@@ -99,10 +99,11 @@ $colors: map-merge((
 
 
   
-$primary  : #6a73fa !default;
-$secondary: #673BB7 !default;
+$primary  : #600022 !default;
+$secondary: #9596f6 !default;
 $success  : #7ED321 !default;
 $info     : #50E3C2 !default;
+$accent   : #5e5fce !default;
 $warning  : #FFAA16 !default;
 $danger   : #FF1616 !default;
 $light    : #dadada !default;
@@ -111,6 +112,7 @@ $dark     : #454545;
 :root{
 	--primary: #{$primary};
 	--secondary: #{$secondary};
+	--accent: #{$accent};
 	--primary-hover: #{darken($primary, 10)};
 	--primary-light: #{lighten($primary, 10)};
 	--primary-dark: #{darken($primary, 10)};

@@ -641,4 +641,37 @@ const router = createRouter({
   ],
 });
 
+const publicPaths = new Set([
+  "/page-login",
+  "/page-register",
+  "/page-forgot-password",
+  "/page-error-400",
+  "/page-error-403",
+  "/page-error-404",
+  "/page-error-500",
+  "/page-error-503",
+  "/page-lock-screen",
+]);
+
+router.beforeEach(async (to) => {
+  const { useAuthStore } = await import("@/stores/auth");
+  const auth = useAuthStore();
+
+  if (!auth.bootstrapped) {
+    await auth.fetchMe();
+  }
+
+  const isPublic = publicPaths.has(to.path);
+
+  if (!isPublic && !auth.isAuthenticated) {
+    return { path: "/page-login", query: { redirect: to.fullPath } };
+  }
+
+  if (to.path === "/page-login" && auth.isAuthenticated) {
+    return { path: "/" };
+  }
+
+  return true;
+});
+
 export default router;

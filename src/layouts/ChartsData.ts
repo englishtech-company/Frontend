@@ -5053,9 +5053,9 @@ export const chart_widget_4 = {
     datasets: [
       {
         label: "Expense",
-        backgroundColor: "#6a73fa",
+        backgroundColor: "#600022",
         barPercentage: 0.8,
-        hoverBackgroundColor: "#6a73fa",
+        hoverBackgroundColor: "#600022",
         data: [20, 14, 18, 25, 27, 22, 12, 24, 20, 14, 18, 16, 34, 32, 43, 36, 56, 12, 23, 34],
       },
       {
@@ -5737,7 +5737,7 @@ export const chart_widget_8 = {
       },
     },
     offsetY: -100,
-    colors: ["#6a73fa"],
+    colors: ["#600022"],
     dataLabels: {
       enabled: false,
     },

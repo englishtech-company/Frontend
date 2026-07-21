@@ -220,7 +220,7 @@
                   </svg>
                   <span class="ms-2">Inbox </span>
                 </RouterLink>
-                <a to="/page-login" class="dropdown-item ai-icon">
+                <a href="#" class="dropdown-item ai-icon" @click.prevent="logoutHandler">
                   <svg
                     id="icon-logout"
                     xmlns="http://www.w3.org/2000/svg"
@@ -357,6 +357,7 @@
 import { defineComponent, ref, watchEffect, watch } from "vue";
 import { SVGImage } from "@/constent/Theme";
 import { useStore } from "@/stores/Store";
+import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from "pinia";
 import { RouterLink } from "vue-router";
 import router from "@/router";
@@ -370,6 +371,7 @@ export default defineComponent({
   },
   setup() {
     const store = useStore();
+    const auth = useAuthStore();
     const { openChatbox } = storeToRefs(store);
     const size = ref(false);
     const title = ref("Dashboard");
@@ -399,7 +401,7 @@ export default defineComponent({
       { immediate: true }
     );
 
-    return { openChatbox, size, title, themeIcon, bodyTheme };
+    return { openChatbox, size, title, themeIcon, bodyTheme, auth };
   },
   methods: {
     chatboxHandler() {
@@ -417,6 +419,10 @@ export default defineComponent({
       } else {
         document.body.setAttribute("data-theme-version", "light");
       }
+    },
+    async logoutHandler() {
+      await this.auth.logout();
+      await router.push("/page-login");
     },
   },
 });
