@@ -1,0 +1,24 @@
+import { computed } from "vue";
+import { PERMISSIONS } from "@/lib/permissions/access";
+import { useAuthStore } from "@/stores/auth";
+
+export function usePermissions() {
+  const auth = useAuthStore();
+
+  const can = (permission: string) => computed(() => auth.hasPermission(permission));
+
+  return {
+    auth,
+    canViewUsers: computed(() => auth.hasPermission(PERMISSIONS.users.view)),
+    canCreateUsers: computed(() => auth.hasPermission(PERMISSIONS.users.create)),
+    canUpdateUsers: computed(() => auth.hasPermission(PERMISSIONS.users.update)),
+    canDeleteUsers: computed(() => auth.hasPermission(PERMISSIONS.users.delete)),
+    canViewRoles: computed(() => auth.hasPermission(PERMISSIONS.roles.view)),
+    canCreateRoles: computed(() => auth.hasPermission(PERMISSIONS.roles.create)),
+    canUpdateRoles: computed(() => auth.hasPermission(PERMISSIONS.roles.update)),
+    canDeleteRoles: computed(() => auth.hasPermission(PERMISSIONS.roles.delete)),
+    canViewPermissions: computed(() => auth.hasPermission(PERMISSIONS.permissions.view)),
+    canViewAudits: computed(() => auth.hasPermission(PERMISSIONS.audits.view)),
+    can,
+  };
+}

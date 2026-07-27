@@ -1,11 +1,16 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import { normalizeAuthUser } from "@/lib/auth/normalizeUser";
 import { api, getToken, setToken } from "@/lib/api";
+import type { PermissionName } from "@/lib/permissions/access";
 
 export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  roles?: string[];
+  permissions?: string[];
+  is_superadmin?: boolean;
 };
 
 type LoginResponse = {
@@ -28,6 +33,18 @@ export const useAuthStore = defineStore("auth", () => {
   const bootstrapped = ref(false);
 
   const isAuthenticated = computed(() => Boolean(token.value));
+  const isSuperadmin = computed(() => Boolean(user.value?.is_superadmin));
+  const permissions = computed(() => user.value?.permissions ?? []);
+
+  function hasPermission(permission: PermissionName | string): boolean {
+    if (isSuperadmin.value) return true;
+    return permissions.value.includes(permission);
+  }
+
+  function hasAnyPermission(required: Array<PermissionName | string>): boolean {
+    if (isSuperadmin.value) return true;
+    return required.some((permission) => permissions.value.includes(permission));
+  }
 
   async function login(email: string, password: string) {
     loading.value = true;
@@ -40,8 +57,8 @@ export const useAuthStore = defineStore("auth", () => {
       });
 
       token.value = response.token;
-      user.value = response.user;
       setToken(response.token);
+      await fetchMe();
 
       return response;
     } finally {
@@ -58,8 +75,8 @@ export const useAuthStore = defineStore("auth", () => {
 
     try {
       const response = await api<MeResponse>("/auth/me");
-      user.value = response.user;
-      return response.user;
+      user.value = normalizeAuthUser(response.user);
+      return user.value;
     } catch {
       token.value = null;
       user.value = null;
@@ -90,6 +107,10 @@ export const useAuthStore = defineStore("auth", () => {
     loading,
     bootstrapped,
     isAuthenticated,
+    isSuperadmin,
+    permissions,
+    hasPermission,
+    hasAnyPermission,
     login,
     fetchMe,
     logout,
