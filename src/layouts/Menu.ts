@@ -32,6 +32,13 @@ const MenuItems = reactive<menuType[]>([
     title: "Dashboard",
     to: "/",
   },
+
+  {
+    icons: "la la-user",
+    title: "Alunos",
+    to: "/students",
+  },
+
   {
     icons: "la la-cog",
     title: "Administração",

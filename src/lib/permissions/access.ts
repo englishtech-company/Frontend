@@ -11,6 +11,12 @@ export const PERMISSIONS = {
     update: "roles.update",
     delete: "roles.delete",
   },
+  students: {
+    view: "students.view",
+    create: "students.create",
+    update: "students.update",
+    delete: "students.delete",
+  },
   permissions: {
     view: "permissions.view",
   },
@@ -22,6 +28,7 @@ export const PERMISSIONS = {
 export type PermissionName =
   | (typeof PERMISSIONS.users)[keyof typeof PERMISSIONS.users]
   | (typeof PERMISSIONS.roles)[keyof typeof PERMISSIONS.roles]
+  | (typeof PERMISSIONS.students)[keyof typeof PERMISSIONS.students]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits];
 
@@ -39,6 +46,10 @@ export function canAccessPath(
   if (/^\/roles\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.roles.update);
   if (path.startsWith("/roles")) return hasPermission(PERMISSIONS.roles.view);
 
+  if (path === "/students/create") return hasPermission(PERMISSIONS.students.create);
+  if (/^\/students\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.students.update);
+  if (path.startsWith("/students")) return hasPermission(PERMISSIONS.students.view);
+
   if (path.startsWith("/permissions")) return hasPermission(PERMISSIONS.permissions.view);
   if (path.startsWith("/audits")) return hasPermission(PERMISSIONS.audits.view);
 
@@ -53,6 +64,9 @@ export function resolveRoutePermission(path: string): PermissionName | null {
   if (path === "/roles/create") return PERMISSIONS.roles.create;
   if (/^\/roles\/\d+\/edit$/.test(path)) return PERMISSIONS.roles.update;
   if (path.startsWith("/roles")) return PERMISSIONS.roles.view;
+  if (path === "/students/create") return PERMISSIONS.students.create;
+  if (/^\/students\/\d+\/edit$/.test(path)) return PERMISSIONS.students.update;
+  if (path.startsWith("/students")) return PERMISSIONS.students.view;
   if (path.startsWith("/permissions")) return PERMISSIONS.permissions.view;
   if (path.startsWith("/audits")) return PERMISSIONS.audits.view;
   return null;

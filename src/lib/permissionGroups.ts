@@ -14,6 +14,7 @@ export type PermissionModule = {
 
 const MODULE_LABELS: Record<string, string> = {
   users: "Usuários",
+  students: "Alunos",
   clients: "Clientes",
   roles: "Perfis",
   permissions: "Permissões",
