@@ -1,0 +1,219 @@
+<script lang="ts" setup>
+import { computed, onMounted, ref } from "vue";
+import { RouterLink, useRoute, useRouter } from "vue-router";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
+import { createStudent, getStudent, updateStudent } from "@/lib/students";
+
+const route = useRoute();
+const router = useRouter();
+
+const isEdit = computed(() => Boolean(route.params.id));
+const studentId = computed(() => Number(route.params.id));
+
+const name = ref("");
+const email = ref("");
+const phone = ref("");
+const address = ref("");
+const birthdate = ref("");
+const status = ref("active");
+const startDate = ref("");
+const endDate = ref("");
+
+const loading = ref(false);
+const saving = ref(false);
+const error = ref("");
+
+const statusOptions: SelectOption[] = [
+  { value: "active", label: "Ativo" },
+  { value: "inactive", label: "Inativo" },
+  { value: "pending", label: "Pendente" },
+];
+
+async function loadForm() {
+  if (!isEdit.value) return;
+
+  loading.value = true;
+  error.value = "";
+
+  try {
+    const student = await getStudent(studentId.value);
+    name.value = student.name || "";
+    email.value = student.email || "";
+    phone.value = student.phone || "";
+    address.value = student.address || "";
+    birthdate.value = student.birthdate ? student.birthdate.split("T")[0] : "";
+    status.value = student.status || "active";
+    startDate.value = student.start_date ? student.start_date.split("T")[0] : "";
+    endDate.value = student.end_date ? student.end_date.split("T")[0] : "";
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : "Erro ao carregar dados do aluno";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function submit() {
+  saving.value = true;
+  error.value = "";
+
+  try {
+    const payload = {
+      name: name.value,
+      email: email.value,
+      phone: phone.value || undefined,
+      address: address.value || undefined,
+      birthdate: birthdate.value || undefined,
+      status: status.value,
+      start_date: startDate.value || undefined,
+      end_date: endDate.value || undefined,
+    };
+
+    if (isEdit.value) {
+      await updateStudent(studentId.value, payload);
+    } else {
+      await createStudent(payload);
+    }
+
+    router.push("/students");
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : "Erro ao salvar aluno";
+  } finally {
+    saving.value = false;
+  }
+}
+
+onMounted(loadForm);
+</script>
+
+<template>
+  <div class="container-fluid">
+    <div class="row page-titles mx-0">
+      <div class="col-sm-6 p-md-0">
+        <div class="welcome-text">
+          <h4>{{ isEdit ? "Editar aluno" : "Novo aluno" }}</h4>
+          <p class="mb-0">Preencha os dados cadastrais do aluno</p>
+        </div>
+      </div>
+      <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
+        <RouterLink to="/students" class="btn btn-outline-primary">Voltar</RouterLink>
+      </div>
+    </div>
+
+    <div v-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <div v-if="loading" class="text-center py-4">Carregando...</div>
+            <form v-else @submit.prevent="submit">
+              <div class="row">
+                <div class="col-lg-6 mb-3">
+                  <label class="form-label student-form__label" for="name">Nome completo *</label>
+                  <input
+                    id="name"
+                    v-model.trim="name"
+                    type="text"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div class="col-lg-6 mb-3">
+                  <label class="form-label student-form__label" for="email">E-mail *</label>
+                  <input
+                    id="email"
+                    v-model.trim="email"
+                    type="email"
+                    class="form-control"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-6 mb-3">
+                  <label class="form-label student-form__label" for="phone">Telefone</label>
+                  <input
+                    id="phone"
+                    v-model.trim="phone"
+                    type="text"
+                    class="form-control"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+                <div class="col-lg-6 mb-3">
+                  <label class="form-label student-form__label" for="address">Endereço</label>
+                  <input
+                    id="address"
+                    v-model.trim="address"
+                    type="text"
+                    class="form-control"
+                    placeholder="Rua, número, bairro, cidade"
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-4 mb-3">
+                  <label class="form-label student-form__label" for="birthdate">Data de nascimento</label>
+                  <input
+                    id="birthdate"
+                    v-model="birthdate"
+                    type="date"
+                    class="form-control"
+                  />
+                </div>
+                <div class="col-lg-4 mb-3">
+                  <SingleSelect
+                    id="status"
+                    v-model="status"
+                    label="Status *"
+                    :options="statusOptions"
+                    placeholder="Selecione o status"
+                    required
+                  />
+                </div>
+                <div class="col-lg-2 mb-3">
+                  <label class="form-label student-form__label" for="startDate">Data de início</label>
+                  <input
+                    id="startDate"
+                    v-model="startDate"
+                    type="date"
+                    class="form-control"
+                  />
+                </div>
+                <div class="col-lg-2 mb-3">
+                  <label class="form-label student-form__label" for="endDate">Data de término</label>
+                  <input
+                    id="endDate"
+                    v-model="endDate"
+                    type="date"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <button type="submit" class="btn btn-primary" :disabled="saving">
+                  {{ saving ? "Salvando..." : "Salvar" }}
+                </button>
+                <RouterLink to="/students" class="btn btn-light ms-2">Cancelar</RouterLink>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.student-form__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6c757d;
+}
+</style>

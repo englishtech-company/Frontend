@@ -75,3 +75,17 @@ export type AuditLog = {
     user?: AuditUser | null;
   };
 };
+
+export type Student = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  birthdate?: string | null;
+  status: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};

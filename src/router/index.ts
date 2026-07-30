@@ -61,6 +61,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.roles.update },
     },
     {
+      path: "/students",
+      name: "Students",
+      component: () => import("../views/admin/students/StudentList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.students.view },
+    },
+    {
+      path: "/students/create",
+      name: "StudentCreate",
+      component: () => import("../views/admin/students/StudentForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.students.create },
+    },
+    {
+      path: "/students/:id/edit",
+      name: "StudentEdit",
+      component: () => import("../views/admin/students/StudentForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.students.update },
+    },
+    {
       path: "/permissions",
       name: "Permissions",
       component: () => import("../views/admin/permissions/PermissionList.vue"),
