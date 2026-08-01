@@ -15,6 +15,7 @@ export type PermissionModule = {
 const MODULE_LABELS: Record<string, string> = {
   users: "Usuários",
   students: "Alunos",
+  teachers: "Professores",
   clients: "Clientes",
   roles: "Perfis",
   permissions: "Permissões",
@@ -69,7 +70,9 @@ export function countSelectedInModule(
   module: PermissionModule,
   selected: string[]
 ): number {
-  return module.permissions.filter((p) => selected.includes(p.name)).length;
+  return module.permissions.filter((permission) =>
+    selected.includes(permission.name)
+  ).length;
 }
 
 export function isModuleFullySelected(
@@ -78,6 +81,6 @@ export function isModuleFullySelected(
 ): boolean {
   return (
     module.permissions.length > 0 &&
-    module.permissions.every((p) => selected.includes(p.name))
+    module.permissions.every((permission) => selected.includes(permission.name))
   );
 }

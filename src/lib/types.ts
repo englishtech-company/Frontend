@@ -89,3 +89,17 @@ export type Student = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type TeacherStatus = "active" | "inactive";
+
+export type Teacher = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  status: TeacherStatus;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};

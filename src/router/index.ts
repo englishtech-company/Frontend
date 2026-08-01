@@ -79,6 +79,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.students.update },
     },
     {
+      path: "/teachers",
+      name: "Teachers",
+      component: () => import("../views/admin/teachers/TeacherList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.view },
+    },
+    {
+      path: "/teachers/create",
+      name: "TeacherCreate",
+      component: () => import("../views/admin/teachers/TeacherForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.create },
+    },
+    {
+      path: "/teachers/:id/edit",
+      name: "TeacherEdit",
+      component: () => import("../views/admin/teachers/TeacherForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.update },
+    },
+    {
       path: "/permissions",
       name: "Permissions",
       component: () => import("../views/admin/permissions/PermissionList.vue"),
@@ -174,7 +192,10 @@ router.beforeEach(async (to) => {
   const isPublic = publicPaths.has(to.path);
 
   if (!isPublic && !auth.isAuthenticated) {
-    return { path: "/page-login", query: { redirect: to.fullPath } };
+    return {
+      path: "/page-login",
+      query: { redirect: to.fullPath },
+    };
   }
 
   if (to.path === "/page-login" && auth.isAuthenticated) {
@@ -183,9 +204,13 @@ router.beforeEach(async (to) => {
 
   if (!isPublic && auth.isAuthenticated) {
     const requiredPermission =
-      (to.meta.permission as string | undefined) ?? resolveRoutePermission(to.path);
+      (to.meta.permission as string | undefined) ??
+      resolveRoutePermission(to.path);
 
-    if (requiredPermission && !auth.hasPermission(requiredPermission)) {
+    if (
+      requiredPermission &&
+      !auth.hasPermission(requiredPermission)
+    ) {
       return { path: "/page-error-403" };
     }
   }
