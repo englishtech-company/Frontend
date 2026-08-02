@@ -103,3 +103,14 @@ export type Teacher = {
   updated_at?: string;
   deleted_at?: string | null;
 };
+
+export type Plan = {
+  id: number;
+  name: string;
+  workload: string;
+  base_price: string;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};

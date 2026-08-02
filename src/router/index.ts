@@ -97,6 +97,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.teachers.update },
     },
     {
+      path: "/plans",
+      name: "Plans",
+      component: () => import("../views/admin/plans/PlanList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.plans.view },
+    },
+    {
+      path: "/plans/create",
+      name: "PlanCreate",
+      component: () => import("../views/admin/plans/PlanForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.plans.create },
+    },
+    {
+      path: "/plans/:id/edit",
+      name: "PlanEdit",
+      component: () => import("../views/admin/plans/PlanForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.plans.update },
+    },
+    {
       path: "/permissions",
       name: "Permissions",
       component: () => import("../views/admin/permissions/PermissionList.vue"),
