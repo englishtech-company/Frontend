@@ -3,6 +3,12 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
 import { deletePlan, listPlans } from "@/lib/plans";
+import {
+  countActiveVariants,
+  formatCommitmentLabel,
+  formatDurationLabel,
+  formatPriceRange,
+} from "@/lib/plans/format";
 import type { Plan } from "@/lib/types";
 
 const {
@@ -70,7 +76,7 @@ async function removePlan(plan: Plan) {
   }
 
   const confirmed = confirm(
-    `Remover o plano "${plan.name}"?`
+    `Remover o plano "${plan.name}" e todas as variações?`
   );
 
   if (!confirmed) return;
@@ -91,19 +97,6 @@ function goToPage(nextPage: number) {
 
   page.value = nextPage;
   loadPlans();
-}
-
-function formatPrice(value: string): string {
-  const price = Number(value);
-
-  if (!Number.isFinite(price)) {
-    return "—";
-  }
-
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(price);
 }
 
 function formatStatusBadge(active: boolean) {
@@ -130,7 +123,7 @@ onMounted(loadPlans);
         <div class="welcome-text">
           <h4>Planos</h4>
           <p class="mb-0">
-            Gerencie os planos comerciais do sistema
+            Gerencie os planos comerciais e variações de carga horária
           </p>
         </div>
       </div>
@@ -149,10 +142,7 @@ onMounted(loadPlans);
       </div>
     </div>
 
-    <div
-      v-if="error"
-      class="alert alert-danger"
-    >
+    <div v-if="error" class="alert alert-danger">
       {{ error }}
     </div>
 
@@ -207,24 +197,20 @@ onMounted(loadPlans);
           </div>
 
           <div class="card-body">
-            <div
-              v-if="loading"
-              class="text-center py-4"
-            >
+            <div v-if="loading" class="text-center py-4">
               Carregando...
             </div>
 
-            <div
-              v-else
-              class="table-responsive"
-            >
+            <div v-else class="table-responsive">
               <table class="table table-striped table-responsive-sm">
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th class="text-nowrap">Nome</th>
-                    <th class="text-nowrap">Carga horária</th>
-                    <th class="text-nowrap">Preço base</th>
+                    <th class="text-nowrap">Plano</th>
+                    <th class="text-nowrap">Vínculo</th>
+                    <th class="text-nowrap">Duração</th>
+                    <th class="text-nowrap">Faixa de preço</th>
+                    <th class="text-nowrap">Variações ativas</th>
                     <th class="text-nowrap">Status</th>
                     <th
                       v-if="showActions"
@@ -238,7 +224,7 @@ onMounted(loadPlans);
                 <tbody>
                   <tr v-if="plans.length === 0">
                     <td
-                      :colspan="showActions ? 6 : 5"
+                      :colspan="showActions ? 8 : 7"
                       class="text-center text-muted"
                     >
                       Nenhum plano encontrado
@@ -256,11 +242,19 @@ onMounted(loadPlans);
                     </td>
 
                     <td class="text-nowrap">
-                      {{ plan.workload }}
+                      {{ formatCommitmentLabel(plan.commitment) }}
                     </td>
 
                     <td class="text-nowrap">
-                      {{ formatPrice(plan.base_price) }}
+                      {{ formatDurationLabel(plan.duration_months) }}
+                    </td>
+
+                    <td class="text-nowrap">
+                      {{ formatPriceRange(plan) }}
+                    </td>
+
+                    <td class="text-nowrap">
+                      {{ countActiveVariants(plan) }}/3
                     </td>
 
                     <td class="text-nowrap">

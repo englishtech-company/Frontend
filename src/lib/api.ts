@@ -52,11 +52,19 @@ export async function api<T = unknown>(
       setToken(null);
     }
 
-    const error = new Error(
-      (payload as { msg?: string; message?: string }).msg ||
-        (payload as { message?: string }).message ||
-        `HTTP ${response.status}`
-    ) as ApiError;
+    const payloadRecord = payload as {
+      msg?: string;
+      message?: string;
+      errors?: unknown;
+    };
+
+    let detail = payloadRecord.msg || payloadRecord.message || `HTTP ${response.status}`;
+
+    if (typeof payloadRecord.errors === "string" && payloadRecord.errors.trim()) {
+      detail = payloadRecord.errors;
+    }
+
+    const error = new Error(detail) as ApiError;
     error.status = response.status;
     error.payload = payload as Record<string, unknown>;
     throw error;

@@ -4,6 +4,8 @@ import type {
   ApiListResponse,
   Paginated,
   Plan,
+  PlanCommitment,
+  PlanVariant,
 } from "@/lib/types";
 
 type ListPlansParams = {
@@ -22,11 +24,18 @@ type PlanPlucksResponse = {
   };
 };
 
+export type PlanVariantPayload = {
+  plan_workload_id: number;
+  monthly_price: number;
+  active: boolean;
+};
+
 export type PlanPayload = {
   name: string;
-  workload: string;
-  base_price: number;
+  commitment: PlanCommitment;
+  duration_months: number;
   active: boolean;
+  variants: PlanVariantPayload[];
 };
 
 export async function listPlans(
@@ -100,3 +109,5 @@ export async function getPlanOptions(): Promise<Record<string, string>> {
 
   return response.plucks.plans;
 }
+
+export type { PlanVariant };

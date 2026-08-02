@@ -104,12 +104,44 @@ export type Teacher = {
   deleted_at?: string | null;
 };
 
+export type PlanCommitment = "monthly" | "quarterly" | "semiannual";
+
+export type PlanVariant = {
+  id?: number;
+  plan_id?: number;
+  plan_workload_id: number;
+  monthly_price: string;
+  active: boolean;
+  plan_workload?: PlanWorkload;
+  relationships?: {
+    plan_workload?: PlanWorkload;
+  };
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};
+
+export type PlanWorkload = {
+  id: number;
+  name: string;
+  hours_per_week: number;
+  sort_order: number;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};
+
 export type Plan = {
   id: number;
   name: string;
-  workload: string;
-  base_price: string;
+  commitment: PlanCommitment;
+  duration_months: number;
   active: boolean;
+  variants?: PlanVariant[];
+  relationships?: {
+    variants?: PlanVariant[];
+  };
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
