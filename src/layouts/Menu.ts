@@ -50,6 +50,11 @@ const MenuItems = reactive<menuType[]>([
     className: "sub-menu",
     subMenuItems: [
       {
+        menu: "Planos",
+        to: "/plans",
+        permission: PERMISSIONS.plans.view,
+      },
+      {
         menu: "Usuários",
         to: "/users",
         permission: PERMISSIONS.users.view,
