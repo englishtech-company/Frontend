@@ -23,6 +23,12 @@ export const PERMISSIONS = {
     update: "teachers.update",
     delete: "teachers.delete",
   },
+  plans: {
+    view: "plans.view",
+    create: "plans.create",
+    update: "plans.update",
+    delete: "plans.delete",
+  },
   permissions: {
     view: "permissions.view",
   },
@@ -36,6 +42,7 @@ export type PermissionName =
   | (typeof PERMISSIONS.roles)[keyof typeof PERMISSIONS.roles]
   | (typeof PERMISSIONS.students)[keyof typeof PERMISSIONS.students]
   | (typeof PERMISSIONS.teachers)[keyof typeof PERMISSIONS.teachers]
+  | (typeof PERMISSIONS.plans)[keyof typeof PERMISSIONS.plans]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits];
 
@@ -61,6 +68,10 @@ export function canAccessPath(
   if (/^\/teachers\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.teachers.update);
   if (path.startsWith("/teachers")) return hasPermission(PERMISSIONS.teachers.view);
 
+  if (path === "/plans/create") return hasPermission(PERMISSIONS.plans.create);
+  if (/^\/plans\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.plans.update);
+  if (path.startsWith("/plans")) return hasPermission(PERMISSIONS.plans.view);
+
   if (path.startsWith("/permissions")) return hasPermission(PERMISSIONS.permissions.view);
   if (path.startsWith("/audits")) return hasPermission(PERMISSIONS.audits.view);
 
@@ -85,6 +96,10 @@ export function resolveRoutePermission(path: string): PermissionName | null {
   if (path === "/teachers/create") return PERMISSIONS.teachers.create;
   if (/^\/teachers\/\d+\/edit$/.test(path)) return PERMISSIONS.teachers.update;
   if (path.startsWith("/teachers")) return PERMISSIONS.teachers.view;
+
+  if (path === "/plans/create") return PERMISSIONS.plans.create;
+  if (/^\/plans\/\d+\/edit$/.test(path)) return PERMISSIONS.plans.update;
+  if (path.startsWith("/plans")) return PERMISSIONS.plans.view;
 
   if (path.startsWith("/permissions")) return PERMISSIONS.permissions.view;
   if (path.startsWith("/audits")) return PERMISSIONS.audits.view;
