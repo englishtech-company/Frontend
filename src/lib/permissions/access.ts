@@ -29,6 +29,12 @@ export const PERMISSIONS = {
     update: "plans.update",
     delete: "plans.delete",
   },
+  leads: {
+    view: "leads.view",
+    create: "leads.create",
+    update: "leads.update",
+    delete: "leads.delete",
+  },
   permissions: {
     view: "permissions.view",
   },
@@ -43,6 +49,7 @@ export type PermissionName =
   | (typeof PERMISSIONS.students)[keyof typeof PERMISSIONS.students]
   | (typeof PERMISSIONS.teachers)[keyof typeof PERMISSIONS.teachers]
   | (typeof PERMISSIONS.plans)[keyof typeof PERMISSIONS.plans]
+  | (typeof PERMISSIONS.leads)[keyof typeof PERMISSIONS.leads]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits];
 
@@ -72,6 +79,10 @@ export function canAccessPath(
   if (/^\/plans\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.plans.update);
   if (path.startsWith("/plans")) return hasPermission(PERMISSIONS.plans.view);
 
+  if (path === "/leads/create") return hasPermission(PERMISSIONS.leads.create);
+  if (/^\/leads\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.leads.update);
+  if (path.startsWith("/leads")) return hasPermission(PERMISSIONS.leads.view);
+
   if (path.startsWith("/permissions")) return hasPermission(PERMISSIONS.permissions.view);
   if (path.startsWith("/audits")) return hasPermission(PERMISSIONS.audits.view);
 
@@ -100,6 +111,10 @@ export function resolveRoutePermission(path: string): PermissionName | null {
   if (path === "/plans/create") return PERMISSIONS.plans.create;
   if (/^\/plans\/\d+\/edit$/.test(path)) return PERMISSIONS.plans.update;
   if (path.startsWith("/plans")) return PERMISSIONS.plans.view;
+
+  if (path === "/leads/create") return PERMISSIONS.leads.create;
+  if (/^\/leads\/\d+\/edit$/.test(path)) return PERMISSIONS.leads.update;
+  if (path.startsWith("/leads")) return PERMISSIONS.leads.view;
 
   if (path.startsWith("/permissions")) return PERMISSIONS.permissions.view;
   if (path.startsWith("/audits")) return PERMISSIONS.audits.view;

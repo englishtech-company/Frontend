@@ -17,6 +17,7 @@ const MODULE_LABELS: Record<string, string> = {
   students: "Alunos",
   teachers: "Professores",
   plans: "Planos",
+  leads: "Interessados",
   clients: "Clientes",
   roles: "Perfis",
   permissions: "Permissões",
@@ -64,7 +65,9 @@ export function groupPermissions(permissions: Permission[]): PermissionModule[] 
     );
   }
 
-  return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  return Array.from(groups.values()).sort((a, b) =>
+    a.label.localeCompare(b.label, "pt-BR")
+  );
 }
 
 export function countSelectedInModule(

@@ -114,3 +114,20 @@ export type Plan = {
   updated_at?: string;
   deleted_at?: string | null;
 };
+
+export type LeadRegistrationSource = "manual" | "webhook";
+
+export type Lead = {
+  id: number;
+  name: string;
+  whatsapp_phone: string;
+  email?: string | null;
+  source: string;
+  objective: string;
+  self_declared_level: string;
+  registration_source: LeadRegistrationSource;
+  raw_payload?: Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};
