@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
+import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { getTeacher } from "@/lib/teachers";
 import {
@@ -18,7 +19,7 @@ import {
   getTeacherCurrentStudents,
   getTeacherDaysInSystem,
   getTeacherStudentAssignments,
-  TEACHER_FUTURE_SECTIONS,
+  TEACHER_MODULE_TABS,
 } from "@/lib/teachers/format";
 import type { Teacher } from "@/lib/types";
 
@@ -29,7 +30,15 @@ const teacherId = computed(() => Number(route.params.id));
 const teacher = ref<Teacher | null>(null);
 const loading = ref(true);
 const error = ref("");
-const activeTab = ref<"overview" | "students" | "history">("overview");
+const activeTab = ref<
+  | "overview"
+  | "students"
+  | "classes"
+  | "reports"
+  | "documents"
+  | "availability"
+  | "history"
+>("overview");
 
 const statusBadge = computed(() =>
   formatTeacherStatusBadge(teacher.value?.status ?? "")
@@ -210,6 +219,21 @@ onMounted(loadTeacher);
                           </span>
                         </button>
                       </li>
+                      <li
+                        v-for="moduleTab in TEACHER_MODULE_TABS"
+                        :key="moduleTab.id"
+                        class="nav-item"
+                        role="presentation"
+                      >
+                        <button
+                          type="button"
+                          class="nav-link"
+                          :class="{ active: activeTab === moduleTab.id }"
+                          @click="activeTab = moduleTab.id as typeof activeTab"
+                        >
+                          {{ moduleTab.label }}
+                        </button>
+                      </li>
                       <li class="nav-item" role="presentation">
                         <button
                           type="button"
@@ -289,35 +313,21 @@ onMounted(loadTeacher);
                             </div>
                           </div>
                         </div>
+                      </div>
 
-                        <div class="pt-2 border-top">
-                          <h4 class="text-primary mb-4">Próximas integrações</h4>
-                          <div class="row">
-                            <div
-                              v-for="section in TEACHER_FUTURE_SECTIONS"
-                              :key="section.id"
-                              class="col-xl-6 mb-4"
-                            >
-                              <div class="card border h-100 mb-0">
-                                <div class="card-body">
-                                  <div class="d-flex align-items-start">
-                                    <span
-                                      class="rounded-circle bg-primary-light d-inline-flex align-items-center justify-content-center me-3"
-                                      style="width: 42px; height: 42px; min-width: 42px;"
-                                    >
-                                      <i :class="section.icon" class="text-primary fs-18"></i>
-                                    </span>
-                                    <div>
-                                      <h5 class="mb-1">{{ section.title }}</h5>
-                                      <p class="text-muted mb-2">{{ section.description }}</p>
-                                      <span class="badge badge-light text-dark">Em breve</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                      <div
+                        v-for="moduleTab in TEACHER_MODULE_TABS"
+                        :key="moduleTab.id"
+                        v-show="activeTab === moduleTab.id"
+                        class="tab-pane fade active show"
+                        role="tabpanel"
+                      >
+                        <ProfileModulePlaceholder
+                          :title="moduleTab.title"
+                          :description="moduleTab.description"
+                          :icon="moduleTab.icon"
+                          :examples="moduleTab.examples"
+                        />
                       </div>
 
                       <div

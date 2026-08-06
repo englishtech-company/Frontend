@@ -92,13 +92,6 @@ export function getStudentEnrollmentDays(student: Student): string {
   return String(days);
 }
 
-export type StudentFutureSection = {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-};
-
 export function getStudentCurrentTeacher(student: Student): Teacher | null {
   return (
     student.relationships?.current_teacher ??
@@ -173,29 +166,109 @@ export function formatStudentPlanSummary(variant: PlanVariant | null | undefined
   };
 }
 
-export const STUDENT_FUTURE_SECTIONS: StudentFutureSection[] = [
+export type StudentFutureSection = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+};
+
+export type StudentModuleTab = StudentFutureSection & {
+  label: string;
+  examples?: {
+    title: string;
+    subtitle?: string;
+    badge?: string;
+    badgeClass?: string;
+  }[];
+};
+
+export const STUDENT_MODULE_TABS: StudentModuleTab[] = [
   {
     id: "classes",
+    label: "Aulas",
     title: "Aulas e agenda",
-    description: "Calendário, frequência e reposições.",
+    description:
+      "Calendário de aulas, frequência, reposições e histórico de sessões do aluno.",
     icon: "la la-calendar-check",
+    examples: [
+      {
+        title: "05/08/2026 · 19:00",
+        subtitle: "Conversation · Prof. Sarah Johnson",
+        badge: "Realizada",
+        badgeClass: "badge-success",
+      },
+      {
+        title: "08/08/2026 · 19:00",
+        subtitle: "Conversation · Prof. Sarah Johnson",
+        badge: "Agendada",
+        badgeClass: "badge-primary",
+      },
+      {
+        title: "12/08/2026 · 19:00",
+        subtitle: "Conversation · Prof. Sarah Johnson",
+        badge: "Agendada",
+        badgeClass: "badge-primary",
+      },
+    ],
   },
   {
     id: "payments",
+    label: "Pagamentos",
     title: "Pagamentos",
-    description: "Mensalidades, boletos e inadimplência.",
+    description:
+      "Mensalidades, boletos, comprovantes e controle de inadimplência do aluno.",
     icon: "la la-money-bill-wave",
+    examples: [
+      {
+        title: "Mensalidade fev/2026",
+        subtitle: "Vencimento 01/02/2026 · R$ 464,00",
+        badge: "Pago",
+        badgeClass: "badge-success",
+      },
+      {
+        title: "Mensalidade mar/2026",
+        subtitle: "Vencimento 01/03/2026 · R$ 464,00",
+        badge: "Pago",
+        badgeClass: "badge-success",
+      },
+      {
+        title: "Mensalidade abr/2026",
+        subtitle: "Vencimento 01/04/2026 · R$ 464,00",
+        badge: "Pendente",
+        badgeClass: "badge-warning",
+      },
+    ],
   },
   {
     id: "documents",
+    label: "Documentos",
     title: "Documentos",
-    description: "Contratos, termos e anexos do aluno.",
+    description: "Contratos, termos, anexos e arquivos vinculados ao aluno.",
     icon: "la la-folder-open",
-  },
-  {
-    id: "notes",
-    title: "Observações internas",
-    description: "Anotações da equipe sobre o aluno.",
-    icon: "la la-sticky-note",
+    examples: [
+      {
+        title: "Contrato de matrícula.pdf",
+        subtitle: "Enviado em 01/02/2026",
+        badge: "Assinado",
+        badgeClass: "badge-success",
+      },
+      {
+        title: "Termo de uso de imagem.pdf",
+        subtitle: "Enviado em 01/02/2026",
+        badge: "Assinado",
+        badgeClass: "badge-success",
+      },
+      {
+        title: "Comprovante mar/2026.pdf",
+        subtitle: "Enviado em 03/03/2026",
+        badge: "Anexo",
+        badgeClass: "badge-secondary",
+      },
+    ],
   },
 ];
+
+export const STUDENT_FUTURE_SECTIONS: StudentFutureSection[] = STUDENT_MODULE_TABS.map(
+  ({ id, title, description, icon }) => ({ id, title, description, icon })
+);
