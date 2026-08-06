@@ -2,7 +2,13 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
+import { confirmDelete } from "@/lib/confirm";
 import { deleteStudent, listStudents } from "@/lib/students";
+import {
+  formatStudentPlanShortLabel,
+  getStudentCurrentPlanVariant,
+  getStudentCurrentTeacher,
+} from "@/lib/students/format";
 import type { Student } from "@/lib/types";
 
 const {
@@ -21,7 +27,9 @@ const total = ref(0);
 const search = ref("");
 const statusFilter = ref("");
 
-const showActions = computed(() => canUpdateStudents.value || canDeleteStudents.value);
+const showActions = computed(
+  () => canViewStudents.value || canUpdateStudents.value || canDeleteStudents.value
+);
 
 async function loadStudents() {
   if (!canViewStudents.value) {
@@ -55,7 +63,12 @@ function handleSearch() {
 }
 
 async function removeStudent(student: Student) {
-  if (!confirm(`Remover o aluno "${student.name}"?`)) return;
+  const confirmed = await confirmDelete({
+    entityLabel: "aluno",
+    itemName: student.name,
+  });
+
+  if (!confirmed) return;
 
   try {
     await deleteStudent(student.id);
@@ -145,19 +158,30 @@ onMounted(loadStudents);
                     <th>E-mail</th>
                     <th>Telefone</th>
                     <th>Status</th>
+                    <th>Professor</th>
+                    <th>Plano</th>
                     <th>Início</th>
                     <th v-if="showActions" class="text-end">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="students.length === 0">
-                    <td :colspan="showActions ? 7 : 6" class="text-center text-muted">
+                    <td :colspan="showActions ? 9 : 8" class="text-center text-muted">
                       Nenhum aluno encontrado
                     </td>
                   </tr>
                   <tr v-for="student in students" :key="student.id">
                     <td>{{ student.id }}</td>
-                    <td><strong>{{ student.name }}</strong></td>
+                    <td>
+                      <RouterLink
+                        v-if="canViewStudents"
+                        :to="`/students/${student.id}`"
+                        class="text-primary"
+                      >
+                        <strong>{{ student.name }}</strong>
+                      </RouterLink>
+                      <strong v-else>{{ student.name }}</strong>
+                    </td>
                     <td>{{ student.email }}</td>
                     <td>{{ student.phone || "—" }}</td>
                     <td>
@@ -165,6 +189,8 @@ onMounted(loadStudents);
                         {{ formatStatusBadge(student.status).label }}
                       </span>
                     </td>
+                    <td>{{ getStudentCurrentTeacher(student)?.name || "—" }}</td>
+                    <td>{{ formatStudentPlanShortLabel(getStudentCurrentPlanVariant(student)) }}</td>
                     <td>
                       {{
                         student.start_date
@@ -172,21 +198,31 @@ onMounted(loadStudents);
                           : "—"
                       }}
                     </td>
-                    <td v-if="showActions" class="text-end">
+                    <td v-if="showActions" class="text-end text-nowrap">
+                      <RouterLink
+                        v-if="canViewStudents"
+                        :to="`/students/${student.id}`"
+                        class="btn btn-xs sharp btn-primary me-1"
+                        :aria-label="`Ver ${student.name}`"
+                      >
+                        <i class="fa fa-eye"></i>
+                      </RouterLink>
                       <RouterLink
                         v-if="canUpdateStudents"
                         :to="`/students/${student.id}/edit`"
-                        class="btn btn-sm btn-primary me-1"
+                        class="btn btn-xs sharp btn-primary me-1"
+                        :aria-label="`Editar ${student.name}`"
                       >
-                        Editar
+                        <i class="fa fa-pencil"></i>
                       </RouterLink>
                       <button
                         v-if="canDeleteStudents"
                         type="button"
-                        class="btn btn-sm btn-danger"
+                        class="btn btn-xs sharp btn-danger"
+                        :aria-label="`Excluir ${student.name}`"
                         @click="removeStudent(student)"
                       >
-                        Excluir
+                        <i class="fa fa-trash"></i>
                       </button>
                     </td>
                   </tr>

@@ -101,6 +101,28 @@ export function countActiveVariants(plan: Plan): number {
   return getPlanVariants(plan).filter((variant) => variant.active).length;
 }
 
+export function formatPlanVariantOptionLabel(plan: Plan, variant: PlanVariant): string {
+  const hours = getVariantHoursPerWeek(variant) ?? getVariantWorkload(variant)?.hours_per_week;
+  const hoursLabel = hours ? formatHoursLabel(hours) : "";
+  const priceLabel = formatPrice(variant.monthly_price);
+
+  return [plan.name, hoursLabel, priceLabel].filter(Boolean).join(" · ");
+}
+
+export function buildActivePlanVariantOptions(plans: Plan[]): Array<{
+  value: string;
+  label: string;
+}> {
+  return plans.flatMap((plan) =>
+    getPlanVariants(plan)
+      .filter((variant) => variant.active && variant.id)
+      .map((variant) => ({
+        value: String(variant.id),
+        label: formatPlanVariantOptionLabel(plan, variant),
+      }))
+  );
+}
+
 export function createEmptyVariants(): Array<{
   plan_workload_id: number;
   hours_per_week: number;

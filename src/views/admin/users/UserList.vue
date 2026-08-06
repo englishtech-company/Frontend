@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
+import { confirmDelete } from "@/lib/confirm";
 import { deleteUser, listUsers } from "@/lib/users";
 import { formatUserRoleLabel } from "@/lib/roles";
 import type { User } from "@/lib/types";
@@ -45,7 +46,12 @@ async function loadUsers() {
 }
 
 async function removeUser(user: User) {
-  if (!confirm(`Remover o usuário "${user.name}"?`)) return;
+  const confirmed = await confirmDelete({
+    entityLabel: "usuário",
+    itemName: user.name,
+  });
+
+  if (!confirmed) return;
 
   try {
     await deleteUser(user.id);
@@ -126,21 +132,23 @@ onMounted(loadUsers);
                           : "—"
                       }}
                     </td>
-                    <td v-if="showActions" class="text-end">
+                    <td v-if="showActions" class="text-end text-nowrap">
                       <RouterLink
                         v-if="canUpdateUsers"
                         :to="`/users/${user.id}/edit`"
-                        class="btn btn-sm btn-primary me-1"
+                        class="btn btn-xs sharp btn-primary me-1"
+                        :aria-label="`Editar ${user.name}`"
                       >
-                        Editar
+                        <i class="fa fa-pencil"></i>
                       </RouterLink>
                       <button
                         v-if="canDeleteUsers"
                         type="button"
-                        class="btn btn-sm btn-danger"
+                        class="btn btn-xs sharp btn-danger"
+                        :aria-label="`Excluir ${user.name}`"
                         @click="removeUser(user)"
                       >
-                        Excluir
+                        <i class="fa fa-trash"></i>
                       </button>
                     </td>
                   </tr>

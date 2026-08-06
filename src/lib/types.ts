@@ -76,6 +76,25 @@ export type AuditLog = {
   };
 };
 
+export type StudentTeacherAssignment = {
+  id: number;
+  student_id: number;
+  teacher_id: number | null;
+  created_at?: string;
+  updated_at?: string;
+  teacher?: Teacher | null;
+  student?: Student;
+};
+
+export type StudentEnrollmentAssignment = {
+  id: number;
+  student_id: number;
+  plan_variant_id: number | null;
+  created_at?: string;
+  updated_at?: string;
+  plan_variant?: PlanVariant | null;
+};
+
 export type Student = {
   id: number;
   name: string;
@@ -88,6 +107,14 @@ export type Student = {
   end_date?: string | null;
   created_at?: string;
   updated_at?: string;
+  current_teacher_assignment?: StudentTeacherAssignment | null;
+  current_enrollment_assignment?: StudentEnrollmentAssignment | null;
+  relationships?: {
+    teacher_assignments?: StudentTeacherAssignment[];
+    current_teacher?: Teacher | null;
+    enrollment_assignments?: StudentEnrollmentAssignment[];
+    current_plan_variant?: PlanVariant | null;
+  };
 };
 
 export type TeacherStatus = "active" | "inactive";
@@ -102,6 +129,10 @@ export type Teacher = {
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+  relationships?: {
+    student_assignments?: StudentTeacherAssignment[];
+    current_students?: Student[];
+  };
 };
 
 export type PlanCommitment = "monthly" | "quarterly" | "semiannual";
@@ -113,8 +144,10 @@ export type PlanVariant = {
   monthly_price: string;
   active: boolean;
   plan_workload?: PlanWorkload;
+  plan?: Plan;
   relationships?: {
     plan_workload?: PlanWorkload;
+    plan?: Plan;
   };
   created_at?: string;
   updated_at?: string;

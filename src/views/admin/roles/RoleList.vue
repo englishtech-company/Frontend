@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
+import { confirmDelete } from "@/lib/confirm";
 import { deleteRole, isProtectedRole, listRoles } from "@/lib/roles";
 import type { Role } from "@/lib/types";
 
@@ -44,7 +45,12 @@ async function loadRoles() {
 }
 
 async function removeRole(role: Role) {
-  if (!confirm(`Remover o perfil "${role.name}"?`)) return;
+  const confirmed = await confirmDelete({
+    entityLabel: "perfil",
+    itemName: role.name,
+  });
+
+  if (!confirmed) return;
 
   try {
     await deleteRole(role.id);
@@ -113,21 +119,23 @@ onMounted(loadRoles);
                     <td>{{ role.id }}</td>
                     <td>{{ role.name }}</td>
                     <td>{{ role.guard_name }}</td>
-                    <td v-if="showActions" class="text-end">
+                    <td v-if="showActions" class="text-end text-nowrap">
                       <RouterLink
                         v-if="canUpdateRoles"
                         :to="`/roles/${role.id}/edit`"
-                        class="btn btn-sm btn-primary me-1"
+                        class="btn btn-xs sharp btn-primary me-1"
+                        :aria-label="`Editar ${role.name}`"
                       >
-                        Editar
+                        <i class="fa fa-pencil"></i>
                       </RouterLink>
                       <button
                         v-if="canDeleteRoles"
                         type="button"
-                        class="btn btn-sm btn-danger"
+                        class="btn btn-xs sharp btn-danger"
+                        :aria-label="`Excluir ${role.name}`"
                         @click="removeRole(role)"
                       >
-                        Excluir
+                        <i class="fa fa-trash"></i>
                       </button>
                     </td>
                   </tr>

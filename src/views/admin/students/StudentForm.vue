@@ -3,7 +3,14 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
+import { listPlans } from "@/lib/plans";
+import { buildActivePlanVariantOptions } from "@/lib/plans/format";
+import { listTeachers } from "@/lib/teachers";
 import { createStudent, getStudent, updateStudent } from "@/lib/students";
+import {
+  getStudentCurrentPlanVariant,
+  getStudentCurrentTeacher,
+} from "@/lib/students/format";
 
 const route = useRoute();
 const router = useRouter();
@@ -19,6 +26,10 @@ const birthdate = ref("");
 const status = ref("active");
 const startDate = ref("");
 const endDate = ref("");
+const teacherId = ref<string | null>(null);
+const planVariantId = ref<string | null>(null);
+const teacherOptions = ref<SelectOption[]>([]);
+const planVariantOptions = ref<SelectOption[]>([]);
 
 const loading = ref(false);
 const saving = ref(false);
@@ -30,13 +41,28 @@ const statusOptions: SelectOption[] = [
   { value: "pending", label: "Pendente" },
 ];
 
-async function loadForm() {
-  if (!isEdit.value) return;
+async function loadTeacherOptions() {
+  const result = await listTeachers({ status: "active", limit: 100 });
+  teacherOptions.value = result.data.map((teacher) => ({
+    value: String(teacher.id),
+    label: teacher.name,
+  }));
+}
 
+async function loadPlanVariantOptions() {
+  const result = await listPlans({ active: true, limit: 100 });
+  planVariantOptions.value = buildActivePlanVariantOptions(result.data);
+}
+
+async function loadForm() {
   loading.value = true;
   error.value = "";
 
   try {
+    await Promise.all([loadTeacherOptions(), loadPlanVariantOptions()]);
+
+    if (!isEdit.value) return;
+
     const student = await getStudent(studentId.value);
     name.value = student.name || "";
     email.value = student.email || "";
@@ -46,6 +72,12 @@ async function loadForm() {
     status.value = student.status || "active";
     startDate.value = student.start_date ? student.start_date.split("T")[0] : "";
     endDate.value = student.end_date ? student.end_date.split("T")[0] : "";
+
+    const currentTeacher = getStudentCurrentTeacher(student);
+    teacherId.value = currentTeacher ? String(currentTeacher.id) : null;
+
+    const currentPlanVariant = getStudentCurrentPlanVariant(student);
+    planVariantId.value = currentPlanVariant?.id ? String(currentPlanVariant.id) : null;
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao carregar dados do aluno";
   } finally {
@@ -67,6 +99,8 @@ async function submit() {
       status: status.value,
       start_date: startDate.value || undefined,
       end_date: endDate.value || undefined,
+      teacher_id: teacherId.value ? Number(teacherId.value) : null,
+      plan_variant_id: planVariantId.value ? Number(planVariantId.value) : null,
     };
 
     if (isEdit.value) {
@@ -174,7 +208,30 @@ onMounted(loadForm);
                     required
                   />
                 </div>
-                <div class="col-lg-2 mb-3">
+                <div class="col-lg-4 mb-3">
+                  <SingleSelect
+                    id="teacherId"
+                    v-model="teacherId"
+                    label="Professor responsável"
+                    :options="teacherOptions"
+                    placeholder="Selecione um professor"
+                    hint="Deixe vazio para desvincular. Trocar o professor gera histórico."
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-6 mb-3">
+                  <SingleSelect
+                    id="planVariantId"
+                    v-model="planVariantId"
+                    label="Plano contratado"
+                    :options="planVariantOptions"
+                    placeholder="Selecione um plano"
+                    hint="Deixe vazio para remover matrícula. Trocar o plano gera histórico."
+                  />
+                </div>
+                <div class="col-lg-3 mb-3">
                   <label class="form-label student-form__label" for="startDate">Data de início</label>
                   <input
                     id="startDate"
@@ -183,7 +240,7 @@ onMounted(loadForm);
                     class="form-control"
                   />
                 </div>
-                <div class="col-lg-2 mb-3">
+                <div class="col-lg-3 mb-3">
                   <label class="form-label student-form__label" for="endDate">Data de término</label>
                   <input
                     id="endDate"

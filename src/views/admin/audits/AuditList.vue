@@ -186,13 +186,20 @@ onMounted(async () => {
                         #{{ audit.auditable_id }}
                       </td>
                       <td class="audit-table__summary">{{ summarizeAuditChanges(audit) }}</td>
-                      <td class="text-end">
+                      <td class="text-end text-nowrap">
                         <button
                           type="button"
-                          class="btn btn-sm btn-outline-primary"
+                          class="btn btn-xs sharp btn-primary"
+                          :aria-label="
+                            expandedId === audit.id
+                              ? 'Fechar detalhes da auditoria'
+                              : 'Ver detalhes da auditoria'
+                          "
                           @click="toggleDetails(audit.id)"
                         >
-                          {{ expandedId === audit.id ? "Fechar" : "Ver" }}
+                          <i
+                            :class="expandedId === audit.id ? 'fa fa-times' : 'fa fa-eye'"
+                          ></i>
                         </button>
                       </td>
                     </tr>

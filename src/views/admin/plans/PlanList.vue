@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
+import { confirmDelete } from "@/lib/confirm";
 import { deletePlan, listPlans } from "@/lib/plans";
 import {
   countActiveVariants,
@@ -75,9 +76,11 @@ async function removePlan(plan: Plan) {
     return;
   }
 
-  const confirmed = confirm(
-    `Remover o plano "${plan.name}" e todas as variações?`
-  );
+  const confirmed = await confirmDelete({
+    entityLabel: "plano",
+    itemName: plan.name,
+    message: `Deseja remover "${plan.name}" e todas as variações? Esta ação não pode ser desfeita.`,
+  });
 
   if (!confirmed) return;
 

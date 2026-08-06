@@ -1,16 +1,29 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import { PERMISSIONS } from "@/lib/permissions/access";
-import { listUsers } from "@/lib/users";
+import { usePermissions } from "@/composables/usePermissions";
+import { listPlans } from "@/lib/plans";
 import { listRoles } from "@/lib/roles";
+import { listStudents } from "@/lib/students";
+import { listTeachers } from "@/lib/teachers";
+import { listUsers } from "@/lib/users";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
+const { canViewStudents, canViewTeachers, canViewPlans, canViewUsers, canViewRoles } =
+  usePermissions();
 
-const totalUsers = ref<number | null>(null);
-const totalRoles = ref<number | null>(null);
+type CountStat = {
+  total: number | null;
+  active: number | null;
+};
+
 const loading = ref(true);
+const students = ref<CountStat>({ total: null, active: null });
+const teachers = ref<CountStat>({ total: null, active: null });
+const plans = ref<CountStat>({ total: null, active: null });
+const usersTotal = ref<number | null>(null);
+const rolesTotal = ref<number | null>(null);
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -19,83 +32,117 @@ const greeting = computed(() => {
   return "Boa noite";
 });
 
-const canViewUsers = computed(() => auth.hasPermission(PERMISSIONS.users.view));
-const canViewRoles = computed(() => auth.hasPermission(PERMISSIONS.roles.view));
-const canViewPermissions = computed(() =>
-  auth.hasPermission(PERMISSIONS.permissions.view)
-);
-const canViewAudits = computed(() => auth.hasPermission(PERMISSIONS.audits.view));
+function formatCount(value: number | null): string {
+  if (value === null) return "—";
+  return String(value);
+}
 
-const quickLinks = computed(() =>
-  [
-    {
-      to: "/users",
-      label: "Usuários",
-      icon: "la la-user",
-      visible: canViewUsers.value,
-    },
-    {
-      to: "/roles",
-      label: "Perfis",
-      icon: "la la-id-badge",
-      visible: canViewRoles.value,
-    },
-    {
-      to: "/permissions",
-      label: "Permissões",
-      icon: "la la-key",
-      visible: canViewPermissions.value,
-    },
-    {
-      to: "/audits",
-      label: "Auditoria",
-      icon: "la la-history",
-      visible: canViewAudits.value,
-    },
-  ].filter((link) => link.visible)
-);
+function getActivePercent(stat: CountStat): number {
+  if (stat.total === null || stat.total <= 0) return 0;
+  if (stat.active === null) return 100;
+  return Math.min(100, Math.round((stat.active / stat.total) * 100));
+}
 
-const stats = computed(() => {
-  const items = [
+function formatEntityHint(
+  stat: CountStat,
+  entityLabel: string,
+  activeLabel = "ativo"
+): string {
+  if (stat.total === null) return "";
+
+  if (stat.active === null) {
+    return `${stat.total} ${entityLabel}${stat.total === 1 ? "" : "s"}`;
+  }
+
+  const inactive = Math.max(0, stat.total - stat.active);
+
+  if (inactive === 0) {
+    return `${stat.active} ${activeLabel}${stat.active === 1 ? "" : "s"}`;
+  }
+
+  return `${stat.active} ${activeLabel}${stat.active === 1 ? "" : "s"} · ${inactive} inativo${inactive === 1 ? "" : "s"}`;
+}
+
+function formatProgressHint(stat: CountStat): string {
+  if (stat.total === null || stat.active === null || stat.total <= 0) return "";
+  return `${getActivePercent(stat)}% ativos`;
+}
+
+const statCards = computed(() => {
+  const cards = [
     {
-      label: "Alunos",
-      value: "—",
-      hint: "Em breve",
+      key: "students",
+      label: "Total de alunos",
+      value: formatCount(students.value.total),
+      hint: formatEntityHint(students.value, "cadastrado"),
+      progressHint: formatProgressHint(students.value),
+      progress: getActivePercent(students.value),
       icon: "la la-users",
       color: "bg-primary",
-      visible: true,
+      to: "/students",
+      visible: canViewStudents.value,
     },
     {
-      label: "Professores",
-      value: "—",
-      hint: "Em breve",
-      icon: "la la-user",
+      key: "teachers",
+      label: "Total de professores",
+      value: formatCount(teachers.value.total),
+      hint: formatEntityHint(teachers.value, "cadastrado"),
+      progressHint: formatProgressHint(teachers.value),
+      progress: getActivePercent(teachers.value),
+      icon: "la la-chalkboard-teacher",
       color: "bg-warning",
-      visible: true,
+      to: "/teachers",
+      visible: canViewTeachers.value,
     },
     {
-      label: "Turmas",
-      value: "—",
-      hint: "Em breve",
-      icon: "la la-graduation-cap",
+      key: "plans",
+      label: "Planos comerciais",
+      value: formatCount(plans.value.total),
+      hint: formatEntityHint(plans.value, "plano", "ativo"),
+      progressHint: formatProgressHint(plans.value),
+      progress: getActivePercent(plans.value),
+      icon: "la la-file-invoice-dollar",
       color: "bg-secondary",
-      visible: true,
+      to: "/plans",
+      visible: canViewPlans.value,
+    },
+    {
+      key: "users",
+      label: "Usuários do sistema",
+      value: formatCount(usersTotal.value),
+      hint:
+        canViewRoles.value && rolesTotal.value !== null && usersTotal.value !== null
+          ? `${usersTotal.value} cadastrados · ${rolesTotal.value} perfil${rolesTotal.value === 1 ? "" : "s"}`
+          : usersTotal.value !== null
+            ? `${usersTotal.value} cadastrados`
+            : "",
+      progressHint: "Acesso administrativo",
+      progress: 100,
+      icon: "la la-id-badge",
+      color: "bg-danger",
+      to: "/users",
+      visible: canViewUsers.value,
     },
   ];
 
-  if (canViewUsers.value) {
-    items.push({
-      label: "Usuários do sistema",
-      value: totalUsers.value !== null ? String(totalUsers.value) : "—",
-      hint: canViewRoles.value && totalRoles.value !== null ? `${totalRoles.value} perfis` : "",
-      icon: "la la-id-badge",
-      color: "bg-danger",
-      visible: true,
-    });
-  }
-
-  return items.filter((item) => item.visible);
+  return cards.filter((card) => card.visible);
 });
+
+async function loadCountStat(
+  loader: () => Promise<{ total: number }>,
+  target: { value: CountStat }
+) {
+  const result = await loader();
+  target.value.total = result.total;
+}
+
+async function loadActiveCount(
+  loader: () => Promise<{ total: number }>,
+  target: { value: CountStat }
+) {
+  const result = await loader();
+  target.value.active = result.total;
+}
 
 async function loadStats() {
   loading.value = true;
@@ -103,10 +150,31 @@ async function loadStats() {
   try {
     const requests: Promise<void>[] = [];
 
+    if (canViewStudents.value) {
+      requests.push(
+        loadCountStat(() => listStudents({ page: 1, limit: 1 }), students),
+        loadActiveCount(() => listStudents({ page: 1, limit: 1, status: "active" }), students)
+      );
+    }
+
+    if (canViewTeachers.value) {
+      requests.push(
+        loadCountStat(() => listTeachers({ page: 1, limit: 1 }), teachers),
+        loadActiveCount(() => listTeachers({ page: 1, limit: 1, status: "active" }), teachers)
+      );
+    }
+
+    if (canViewPlans.value) {
+      requests.push(
+        loadCountStat(() => listPlans({ page: 1, limit: 1 }), plans),
+        loadActiveCount(() => listPlans({ page: 1, limit: 1, active: true }), plans)
+      );
+    }
+
     if (canViewUsers.value) {
       requests.push(
         listUsers({ page: 1, limit: 1 }).then((users) => {
-          totalUsers.value = users.total;
+          usersTotal.value = users.total;
         })
       );
     }
@@ -114,15 +182,18 @@ async function loadStats() {
     if (canViewRoles.value) {
       requests.push(
         listRoles({ page: 1, limit: 1 }).then((roles) => {
-          totalRoles.value = roles.total;
+          rolesTotal.value = roles.total;
         })
       );
     }
 
     await Promise.all(requests);
   } catch {
-    totalUsers.value = null;
-    totalRoles.value = null;
+    students.value = { total: null, active: null };
+    teachers.value = { total: null, active: null };
+    plans.value = { total: null, active: null };
+    usersTotal.value = null;
+    rolesTotal.value = null;
   } finally {
     loading.value = false;
   }
@@ -137,92 +208,85 @@ onMounted(loadStats);
       <div class="col-sm-6 p-md-0">
         <div class="welcome-text">
           <h4>{{ greeting }}, {{ auth.user?.name ?? "usuário" }}!</h4>
-          <p class="mb-0">Painel da EnglishTech — escola de inglês</p>
+          <p class="mb-0">Resumo da operação da EnglishTech</p>
         </div>
       </div>
     </div>
 
     <div class="row">
       <div
-        v-for="stat in stats"
-        :key="stat.label"
+        v-for="stat in statCards"
+        :key="stat.key"
         class="col-xl-3 col-xxl-3 col-sm-6"
       >
-        <div class="widget-stat card" :class="stat.color">
-          <div class="card-body">
-            <div class="media">
-              <span class="me-3">
-                <i :class="stat.icon"></i>
-              </span>
-              <div class="media-body text-white">
-                <p class="mb-1">{{ stat.label }}</p>
-                <h3 class="text-white">
-                  {{ loading && stat.value !== "—" ? "..." : stat.value }}
-                </h3>
-                <small v-if="stat.hint">{{ stat.hint }}</small>
+        <component
+          :is="stat.to ? RouterLink : 'div'"
+          :to="stat.to || undefined"
+          class="dashboard-stat-link"
+        >
+          <div class="widget-stat card" :class="stat.color">
+            <div class="card-body p-4">
+              <div class="media">
+                <span class="me-3">
+                  <i :class="stat.icon"></i>
+                </span>
+                <div class="media-body text-white">
+                  <p class="mb-1 dashboard-stat-label">{{ stat.label }}</p>
+                  <h3 class="text-white mb-0 dashboard-stat-value">
+                    {{ loading ? "..." : stat.value }}
+                  </h3>
+                  <div class="progress mb-2 bg-white mt-3">
+                    <div
+                      class="progress-bar progress-animated bg-white"
+                      :style="{ width: `${loading ? 0 : stat.progress}%` }"
+                    ></div>
+                  </div>
+                  <small v-if="stat.hint" class="dashboard-stat-hint">{{ stat.hint }}</small>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-xl-8">
-        <div class="card">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Próximos módulos</h4>
-          </div>
-          <div class="card-body">
-            <p class="text-muted mb-3">
-              O frontend foi simplificado para começar o desenvolvimento. Os módulos
-              abaixo serão implementados conforme o backend estiver pronto.
-            </p>
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                Alunos
-                <span class="badge bg-light text-dark">Planejado</span>
-              </li>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                Professores
-                <span class="badge bg-light text-dark">Planejado</span>
-              </li>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                Turmas e cursos
-                <span class="badge bg-light text-dark">Planejado</span>
-              </li>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                Matrículas e mensalidades
-                <span class="badge bg-light text-dark">Planejado</span>
-              </li>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                Auditoria
-                <span class="badge bg-success text-white">Disponível</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="quickLinks.length" class="col-xl-4">
-        <div class="card">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Acesso rápido</h4>
-          </div>
-          <div class="card-body">
-            <div class="d-grid gap-2">
-              <RouterLink
-                v-for="link in quickLinks"
-                :key="link.to"
-                :to="link.to"
-                class="btn btn-outline-primary"
-              >
-                <i :class="`${link.icon} me-1`"></i> {{ link.label }}
-              </RouterLink>
-            </div>
-          </div>
-        </div>
+        </component>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.dashboard-stat-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dashboard-stat-link:hover .widget-stat.card {
+  transform: translateY(-2px);
+  box-shadow: 0 0.75rem 1.5rem rgba(20, 24, 31, 0.12);
+}
+
+.widget-stat.card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-stat-label {
+  font-size: 0.875rem !important;
+  font-weight: 500;
+  text-transform: none !important;
+  opacity: 0.95;
+}
+
+.dashboard-stat-value {
+  font-size: 2.5rem !important;
+  font-weight: 700 !important;
+  line-height: 1.1;
+  color: #fff !important;
+  margin: 0.25rem 0 0;
+}
+
+.dashboard-stat-hint {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+</style>
