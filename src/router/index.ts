@@ -109,6 +109,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.teachers.view },
     },
     {
+      path: "/leads",
+      name: "Leads",
+      component: () => import("../views/admin/leads/LeadList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.leads.view },
+    },
+    {
+      path: "/leads/create",
+      name: "LeadCreate",
+      component: () => import("../views/admin/leads/LeadForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.leads.create },
+    },
+    {
+      path: "/leads/:id/edit",
+      name: "LeadEdit",
+      component: () => import("../views/admin/leads/LeadForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.leads.update },
+    },
+    {
       path: "/plans",
       name: "Plans",
       component: () => import("../views/admin/plans/PlanList.vue"),
