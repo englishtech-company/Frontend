@@ -127,6 +127,51 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.leads.update },
     },
     {
+      path: "/enrollments",
+      name: "Enrollments",
+      component: () => import("../views/admin/enrollments/EnrollmentList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.view },
+    },
+    {
+      path: "/enrollments/create",
+      name: "EnrollmentCreate",
+      component: () => import("../views/admin/enrollments/EnrollmentForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.create },
+    },
+    {
+      path: "/enrollments/:id/edit",
+      name: "EnrollmentEdit",
+      component: () => import("../views/admin/enrollments/EnrollmentForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.update },
+    },
+    {
+      path: "/enrollment-questions",
+      name: "EnrollmentQuestions",
+      component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionList.vue"),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.enrollmentQuestions.view,
+      },
+    },
+    {
+      path: "/enrollment-questions/create",
+      name: "EnrollmentQuestionCreate",
+      component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.enrollmentQuestions.create,
+      },
+    },
+    {
+      path: "/enrollment-questions/:id/edit",
+      name: "EnrollmentQuestionEdit",
+      component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.enrollmentQuestions.update,
+      },
+    },
+    {
       path: "/plans",
       name: "Plans",
       component: () => import("../views/admin/plans/PlanList.vue"),
@@ -173,6 +218,18 @@ const router = createRouter({
       name: "ExperimentalClassEdit",
       component: () => import("../views/experimental-classes/ExperimentalClassForm.vue"),
       meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.update },
+    },
+    {
+      path: "/enrollment/:token",
+      name: "PublicEnrollment",
+      component: () => import("../views/pages/PublicEnrollmentForm.vue"),
+      meta: { layout4: "layout4" },
+    },
+    {
+      path: "/matricula/:token",
+      redirect: (to) => ({
+        path: `/enrollment/${String(to.params.token)}`,
+      }),
     },
     {
       path: "/page-login",
@@ -247,6 +304,14 @@ const publicPaths = new Set([
   "/page-lock-screen",
 ]);
 
+function isPublicPath(path: string): boolean {
+  if (publicPaths.has(path)) {
+    return true;
+  }
+
+  return path.startsWith("/enrollment/");
+}
+
 router.beforeEach(async (to) => {
   const { useAuthStore } = await import("@/stores/auth");
   const auth = useAuthStore();
@@ -255,7 +320,7 @@ router.beforeEach(async (to) => {
     await auth.fetchMe();
   }
 
-  const isPublic = publicPaths.has(to.path);
+  const isPublic = isPublicPath(to.path);
 
   if (!isPublic && !auth.isAuthenticated) {
     return {

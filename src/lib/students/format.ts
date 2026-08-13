@@ -44,6 +44,18 @@ export function formatStudentDate(value?: string | null): string {
   return new Date(value).toLocaleDateString("pt-BR");
 }
 
+export function formatCpf(value?: string | null): string {
+  if (!value) return "—";
+
+  const digits = value.replace(/\D/g, "");
+
+  if (digits.length !== 11) {
+    return value;
+  }
+
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
 export function formatStudentDateTime(value?: string | null): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("pt-BR");

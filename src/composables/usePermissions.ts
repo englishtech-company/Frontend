@@ -33,6 +33,22 @@ export function usePermissions() {
     canCreateLeads: computed(() => auth.hasPermission(PERMISSIONS.leads.create)),
     canUpdateLeads: computed(() => auth.hasPermission(PERMISSIONS.leads.update)),
     canDeleteLeads: computed(() => auth.hasPermission(PERMISSIONS.leads.delete)),
+    canViewEnrollments: computed(() => auth.hasPermission(PERMISSIONS.enrollments.view)),
+    canCreateEnrollments: computed(() => auth.hasPermission(PERMISSIONS.enrollments.create)),
+    canUpdateEnrollments: computed(() => auth.hasPermission(PERMISSIONS.enrollments.update)),
+    canDeleteEnrollments: computed(() => auth.hasPermission(PERMISSIONS.enrollments.delete)),
+    canViewEnrollmentQuestions: computed(() =>
+      auth.hasPermission(PERMISSIONS.enrollmentQuestions.view)
+    ),
+    canCreateEnrollmentQuestions: computed(() =>
+      auth.hasPermission(PERMISSIONS.enrollmentQuestions.create)
+    ),
+    canUpdateEnrollmentQuestions: computed(() =>
+      auth.hasPermission(PERMISSIONS.enrollmentQuestions.update)
+    ),
+    canDeleteEnrollmentQuestions: computed(() =>
+      auth.hasPermission(PERMISSIONS.enrollmentQuestions.delete)
+    ),
     canViewPermissions: computed(() => auth.hasPermission(PERMISSIONS.permissions.view)),
     canViewAudits: computed(() => auth.hasPermission(PERMISSIONS.audits.view)),
     canViewExperimentalClasses: computed(() => auth.hasPermission(PERMISSIONS.experimentalClasses.view)),

@@ -111,7 +111,7 @@ onUnmounted(() => {
       </div>
     </component>
     <component :is="$route.meta.layout4">
-      <div class="vh-100">
+      <div class="layout-public min-vh-100">
         <RouterView />
       </div>
     </component>
