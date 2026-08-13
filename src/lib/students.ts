@@ -11,6 +11,7 @@ type ListParams = {
 export type StudentPayload = {
   name: string;
   email: string;
+  cpf?: string | null;
   phone?: string | null;
   address?: string | null;
   birthdate?: string | null;

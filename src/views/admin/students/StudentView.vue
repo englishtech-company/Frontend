@@ -6,6 +6,7 @@ import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholde
 import { usePermissions } from "@/composables/usePermissions";
 import { getStudent } from "@/lib/students";
 import {
+  formatCpf,
   formatStudentDate,
   formatStudentDateTime,
   formatStudentPlanSummary,
@@ -147,6 +148,10 @@ onMounted(loadStudent);
                   <li class="list-group-item d-flex px-0 justify-content-between">
                     <strong>E-mail</strong>
                     <span class="mb-0 text-end">{{ student.email }}</span>
+                  </li>
+                  <li class="list-group-item d-flex px-0 justify-content-between">
+                    <strong>CPF</strong>
+                    <span class="mb-0">{{ formatCpf(student.cpf) }}</span>
                   </li>
                   <li class="list-group-item d-flex px-0 justify-content-between">
                     <strong>Telefone</strong>

@@ -62,6 +62,14 @@ export async function api<T = unknown>(
 
     if (typeof payloadRecord.errors === "string" && payloadRecord.errors.trim()) {
       detail = payloadRecord.errors;
+    } else if (payloadRecord.errors && typeof payloadRecord.errors === "object") {
+      const fieldErrors = Object.values(payloadRecord.errors as Record<string, unknown>)
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+      if (fieldErrors.length > 0) {
+        detail = fieldErrors[0];
+      }
     }
 
     const error = new Error(detail) as ApiError;

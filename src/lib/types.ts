@@ -99,6 +99,7 @@ export type Student = {
   id: number;
   name: string;
   email: string;
+  cpf?: string | null;
   phone?: string | null;
   address?: string | null;
   birthdate?: string | null;
@@ -195,4 +196,104 @@ export type Lead = {
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+};
+
+export type EnrollmentStatus = "pending" | "submitted" | "confirmed" | "cancelled";
+
+export type EnrollmentPaymentMethod = "pix" | "credit_card";
+
+export type EnrollmentQuestionType =
+  | "text"
+  | "textarea"
+  | "radio"
+  | "checkbox"
+  | "select"
+  | "number"
+  | "date";
+
+export type EnrollmentQuestion = {
+  id: number;
+  label: string;
+  help_text?: string | null;
+  type: EnrollmentQuestionType;
+  required: boolean;
+  options?: string[] | null;
+  sort_order: number;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  relationships?: Record<string, unknown>;
+};
+
+export type EnrollmentFormQuestion = {
+  id: number;
+  enrollment_id: number;
+  enrollment_question_id?: number | null;
+  label: string;
+  help_text?: string | null;
+  type: EnrollmentQuestionType;
+  required: boolean;
+  options?: string[] | null;
+  sort_order: number;
+};
+
+export type StudentExtra = {
+  id: number;
+  student_id: number;
+  enrollment_id: number;
+  answers: Record<string, string | string[]>;
+};
+
+export type Enrollment = {
+  id: number;
+  student_id?: number | null;
+  plan_variant_id: number;
+  discount_percent?: string | number | null;
+  payment_method: EnrollmentPaymentMethod;
+  status: EnrollmentStatus;
+  public_token: string;
+  submitted_at?: string | null;
+  confirmed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  student?: Student | null;
+  plan_variant?: PlanVariant | null;
+  relationships?: {
+    student?: Student | null;
+    plan_variant?: PlanVariant | null;
+    form_questions?: EnrollmentFormQuestion[];
+    student_extra?: StudentExtra | null;
+    public_url?: string;
+  };
+};
+
+export type PublicEnrollment = {
+  id: number;
+  status: EnrollmentStatus;
+  discount_percent?: string | number | null;
+  payment_method: EnrollmentPaymentMethod;
+  plan_variant?: {
+    id: number;
+    monthly_price: string;
+    plan?: {
+      name: string;
+      commitment: PlanCommitment;
+      duration_months: number;
+    } | null;
+    plan_workload?: {
+      name: string;
+      hours_per_week: number;
+    } | null;
+  } | null;
+  student?: {
+    name: string;
+    email: string;
+    cpf?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    birthdate?: string | null;
+  } | null;
+  form_questions: EnrollmentFormQuestion[];
 };

@@ -11,6 +11,7 @@ import {
   getStudentCurrentPlanVariant,
   getStudentCurrentTeacher,
 } from "@/lib/students/format";
+import { maskCpf, maskPhone } from "@/lib/br/masks";
 
 const route = useRoute();
 const router = useRouter();
@@ -20,6 +21,7 @@ const studentId = computed(() => Number(route.params.id));
 
 const name = ref("");
 const email = ref("");
+const cpf = ref("");
 const phone = ref("");
 const address = ref("");
 const birthdate = ref("");
@@ -66,7 +68,8 @@ async function loadForm() {
     const student = await getStudent(studentId.value);
     name.value = student.name || "";
     email.value = student.email || "";
-    phone.value = student.phone || "";
+    cpf.value = student.cpf ? maskCpf(student.cpf) : "";
+    phone.value = student.phone ? maskPhone(student.phone) : "";
     address.value = student.address || "";
     birthdate.value = student.birthdate ? student.birthdate.split("T")[0] : "";
     status.value = student.status || "active";
@@ -93,6 +96,7 @@ async function submit() {
     const payload = {
       name: name.value,
       email: email.value,
+      cpf: cpf.value || undefined,
       phone: phone.value || undefined,
       address: address.value || undefined,
       birthdate: birthdate.value || undefined,
@@ -118,6 +122,14 @@ async function submit() {
 }
 
 onMounted(loadForm);
+
+function onCpfInput(event: Event) {
+  cpf.value = maskCpf((event.target as HTMLInputElement).value);
+}
+
+function onPhoneInput(event: Event) {
+  phone.value = maskPhone((event.target as HTMLInputElement).value);
+}
 </script>
 
 <template>
@@ -167,13 +179,29 @@ onMounted(loadForm);
 
               <div class="row">
                 <div class="col-lg-6 mb-3">
+                  <label class="form-label student-form__label" for="cpf">CPF *</label>
+                  <input
+                    id="cpf"
+                    :value="cpf"
+                    type="text"
+                    class="form-control"
+                    inputmode="numeric"
+                    maxlength="14"
+                    placeholder="000.000.000-00"
+                    required
+                    @input="onCpfInput"
+                  />
+                </div>
+                <div class="col-lg-6 mb-3">
                   <label class="form-label student-form__label" for="phone">Telefone</label>
                   <input
                     id="phone"
-                    v-model.trim="phone"
+                    :value="phone"
                     type="text"
                     class="form-control"
+                    maxlength="15"
                     placeholder="(00) 00000-0000"
+                    @input="onPhoneInput"
                   />
                 </div>
                 <div class="col-lg-6 mb-3">

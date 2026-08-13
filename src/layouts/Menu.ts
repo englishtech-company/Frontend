@@ -51,6 +51,23 @@ const MenuItems = reactive<menuType[]>([
     permission: PERMISSIONS.leads.view,
   },
   {
+    icons: "la la-file-alt",
+    title: "Matrículas",
+    className: "sub-menu",
+    subMenuItems: [
+      {
+        menu: "Listagem",
+        to: "/enrollments",
+        permission: PERMISSIONS.enrollments.view,
+      },
+      {
+        menu: "Perguntas de matrícula",
+        to: "/enrollment-questions",
+        permission: PERMISSIONS.enrollmentQuestions.view,
+      },
+    ],
+  },
+  {
     icons: "la la-cog",
     title: "Administração",
     className: "sub-menu",
