@@ -196,3 +196,27 @@ export type Lead = {
   updated_at?: string;
   deleted_at?: string | null;
 };
+
+export type ExperimentalClass = {
+  id: number;
+  interested_id: number;
+  teacher_id?: number | null;
+  date_class: string;
+  status_class: string;
+  conversao: boolean;
+  self_declared_level?: string | null;
+  evaluation_listening?: string | null;
+  evaluation_speaking?: string | null;
+  evaluation_vocabulary?: string | null;
+  evaluation_grammar?: string | null;
+  observations_feedback?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  interested?: Lead;
+  teacher?: User | null;
+  relationships?: {
+    interested?: Lead;
+    teacher?: User | null;
+  };
+};
