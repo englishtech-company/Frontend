@@ -51,6 +51,12 @@ const MenuItems = reactive<menuType[]>([
     permission: PERMISSIONS.leads.view,
   },
   {
+    icons: "la la-flask",
+    title: "Aulas Experimentais",
+    to: "/experimental-classes",
+    permission: PERMISSIONS.experimentalClasses.view,
+  },
+  {
     icons: "la la-file-alt",
     title: "Matrículas",
     className: "sub-menu",

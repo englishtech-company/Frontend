@@ -22,6 +22,7 @@ const MODULE_LABELS: Record<string, string> = {
   roles: "Perfis",
   permissions: "Permissões",
   audits: "Auditoria",
+  "experimental-classes": "Aulas Experimentais",
 };
 
 const ACTION_LABELS: Record<string, string> = {

@@ -51,6 +51,10 @@ export function usePermissions() {
     ),
     canViewPermissions: computed(() => auth.hasPermission(PERMISSIONS.permissions.view)),
     canViewAudits: computed(() => auth.hasPermission(PERMISSIONS.audits.view)),
+    canViewExperimentalClasses: computed(() => auth.hasPermission(PERMISSIONS.experimentalClasses.view)),
+    canCreateExperimentalClasses: computed(() => auth.hasPermission(PERMISSIONS.experimentalClasses.create)),
+    canUpdateExperimentalClasses: computed(() => auth.hasPermission(PERMISSIONS.experimentalClasses.update)),
+    canDeleteExperimentalClasses: computed(() => auth.hasPermission(PERMISSIONS.experimentalClasses.delete)),
     can,
   };
 }
