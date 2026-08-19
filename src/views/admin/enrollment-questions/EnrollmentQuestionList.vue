@@ -51,7 +51,7 @@ async function loadQuestions() {
 
   try {
     const [result, plucks] = await Promise.all([
-      listEnrollmentQuestions({ page: page.value, limit: 50 }),
+      listEnrollmentQuestions({ page: page.value }),
       getEnrollmentQuestionPlucks(),
     ]);
 

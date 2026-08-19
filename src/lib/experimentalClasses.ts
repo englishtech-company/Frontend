@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, ExperimentalClass, Paginated } from "@/lib/types";
 
 const MODULE = "experimental-classes";
@@ -8,6 +9,16 @@ type ListParams = {
   limit?: number;
   search?: string;
   status_class?: string;
+};
+
+type ExperimentalClassPlucksResponse = {
+  action: string;
+  status: number;
+  msg: string;
+  plucks: {
+    interested: Record<string, string>;
+    teachers: Record<string, string>;
+  };
 };
 
 export type ExperimentalClassPayload = {
@@ -24,12 +35,21 @@ export type ExperimentalClassPayload = {
   observations_feedback?: string | null;
 };
 
+export async function getExperimentalClassPlucks(): Promise<{
+  interested: Record<string, string>;
+  teachers: Record<string, string>;
+}> {
+  const response = await api<ExperimentalClassPlucksResponse>(`/${MODULE}/plucks`);
+
+  return response.plucks;
+}
+
 export async function listExperimentalClasses(
   params: ListParams = {}
 ): Promise<Paginated<ExperimentalClass>> {
   const query = new URLSearchParams({
     "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? 20),
+    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
   });
 
   if (params.status_class) {

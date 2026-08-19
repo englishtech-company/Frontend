@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, Paginated, Role, User } from "@/lib/types";
 
 type ListParams = {
@@ -48,7 +49,7 @@ export async function getRoleOptions(): Promise<RoleOption[]> {
 
 export async function listRoles(params: ListParams = {}): Promise<Paginated<Role>> {
   const page = params.page ?? 1;
-  const limit = params.limit ?? 20;
+  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
   const response = await api<ApiListResponse<"roles", Role>>(
     `/roles?pagination[page]=${page}&pagination[limit]=${limit}`
   );

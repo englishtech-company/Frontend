@@ -215,10 +215,10 @@ export type ExperimentalClass = {
   updated_at?: string;
   deleted_at?: string | null;
   interested?: Lead;
-  teacher?: User | null;
+  teacher?: Teacher | null;
   relationships?: {
     interested?: Lead;
-    teacher?: User | null;
+    teacher?: Teacher | null;
   };
 };
 export type EnrollmentStatus = "pending" | "submitted" | "confirmed" | "cancelled";

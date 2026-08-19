@@ -6,19 +6,30 @@ import type { Permission } from "@/lib/types";
 const permissions = ref<Permission[]>([]);
 const loading = ref(true);
 const error = ref("");
+const page = ref(1);
+const lastPage = ref(1);
+const total = ref(0);
 
 async function loadPermissions() {
   loading.value = true;
   error.value = "";
 
   try {
-    const result = await listPermissions({ limit: 100 });
+    const result = await listPermissions({ page: page.value });
     permissions.value = result.data;
+    lastPage.value = result.last_page;
+    total.value = result.total;
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao carregar permissões";
   } finally {
     loading.value = false;
   }
+}
+
+function goToPage(nextPage: number) {
+  if (nextPage < 1 || nextPage > lastPage.value) return;
+  page.value = nextPage;
+  loadPermissions();
 }
 
 onMounted(loadPermissions);
@@ -41,7 +52,7 @@ onMounted(loadPermissions);
       <div class="col-12">
         <div class="card">
           <div class="card-header">
-            <h4 class="card-title mb-0">Lista de permissões ({{ permissions.length }})</h4>
+            <h4 class="card-title mb-0">Lista de permissões ({{ total }})</h4>
           </div>
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">Carregando...</div>
@@ -67,6 +78,29 @@ onMounted(loadPermissions);
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div
+              v-if="lastPage > 1"
+              class="d-flex justify-content-between align-items-center mt-3"
+            >
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                :disabled="page <= 1"
+                @click="goToPage(page - 1)"
+              >
+                Anterior
+              </button>
+              <span>Página {{ page }} de {{ lastPage }}</span>
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                :disabled="page >= lastPage"
+                @click="goToPage(page + 1)"
+              >
+                Próxima
+              </button>
             </div>
           </div>
         </div>

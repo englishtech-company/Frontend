@@ -1,10 +1,14 @@
 import { formatPlanVariantOptionLabel, formatPrice } from "@/lib/plans/format";
 import type {
   Enrollment,
+  EnrollmentFormQuestion,
   EnrollmentPaymentMethod,
+  EnrollmentQuestionType,
   EnrollmentStatus,
   Plan,
   PlanVariant,
+  Student,
+  StudentExtra,
 } from "@/lib/types";
 
 export const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
@@ -70,6 +74,74 @@ export function formatEnrollmentPlanLabel(
 
 export function formatEnrollmentNumber(id: number): string {
   return `#${String(id).padStart(6, "0")}`;
+}
+
+export const ENROLLMENT_QUESTION_TYPE_LABELS: Record<EnrollmentQuestionType, string> = {
+  text: "Texto curto",
+  textarea: "Texto livre",
+  radio: "Múltipla escolha (uma opção)",
+  checkbox: "Múltipla escolha (várias opções)",
+  select: "Lista suspensa",
+  number: "Número",
+  date: "Data",
+};
+
+export function formatEnrollmentDate(value?: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("pt-BR");
+}
+
+export function formatEnrollmentDateTime(value?: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("pt-BR");
+}
+
+export function getEnrollmentStudent(enrollment: Enrollment): Student | null {
+  return enrollment.relationships?.student ?? enrollment.student ?? null;
+}
+
+export function getEnrollmentFormQuestions(
+  enrollment: Enrollment
+): EnrollmentFormQuestion[] {
+  return enrollment.relationships?.form_questions ?? [];
+}
+
+export function getEnrollmentStudentExtra(enrollment: Enrollment): StudentExtra | null {
+  return enrollment.relationships?.student_extra ?? null;
+}
+
+export function getEnrollmentAnswer(
+  enrollment: Enrollment,
+  questionId: number
+): string | string[] | null {
+  const extra = getEnrollmentStudentExtra(enrollment);
+  if (!extra?.answers) return null;
+
+  const key = String(questionId);
+  const value = extra.answers[key];
+  return value === undefined || value === null ? null : value;
+}
+
+export function formatEnrollmentAnswer(
+  value: string | string[] | null | undefined,
+  type?: EnrollmentQuestionType
+): string {
+  if (value === null || value === undefined || value === "") return "—";
+
+  if (Array.isArray(value)) {
+    return value.length ? value.join(", ") : "—";
+  }
+
+  if (type === "date" && value) {
+    return new Date(value).toLocaleDateString("pt-BR");
+  }
+
+  return value;
+}
+
+export function hasEnrollmentAnswers(enrollment: Enrollment): boolean {
+  const extra = getEnrollmentStudentExtra(enrollment);
+  return Boolean(extra?.answers && Object.keys(extra.answers).length > 0);
 }
 
 export function formatDiscountedPrice(

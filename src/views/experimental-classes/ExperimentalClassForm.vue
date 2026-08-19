@@ -1,16 +1,16 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   createExperimentalClass,
   getExperimentalClass,
+  getExperimentalClassPlucks,
   updateExperimentalClass,
 } from "@/lib/experimentalClasses";
 import type { ExperimentalClassPayload } from "@/lib/experimentalClasses";
-import { listLeads } from "@/lib/leads";
-import { listUsers } from "@/lib/users";
-import type { Lead, User } from "@/lib/types";
 
 const route = useRoute();
 const router = useRouter();
@@ -29,16 +29,16 @@ const canSave = computed(() =>
 );
 
 // Form fields
-const interestedId = ref<number | "">("");
-const teacherId = ref<number | "">("");
+const interestedId = ref<string | null>(null);
+const teacherId = ref<string | null>(null);
 const dateClass = ref("");
-const statusClass = ref("agendada");
+const statusClass = ref<string | null>("agendada");
 const conversao = ref(false);
 const selfDeclaredLevel = ref("");
-const evaluationListening = ref("");
-const evaluationSpeaking = ref("");
-const evaluationVocabulary = ref("");
-const evaluationGrammar = ref("");
+const evaluationListening = ref<string | null>(null);
+const evaluationSpeaking = ref<string | null>(null);
+const evaluationVocabulary = ref<string | null>(null);
+const evaluationGrammar = ref<string | null>(null);
 const observationsFeedback = ref("");
 
 // UI state
@@ -46,18 +46,16 @@ const loading = ref(false);
 const saving = ref(false);
 const error = ref("");
 
-// Select options
-const leads = ref<Lead[]>([]);
-const users = ref<User[]>([]);
+const leadOptions = ref<SelectOption[]>([]);
+const teacherOptions = ref<SelectOption[]>([]);
 
-const STATUS_OPTIONS = [
+const statusOptions: SelectOption[] = [
   { value: "agendada", label: "Agendada" },
   { value: "realizada", label: "Realizada" },
   { value: "cancelada", label: "Cancelada" },
 ];
 
-const EVALUATION_OPTIONS = [
-  { value: "", label: "Não avaliado" },
+const evaluationOptions: SelectOption[] = [
   { value: "A1", label: "A1 – Iniciante" },
   { value: "A2", label: "A2 – Básico" },
   { value: "B1", label: "B1 – Intermediário" },
@@ -68,14 +66,20 @@ const EVALUATION_OPTIONS = [
 
 async function loadSelectOptions() {
   try {
-    const [leadsPage, usersPage] = await Promise.all([
-      listLeads({ limit: 100 }),
-      listUsers({ limit: 100 }),
-    ]);
-    leads.value = leadsPage.data;
-    users.value = usersPage.data;
-  } catch {
-    // Non-critical; selects will simply be empty
+    const plucks = await getExperimentalClassPlucks();
+    leadOptions.value = Object.entries(plucks.interested).map(([value, label]) => ({
+      value,
+      label,
+    }));
+    teacherOptions.value = Object.entries(plucks.teachers).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  } catch (e) {
+    error.value =
+      e instanceof Error
+        ? e.message
+        : "Erro ao carregar interessados e professores";
   }
 }
 
@@ -88,17 +92,17 @@ async function loadForm() {
   try {
     const item = await getExperimentalClass(recordId.value);
 
-    interestedId.value = item.interested_id;
-    teacherId.value = item.teacher_id ?? "";
+    interestedId.value = String(item.interested_id);
+    teacherId.value = item.teacher_id != null ? String(item.teacher_id) : null;
     // date_class comes as ISO from backend; slice to YYYY-MM-DD for <input type="date">
     dateClass.value = item.date_class ? item.date_class.slice(0, 10) : "";
     statusClass.value = item.status_class;
     conversao.value = item.conversao;
     selfDeclaredLevel.value = item.self_declared_level ?? "";
-    evaluationListening.value = item.evaluation_listening ?? "";
-    evaluationSpeaking.value = item.evaluation_speaking ?? "";
-    evaluationVocabulary.value = item.evaluation_vocabulary ?? "";
-    evaluationGrammar.value = item.evaluation_grammar ?? "";
+    evaluationListening.value = item.evaluation_listening ?? null;
+    evaluationSpeaking.value = item.evaluation_speaking ?? null;
+    evaluationVocabulary.value = item.evaluation_vocabulary ?? null;
+    evaluationGrammar.value = item.evaluation_grammar ?? null;
     observationsFeedback.value = item.observations_feedback ?? "";
   } catch (e) {
     error.value =
@@ -126,14 +130,19 @@ async function submit() {
     return;
   }
 
+  if (!statusClass.value) {
+    error.value = "Selecione o status.";
+    return;
+  }
+
   saving.value = true;
   error.value = "";
 
   const payload: ExperimentalClassPayload = {
     interested_id: Number(interestedId.value),
-    teacher_id: teacherId.value !== "" ? Number(teacherId.value) : null,
+    teacher_id: teacherId.value ? Number(teacherId.value) : null,
     date_class: dateClass.value,
-    status_class: statusClass.value,
+    status_class: statusClass.value ?? "agendada",
     conversao: conversao.value,
     self_declared_level: selfDeclaredLevel.value.trim() || null,
     evaluation_listening: evaluationListening.value || null,
@@ -203,44 +212,26 @@ onMounted(async () => {
               <div class="row">
                 <div class="col-sm-6">
                   <div class="form-group">
-                    <label class="form-label" for="exp-interested">
-                      Interessado *
-                    </label>
-                    <select
+                    <SingleSelect
                       id="exp-interested"
                       v-model="interestedId"
-                      class="form-select"
+                      label="Interessado"
+                      :options="leadOptions"
+                      placeholder="Selecione um interessado"
                       required
-                    >
-                      <option value="">Selecione um interessado</option>
-                      <option
-                        v-for="lead in leads"
-                        :key="lead.id"
-                        :value="lead.id"
-                      >
-                        {{ lead.name }}
-                      </option>
-                    </select>
+                    />
                   </div>
                 </div>
 
                 <div class="col-sm-6">
                   <div class="form-group">
-                    <label class="form-label" for="exp-teacher">Professor</label>
-                    <select
+                    <SingleSelect
                       id="exp-teacher"
                       v-model="teacherId"
-                      class="form-select"
-                    >
-                      <option value="">Sem professor atribuído</option>
-                      <option
-                        v-for="user in users"
-                        :key="user.id"
-                        :value="user.id"
-                      >
-                        {{ user.name }}
-                      </option>
-                    </select>
+                      label="Professor"
+                      :options="teacherOptions"
+                      placeholder="Sem professor atribuído"
+                    />
                   </div>
                 </div>
               </div>
@@ -264,23 +255,15 @@ onMounted(async () => {
 
                 <div class="col-sm-4">
                   <div class="form-group">
-                    <label class="form-label" for="exp-status">
-                      Status *
-                    </label>
-                    <select
+                    <SingleSelect
                       id="exp-status"
                       v-model="statusClass"
-                      class="form-select"
+                      label="Status"
+                      :options="statusOptions"
+                      placeholder="Selecione o status"
+                      :searchable="false"
                       required
-                    >
-                      <option
-                        v-for="opt in STATUS_OPTIONS"
-                        :key="opt.value"
-                        :value="opt.value"
-                      >
-                        {{ opt.label }}
-                      </option>
-                    </select>
+                    />
                   </div>
                 </div>
 
@@ -327,77 +310,53 @@ onMounted(async () => {
               <div class="row">
                 <div class="col-sm-3">
                   <div class="form-group">
-                    <label class="form-label" for="exp-listening">Listening</label>
-                    <select
+                    <SingleSelect
                       id="exp-listening"
                       v-model="evaluationListening"
-                      class="form-select"
-                    >
-                      <option
-                        v-for="opt in EVALUATION_OPTIONS"
-                        :key="opt.value"
-                        :value="opt.value"
-                      >
-                        {{ opt.label }}
-                      </option>
-                    </select>
+                      label="Listening"
+                      :options="evaluationOptions"
+                      placeholder="Não avaliado"
+                      :searchable="false"
+                    />
                   </div>
                 </div>
 
                 <div class="col-sm-3">
                   <div class="form-group">
-                    <label class="form-label" for="exp-speaking">Speaking</label>
-                    <select
+                    <SingleSelect
                       id="exp-speaking"
                       v-model="evaluationSpeaking"
-                      class="form-select"
-                    >
-                      <option
-                        v-for="opt in EVALUATION_OPTIONS"
-                        :key="opt.value"
-                        :value="opt.value"
-                      >
-                        {{ opt.label }}
-                      </option>
-                    </select>
+                      label="Speaking"
+                      :options="evaluationOptions"
+                      placeholder="Não avaliado"
+                      :searchable="false"
+                    />
                   </div>
                 </div>
 
                 <div class="col-sm-3">
                   <div class="form-group">
-                    <label class="form-label" for="exp-vocabulary">Vocabulary</label>
-                    <select
+                    <SingleSelect
                       id="exp-vocabulary"
                       v-model="evaluationVocabulary"
-                      class="form-select"
-                    >
-                      <option
-                        v-for="opt in EVALUATION_OPTIONS"
-                        :key="opt.value"
-                        :value="opt.value"
-                      >
-                        {{ opt.label }}
-                      </option>
-                    </select>
+                      label="Vocabulary"
+                      :options="evaluationOptions"
+                      placeholder="Não avaliado"
+                      :searchable="false"
+                    />
                   </div>
                 </div>
 
                 <div class="col-sm-3">
                   <div class="form-group">
-                    <label class="form-label" for="exp-grammar">Grammar</label>
-                    <select
+                    <SingleSelect
                       id="exp-grammar"
                       v-model="evaluationGrammar"
-                      class="form-select"
-                    >
-                      <option
-                        v-for="opt in EVALUATION_OPTIONS"
-                        :key="opt.value"
-                        :value="opt.value"
-                      >
-                        {{ opt.label }}
-                      </option>
-                    </select>
+                      label="Grammar"
+                      :options="evaluationOptions"
+                      placeholder="Não avaliado"
+                      :searchable="false"
+                    />
                   </div>
                 </div>
               </div>

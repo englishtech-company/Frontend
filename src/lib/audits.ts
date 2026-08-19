@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, AuditLog, Paginated } from "@/lib/types";
 
 type ListParams = {
@@ -9,7 +10,7 @@ type ListParams = {
 
 export async function listAudits(params: ListParams = {}): Promise<Paginated<AuditLog>> {
   const page = params.page ?? 1;
-  const limit = params.limit ?? 20;
+  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
   let url = `/audits?pagination[page]=${page}&pagination[limit]=${limit}`;
 
   if (params.event) {

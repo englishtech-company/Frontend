@@ -145,6 +145,12 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.update },
     },
     {
+      path: "/enrollments/:id",
+      name: "EnrollmentView",
+      component: () => import("../views/admin/enrollments/EnrollmentView.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.view },
+    },
+    {
       path: "/enrollment-questions",
       name: "EnrollmentQuestions",
       component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionList.vue"),

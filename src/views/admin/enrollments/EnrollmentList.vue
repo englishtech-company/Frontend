@@ -33,7 +33,10 @@ const statusFilter = ref<EnrollmentStatus | "">("");
 const copiedId = ref<number | null>(null);
 
 const showActions = computed(
-  () => canUpdateEnrollments.value || canDeleteEnrollments.value
+  () =>
+    canViewEnrollments.value ||
+    canUpdateEnrollments.value ||
+    canDeleteEnrollments.value
 );
 
 async function loadEnrollments() {
@@ -181,7 +184,16 @@ onMounted(loadEnrollments);
 
                   <tr v-for="enrollment in enrollments" :key="enrollment.id">
                     <td>{{ formatEnrollmentNumber(enrollment.id) }}</td>
-                    <td>{{ getEnrollmentStudentName(enrollment) }}</td>
+                    <td>
+                      <RouterLink
+                        v-if="canViewEnrollments"
+                        :to="`/enrollments/${enrollment.id}`"
+                        class="text-primary"
+                      >
+                        {{ getEnrollmentStudentName(enrollment) }}
+                      </RouterLink>
+                      <span v-else>{{ getEnrollmentStudentName(enrollment) }}</span>
+                    </td>
                     <td>{{ formatEnrollmentPlanLabel(enrollment) }}</td>
                     <td>{{ PAYMENT_METHOD_LABELS[enrollment.payment_method] }}</td>
                     <td>
@@ -205,9 +217,18 @@ onMounted(loadEnrollments);
                     </td>
                     <td v-if="showActions" class="text-end text-nowrap">
                       <RouterLink
+                        v-if="canViewEnrollments"
+                        :to="`/enrollments/${enrollment.id}`"
+                        class="btn btn-xs sharp btn-info me-1"
+                        title="Visualizar"
+                      >
+                        <i class="fa fa-eye"></i>
+                      </RouterLink>
+                      <RouterLink
                         v-if="canUpdateEnrollments"
                         :to="`/enrollments/${enrollment.id}/edit`"
                         class="btn btn-xs sharp btn-primary me-1"
+                        title="Editar"
                       >
                         <i class="fa fa-pencil"></i>
                       </RouterLink>
