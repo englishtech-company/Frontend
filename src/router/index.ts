@@ -145,6 +145,12 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.update },
     },
     {
+      path: "/enrollments/:id",
+      name: "EnrollmentView",
+      component: () => import("../views/admin/enrollments/EnrollmentView.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.view },
+    },
+    {
       path: "/enrollment-questions",
       name: "EnrollmentQuestions",
       component: () =>
@@ -285,6 +291,24 @@ const router = createRouter({
       name: "Audits",
       component: () => import("../views/admin/audits/AuditList.vue"),
       meta: { layout3: "layout3", permission: PERMISSIONS.audits.view },
+    },
+    {
+      path: "/experimental-classes",
+      name: "ExperimentalClasses",
+      component: () => import("../views/experimental-classes/ExperimentalClassList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.view },
+    },
+    {
+      path: "/experimental-classes/create",
+      name: "ExperimentalClassCreate",
+      component: () => import("../views/experimental-classes/ExperimentalClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.create },
+    },
+    {
+      path: "/experimental-classes/:id/edit",
+      name: "ExperimentalClassEdit",
+      component: () => import("../views/experimental-classes/ExperimentalClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.update },
     },
     {
       path: "/enrollment/:token",

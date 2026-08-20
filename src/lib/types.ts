@@ -6,13 +6,19 @@ export type Paginated<T> = {
   total: number;
 };
 
-export type ApiListResponse<TKey extends string, T> = {
+export type ApiListResponse<
+  TKey extends string,
+  T
+> = {
   action: string;
   status: number;
   msg: string;
 } & Record<TKey, Paginated<T>>;
 
-export type ApiItemResponse<TKey extends string, T> = {
+export type ApiItemResponse<
+  TKey extends string,
+  T
+> = {
   action: string;
   status: number;
   msg: string;
@@ -63,8 +69,14 @@ export type AuditLog = {
   event: string;
   auditable_type: string;
   auditable_id: number;
-  old_values: Record<string, unknown> | null;
-  new_values: Record<string, unknown> | null;
+  old_values: Record<
+    string,
+    unknown
+  > | null;
+  new_values: Record<
+    string,
+    unknown
+  > | null;
   url: string | null;
   ip_address: string | null;
   user_agent: string | null;
@@ -108,17 +120,27 @@ export type Student = {
   end_date?: string | null;
   created_at?: string;
   updated_at?: string;
-  current_teacher_assignment?: StudentTeacherAssignment | null;
-  current_enrollment_assignment?: StudentEnrollmentAssignment | null;
+  current_teacher_assignment?:
+    | StudentTeacherAssignment
+    | null;
+  current_enrollment_assignment?:
+    | StudentEnrollmentAssignment
+    | null;
   relationships?: {
-    teacher_assignments?: StudentTeacherAssignment[];
+    teacher_assignments?:
+      StudentTeacherAssignment[];
     current_teacher?: Teacher | null;
-    enrollment_assignments?: StudentEnrollmentAssignment[];
-    current_plan_variant?: PlanVariant | null;
+    enrollment_assignments?:
+      StudentEnrollmentAssignment[];
+    current_plan_variant?:
+      | PlanVariant
+      | null;
   };
 };
 
-export type TeacherStatus = "active" | "inactive";
+export type TeacherStatus =
+  | "active"
+  | "inactive";
 
 export type Teacher = {
   id: number;
@@ -131,7 +153,8 @@ export type Teacher = {
   updated_at?: string;
   deleted_at?: string | null;
   relationships?: {
-    student_assignments?: StudentTeacherAssignment[];
+    student_assignments?:
+      StudentTeacherAssignment[];
     current_students?: Student[];
   };
 };
@@ -196,11 +219,50 @@ export type Lead = {
   source: string;
   objective: string;
   self_declared_level: string;
-  registration_source: LeadRegistrationSource;
-  raw_payload?: Record<string, unknown> | null;
+  registration_source:
+    LeadRegistrationSource;
+  raw_payload?:
+    | Record<string, unknown>
+    | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+};
+
+export type ExperimentalClass = {
+  id: number;
+  interested_id: number;
+  teacher_id?: number | null;
+  date_class: string;
+  status_class: string;
+  conversao: boolean;
+  self_declared_level?:
+    | string
+    | null;
+  evaluation_listening?:
+    | string
+    | null;
+  evaluation_speaking?:
+    | string
+    | null;
+  evaluation_vocabulary?:
+    | string
+    | null;
+  evaluation_grammar?:
+    | string
+    | null;
+  observations_feedback?:
+    | string
+    | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  interested?: Lead;
+  teacher?: Teacher | null;
+  relationships?: {
+    interested?: Lead;
+    teacher?: Teacher | null;
+  };
 };
 
 export type EnrollmentStatus =
@@ -234,13 +296,18 @@ export type EnrollmentQuestion = {
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
-  relationships?: Record<string, unknown>;
+  relationships?: Record<
+    string,
+    unknown
+  >;
 };
 
 export type EnrollmentFormQuestion = {
   id: number;
   enrollment_id: number;
-  enrollment_question_id?: number | null;
+  enrollment_question_id?:
+    | number
+    | null;
   label: string;
   help_text?: string | null;
   type: EnrollmentQuestionType;
@@ -253,15 +320,22 @@ export type StudentExtra = {
   id: number;
   student_id: number;
   enrollment_id: number;
-  answers: Record<string, string | string[]>;
+  answers: Record<
+    string,
+    string | string[]
+  >;
 };
 
 export type Enrollment = {
   id: number;
   student_id?: number | null;
   plan_variant_id: number;
-  discount_percent?: string | number | null;
-  payment_method: EnrollmentPaymentMethod;
+  discount_percent?:
+    | string
+    | number
+    | null;
+  payment_method:
+    EnrollmentPaymentMethod;
   status: EnrollmentStatus;
   public_token: string;
   submitted_at?: string | null;
@@ -274,7 +348,8 @@ export type Enrollment = {
   relationships?: {
     student?: Student | null;
     plan_variant?: PlanVariant | null;
-    form_questions?: EnrollmentFormQuestion[];
+    form_questions?:
+      EnrollmentFormQuestion[];
     student_extra?: StudentExtra | null;
     public_url?: string;
   };
@@ -283,8 +358,12 @@ export type Enrollment = {
 export type PublicEnrollment = {
   id: number;
   status: EnrollmentStatus;
-  discount_percent?: string | number | null;
-  payment_method: EnrollmentPaymentMethod;
+  discount_percent?:
+    | string
+    | number
+    | null;
+  payment_method:
+    EnrollmentPaymentMethod;
   plan_variant?: {
     id: number;
     monthly_price: string;
@@ -306,7 +385,8 @@ export type PublicEnrollment = {
     address?: string | null;
     birthdate?: string | null;
   } | null;
-  form_questions: EnrollmentFormQuestion[];
+  form_questions:
+    EnrollmentFormQuestion[];
 };
 
 export type ChargeStatus =

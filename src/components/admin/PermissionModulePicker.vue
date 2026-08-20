@@ -2,9 +2,13 @@
 import { computed, ref } from "vue";
 import {
   countSelectedInModule,
+  countSelectedInSubmodule,
+  getModulePermissions,
   groupPermissions,
   isModuleFullySelected,
+  isSubmoduleFullySelected,
   type PermissionModule,
+  type PermissionSubmodule,
 } from "@/lib/permissionGroups";
 import type { Permission } from "@/lib/types";
 
@@ -63,9 +67,15 @@ function togglePermission(permissionName: string) {
 }
 
 function toggleModule(module: PermissionModule, checked: boolean) {
-  const moduleNames = module.permissions.map((p) => p.name);
+  const moduleNames = getModulePermissions(module).map((p) => p.name);
   const withoutModule = props.modelValue.filter((name) => !moduleNames.includes(name));
   updateSelected(checked ? [...withoutModule, ...moduleNames] : withoutModule);
+}
+
+function toggleSubmodule(submodule: PermissionSubmodule, checked: boolean) {
+  const submoduleNames = submodule.permissions.map((p) => p.name);
+  const withoutSubmodule = props.modelValue.filter((name) => !submoduleNames.includes(name));
+  updateSelected(checked ? [...withoutSubmodule, ...submoduleNames] : withoutSubmodule);
 }
 
 function toggleAll(checked: boolean) {
@@ -74,7 +84,12 @@ function toggleAll(checked: boolean) {
 
 function moduleCountLabel(module: PermissionModule): string {
   const selected = countSelectedInModule(module, props.modelValue);
-  return `${selected}/${module.permissions.length}`;
+  return `${selected}/${getModulePermissions(module).length}`;
+}
+
+function submoduleCountLabel(submodule: PermissionSubmodule): string {
+  const selected = countSelectedInSubmodule(submodule, props.modelValue);
+  return `${selected}/${submodule.permissions.length}`;
 }
 </script>
 
@@ -138,7 +153,54 @@ function moduleCountLabel(module: PermissionModule): string {
             }}
           </label>
 
-          <div class="permission-module__grid">
+          <template v-if="module.submodules?.length">
+            <div
+              v-for="submodule in module.submodules"
+              :key="submodule.key"
+              class="permission-submodule"
+            >
+              <div class="permission-submodule__header">
+                <span class="permission-submodule__title">{{ submodule.label }}</span>
+                <span class="permission-submodule__count">
+                  {{ submoduleCountLabel(submodule) }}
+                </span>
+              </div>
+
+              <label class="permission-submodule__sector-toggle">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  :checked="isSubmoduleFullySelected(submodule, modelValue)"
+                  @change="
+                    toggleSubmodule(submodule, ($event.target as HTMLInputElement).checked)
+                  "
+                />
+                {{
+                  isSubmoduleFullySelected(submodule, modelValue)
+                    ? "Desmarcar submódulo"
+                    : "Selecionar submódulo"
+                }}
+              </label>
+
+              <div class="permission-module__grid">
+                <label
+                  v-for="permission in submodule.permissions"
+                  :key="permission.name"
+                  class="permission-module__item"
+                >
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    :checked="modelValue.includes(permission.name)"
+                    @change="togglePermission(permission.name)"
+                  />
+                  <span>{{ permission.label }}</span>
+                </label>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="permission-module__grid">
             <label
               v-for="permission in module.permissions"
               :key="permission.name"
@@ -311,6 +373,51 @@ function moduleCountLabel(module: PermissionModule): string {
 .permission-module__item:has(input:checked) {
   border-color: color-mix(in srgb, var(--primary) 40%, #edf0f2);
   background: color-mix(in srgb, var(--primary) 8%, #fff);
+}
+
+.permission-submodule + .permission-submodule {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #e9ecef;
+}
+
+.permission-submodule__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.permission-submodule__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.permission-submodule__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.06);
+  color: #495057;
+}
+
+.permission-submodule__sector-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6c757d;
+  cursor: pointer;
+  user-select: none;
 }
 
 .permission-picker__hint {

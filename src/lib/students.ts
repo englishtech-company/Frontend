@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, Paginated, Student } from "@/lib/types";
 
 type ListParams = {
@@ -24,7 +25,7 @@ export type StudentPayload = {
 
 export async function listStudents(params: ListParams = {}): Promise<Paginated<Student>> {
   const page = params.page ?? 1;
-  const limit = params.limit ?? 20;
+  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
   let url = `/students?pagination[page]=${page}&pagination[limit]=${limit}`;
   
   if (params.search) {

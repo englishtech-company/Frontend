@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type {
   ApiItemResponse,
   ApiListResponse,
@@ -36,7 +37,7 @@ export async function listTeachers(
 ): Promise<Paginated<Teacher>> {
   const query = new URLSearchParams({
     "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? 20),
+    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
   });
 
   const search = params.search?.trim();
