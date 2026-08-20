@@ -147,7 +147,10 @@ const router = createRouter({
     {
       path: "/enrollment-questions",
       name: "EnrollmentQuestions",
-      component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionList.vue"),
+      component: () =>
+        import(
+          "../views/admin/enrollment-questions/EnrollmentQuestionList.vue"
+        ),
       meta: {
         layout3: "layout3",
         permission: PERMISSIONS.enrollmentQuestions.view,
@@ -156,7 +159,10 @@ const router = createRouter({
     {
       path: "/enrollment-questions/create",
       name: "EnrollmentQuestionCreate",
-      component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"),
+      component: () =>
+        import(
+          "../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"
+        ),
       meta: {
         layout3: "layout3",
         permission: PERMISSIONS.enrollmentQuestions.create,
@@ -165,10 +171,85 @@ const router = createRouter({
     {
       path: "/enrollment-questions/:id/edit",
       name: "EnrollmentQuestionEdit",
-      component: () => import("../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"),
+      component: () =>
+        import(
+          "../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"
+        ),
       meta: {
         layout3: "layout3",
         permission: PERMISSIONS.enrollmentQuestions.update,
+      },
+    },
+    {
+      path: "/charges",
+      name: "Charges",
+      component: () =>
+        import(
+          "../views/admin/charges/ChargeList.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.charges.view,
+      },
+    },
+    {
+      path: "/charges/create",
+      name: "ChargeCreate",
+      component: () =>
+        import(
+          "../views/admin/charges/ChargeForm.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.charges.create,
+      },
+    },
+    {
+      path: "/charges/:id/edit",
+      name: "ChargeEdit",
+      component: () =>
+        import(
+          "../views/admin/charges/ChargeForm.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.charges.update,
+      },
+    },
+    {
+      path: "/payments",
+      name: "Payments",
+      component: () =>
+        import(
+          "../views/admin/payments/PaymentList.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.payments.view,
+      },
+    },
+    {
+      path: "/payments/create",
+      name: "PaymentCreate",
+      component: () =>
+        import(
+          "../views/admin/payments/PaymentForm.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.payments.create,
+      },
+    },
+    {
+      path: "/payments/:id/edit",
+      name: "PaymentEdit",
+      component: () =>
+        import(
+          "../views/admin/payments/PaymentForm.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.payments.update,
       },
     },
     {
@@ -192,8 +273,12 @@ const router = createRouter({
     {
       path: "/permissions",
       name: "Permissions",
-      component: () => import("../views/admin/permissions/PermissionList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.permissions.view },
+      component: () =>
+        import("../views/admin/permissions/PermissionList.vue"),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.permissions.view,
+      },
     },
     {
       path: "/audits",

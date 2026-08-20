@@ -47,6 +47,18 @@ export const PERMISSIONS = {
     update: "enrollment-questions.update",
     delete: "enrollment-questions.delete",
   },
+  charges: {
+    view: "charges.view",
+    create: "charges.create",
+    update: "charges.update",
+    delete: "charges.delete",
+  },
+  payments: {
+    view: "payments.view",
+    create: "payments.create",
+    update: "payments.update",
+    delete: "payments.delete",
+  },
   permissions: {
     view: "permissions.view",
   },
@@ -64,102 +76,376 @@ export type PermissionName =
   | (typeof PERMISSIONS.leads)[keyof typeof PERMISSIONS.leads]
   | (typeof PERMISSIONS.enrollments)[keyof typeof PERMISSIONS.enrollments]
   | (typeof PERMISSIONS.enrollmentQuestions)[keyof typeof PERMISSIONS.enrollmentQuestions]
+  | (typeof PERMISSIONS.charges)[keyof typeof PERMISSIONS.charges]
+  | (typeof PERMISSIONS.payments)[keyof typeof PERMISSIONS.payments]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits];
 
 export function canAccessPath(
   path: string,
-  hasPermission: (permission: PermissionName | string) => boolean
+  hasPermission: (
+    permission: PermissionName | string
+  ) => boolean
 ): boolean {
-  if (path === "/" || path === "") return true;
-
-  if (path === "/users/create") return hasPermission(PERMISSIONS.users.create);
-  if (/^\/users\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.users.update);
-  if (path.startsWith("/users")) return hasPermission(PERMISSIONS.users.view);
-
-  if (path === "/roles/create") return hasPermission(PERMISSIONS.roles.create);
-  if (/^\/roles\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.roles.update);
-  if (path.startsWith("/roles")) return hasPermission(PERMISSIONS.roles.view);
-
-  if (path === "/students/create") return hasPermission(PERMISSIONS.students.create);
-  if (/^\/students\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.students.update);
-  if (path.startsWith("/students")) return hasPermission(PERMISSIONS.students.view);
-
-  if (path === "/teachers/create") return hasPermission(PERMISSIONS.teachers.create);
-  if (/^\/teachers\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.teachers.update);
-  if (path.startsWith("/teachers")) return hasPermission(PERMISSIONS.teachers.view);
-
-  if (path === "/plans/create") return hasPermission(PERMISSIONS.plans.create);
-  if (/^\/plans\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.plans.update);
-  if (path.startsWith("/plans")) return hasPermission(PERMISSIONS.plans.view);
-
-  if (path === "/leads/create") return hasPermission(PERMISSIONS.leads.create);
-  if (/^\/leads\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.leads.update);
-  if (path.startsWith("/leads")) return hasPermission(PERMISSIONS.leads.view);
-
-  if (path === "/enrollments/create") return hasPermission(PERMISSIONS.enrollments.create);
-  if (/^\/enrollments\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.enrollments.update);
-  if (path.startsWith("/enrollments")) return hasPermission(PERMISSIONS.enrollments.view);
-
-  if (path === "/enrollment-questions/create") {
-    return hasPermission(PERMISSIONS.enrollmentQuestions.create);
-  }
-  if (/^\/enrollment-questions\/\d+\/edit$/.test(path)) {
-    return hasPermission(PERMISSIONS.enrollmentQuestions.update);
-  }
-  if (path.startsWith("/enrollment-questions")) {
-    return hasPermission(PERMISSIONS.enrollmentQuestions.view);
+  if (path === "/" || path === "") {
+    return true;
   }
 
-  if (path.startsWith("/permissions")) return hasPermission(PERMISSIONS.permissions.view);
-  if (path.startsWith("/audits")) return hasPermission(PERMISSIONS.audits.view);
+  if (path === "/users/create") {
+    return hasPermission(
+      PERMISSIONS.users.create
+    );
+  }
+
+  if (/^\/users\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.users.update
+    );
+  }
+
+  if (path.startsWith("/users")) {
+    return hasPermission(
+      PERMISSIONS.users.view
+    );
+  }
+
+  if (path === "/roles/create") {
+    return hasPermission(
+      PERMISSIONS.roles.create
+    );
+  }
+
+  if (/^\/roles\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.roles.update
+    );
+  }
+
+  if (path.startsWith("/roles")) {
+    return hasPermission(
+      PERMISSIONS.roles.view
+    );
+  }
+
+  if (path === "/students/create") {
+    return hasPermission(
+      PERMISSIONS.students.create
+    );
+  }
+
+  if (/^\/students\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.students.update
+    );
+  }
+
+  if (path.startsWith("/students")) {
+    return hasPermission(
+      PERMISSIONS.students.view
+    );
+  }
+
+  if (path === "/teachers/create") {
+    return hasPermission(
+      PERMISSIONS.teachers.create
+    );
+  }
+
+  if (/^\/teachers\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.teachers.update
+    );
+  }
+
+  if (path.startsWith("/teachers")) {
+    return hasPermission(
+      PERMISSIONS.teachers.view
+    );
+  }
+
+  if (path === "/plans/create") {
+    return hasPermission(
+      PERMISSIONS.plans.create
+    );
+  }
+
+  if (/^\/plans\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.plans.update
+    );
+  }
+
+  if (path.startsWith("/plans")) {
+    return hasPermission(
+      PERMISSIONS.plans.view
+    );
+  }
+
+  if (path === "/leads/create") {
+    return hasPermission(
+      PERMISSIONS.leads.create
+    );
+  }
+
+  if (/^\/leads\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.leads.update
+    );
+  }
+
+  if (path.startsWith("/leads")) {
+    return hasPermission(
+      PERMISSIONS.leads.view
+    );
+  }
+
+  if (path === "/enrollments/create") {
+    return hasPermission(
+      PERMISSIONS.enrollments.create
+    );
+  }
+
+  if (
+    /^\/enrollments\/\d+\/edit$/.test(path)
+  ) {
+    return hasPermission(
+      PERMISSIONS.enrollments.update
+    );
+  }
+
+  if (path.startsWith("/enrollments")) {
+    return hasPermission(
+      PERMISSIONS.enrollments.view
+    );
+  }
+
+  if (
+    path === "/enrollment-questions/create"
+  ) {
+    return hasPermission(
+      PERMISSIONS.enrollmentQuestions.create
+    );
+  }
+
+  if (
+    /^\/enrollment-questions\/\d+\/edit$/.test(
+      path
+    )
+  ) {
+    return hasPermission(
+      PERMISSIONS.enrollmentQuestions.update
+    );
+  }
+
+  if (
+    path.startsWith("/enrollment-questions")
+  ) {
+    return hasPermission(
+      PERMISSIONS.enrollmentQuestions.view
+    );
+  }
+
+  if (path === "/charges/create") {
+    return hasPermission(
+      PERMISSIONS.charges.create
+    );
+  }
+
+  if (/^\/charges\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.charges.update
+    );
+  }
+
+  if (path.startsWith("/charges")) {
+    return hasPermission(
+      PERMISSIONS.charges.view
+    );
+  }
+
+  if (path === "/payments/create") {
+    return hasPermission(
+      PERMISSIONS.payments.create
+    );
+  }
+
+  if (/^\/payments\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.payments.update
+    );
+  }
+
+  if (path.startsWith("/payments")) {
+    return hasPermission(
+      PERMISSIONS.payments.view
+    );
+  }
+
+  if (path.startsWith("/permissions")) {
+    return hasPermission(
+      PERMISSIONS.permissions.view
+    );
+  }
+
+  if (path.startsWith("/audits")) {
+    return hasPermission(
+      PERMISSIONS.audits.view
+    );
+  }
 
   return true;
 }
 
-export function resolveRoutePermission(path: string): PermissionName | null {
-  if (path === "/" || path === "") return null;
+export function resolveRoutePermission(
+  path: string
+): PermissionName | null {
+  if (path === "/" || path === "") {
+    return null;
+  }
 
-  if (path === "/users/create") return PERMISSIONS.users.create;
-  if (/^\/users\/\d+\/edit$/.test(path)) return PERMISSIONS.users.update;
-  if (path.startsWith("/users")) return PERMISSIONS.users.view;
+  if (path === "/users/create") {
+    return PERMISSIONS.users.create;
+  }
 
-  if (path === "/roles/create") return PERMISSIONS.roles.create;
-  if (/^\/roles\/\d+\/edit$/.test(path)) return PERMISSIONS.roles.update;
-  if (path.startsWith("/roles")) return PERMISSIONS.roles.view;
+  if (/^\/users\/\d+\/edit$/.test(path)) {
+    return PERMISSIONS.users.update;
+  }
 
-  if (path === "/students/create") return PERMISSIONS.students.create;
-  if (/^\/students\/\d+\/edit$/.test(path)) return PERMISSIONS.students.update;
-  if (path.startsWith("/students")) return PERMISSIONS.students.view;
+  if (path.startsWith("/users")) {
+    return PERMISSIONS.users.view;
+  }
 
-  if (path === "/teachers/create") return PERMISSIONS.teachers.create;
-  if (/^\/teachers\/\d+\/edit$/.test(path)) return PERMISSIONS.teachers.update;
-  if (path.startsWith("/teachers")) return PERMISSIONS.teachers.view;
+  if (path === "/roles/create") {
+    return PERMISSIONS.roles.create;
+  }
 
-  if (path === "/plans/create") return PERMISSIONS.plans.create;
-  if (/^\/plans\/\d+\/edit$/.test(path)) return PERMISSIONS.plans.update;
-  if (path.startsWith("/plans")) return PERMISSIONS.plans.view;
+  if (/^\/roles\/\d+\/edit$/.test(path)) {
+    return PERMISSIONS.roles.update;
+  }
 
-  if (path === "/leads/create") return PERMISSIONS.leads.create;
-  if (/^\/leads\/\d+\/edit$/.test(path)) return PERMISSIONS.leads.update;
-  if (path.startsWith("/leads")) return PERMISSIONS.leads.view;
+  if (path.startsWith("/roles")) {
+    return PERMISSIONS.roles.view;
+  }
 
-  if (path === "/enrollments/create") return PERMISSIONS.enrollments.create;
-  if (/^\/enrollments\/\d+\/edit$/.test(path)) return PERMISSIONS.enrollments.update;
-  if (path.startsWith("/enrollments")) return PERMISSIONS.enrollments.view;
+  if (path === "/students/create") {
+    return PERMISSIONS.students.create;
+  }
 
-  if (path === "/enrollment-questions/create") {
+  if (
+    /^\/students\/\d+\/edit$/.test(path)
+  ) {
+    return PERMISSIONS.students.update;
+  }
+
+  if (path.startsWith("/students")) {
+    return PERMISSIONS.students.view;
+  }
+
+  if (path === "/teachers/create") {
+    return PERMISSIONS.teachers.create;
+  }
+
+  if (
+    /^\/teachers\/\d+\/edit$/.test(path)
+  ) {
+    return PERMISSIONS.teachers.update;
+  }
+
+  if (path.startsWith("/teachers")) {
+    return PERMISSIONS.teachers.view;
+  }
+
+  if (path === "/plans/create") {
+    return PERMISSIONS.plans.create;
+  }
+
+  if (/^\/plans\/\d+\/edit$/.test(path)) {
+    return PERMISSIONS.plans.update;
+  }
+
+  if (path.startsWith("/plans")) {
+    return PERMISSIONS.plans.view;
+  }
+
+  if (path === "/leads/create") {
+    return PERMISSIONS.leads.create;
+  }
+
+  if (/^\/leads\/\d+\/edit$/.test(path)) {
+    return PERMISSIONS.leads.update;
+  }
+
+  if (path.startsWith("/leads")) {
+    return PERMISSIONS.leads.view;
+  }
+
+  if (path === "/enrollments/create") {
+    return PERMISSIONS.enrollments.create;
+  }
+
+  if (
+    /^\/enrollments\/\d+\/edit$/.test(path)
+  ) {
+    return PERMISSIONS.enrollments.update;
+  }
+
+  if (path.startsWith("/enrollments")) {
+    return PERMISSIONS.enrollments.view;
+  }
+
+  if (
+    path === "/enrollment-questions/create"
+  ) {
     return PERMISSIONS.enrollmentQuestions.create;
   }
-  if (/^\/enrollment-questions\/\d+\/edit$/.test(path)) {
+
+  if (
+    /^\/enrollment-questions\/\d+\/edit$/.test(
+      path
+    )
+  ) {
     return PERMISSIONS.enrollmentQuestions.update;
   }
-  if (path.startsWith("/enrollment-questions")) {
+
+  if (
+    path.startsWith("/enrollment-questions")
+  ) {
     return PERMISSIONS.enrollmentQuestions.view;
   }
 
-  if (path.startsWith("/permissions")) return PERMISSIONS.permissions.view;
-  if (path.startsWith("/audits")) return PERMISSIONS.audits.view;
+  if (path === "/charges/create") {
+    return PERMISSIONS.charges.create;
+  }
+
+  if (/^\/charges\/\d+\/edit$/.test(path)) {
+    return PERMISSIONS.charges.update;
+  }
+
+  if (path.startsWith("/charges")) {
+    return PERMISSIONS.charges.view;
+  }
+
+  if (path === "/payments/create") {
+    return PERMISSIONS.payments.create;
+  }
+
+  if (
+    /^\/payments\/\d+\/edit$/.test(path)
+  ) {
+    return PERMISSIONS.payments.update;
+  }
+
+  if (path.startsWith("/payments")) {
+    return PERMISSIONS.payments.view;
+  }
+
+  if (path.startsWith("/permissions")) {
+    return PERMISSIONS.permissions.view;
+  }
+
+  if (path.startsWith("/audits")) {
+    return PERMISSIONS.audits.view;
+  }
 
   return null;
 }

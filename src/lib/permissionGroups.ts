@@ -18,6 +18,10 @@ const MODULE_LABELS: Record<string, string> = {
   teachers: "Professores",
   plans: "Planos",
   leads: "Interessados",
+  enrollments: "Matrículas",
+  "enrollment-questions": "Perguntas da matrícula",
+  charges: "Cobranças",
+  payments: "Pagamentos",
   clients: "Clientes",
   roles: "Perfis",
   permissions: "Permissões",
@@ -31,42 +35,64 @@ const ACTION_LABELS: Record<string, string> = {
   delete: "Excluir",
 };
 
-const ACTION_ORDER = ["view", "create", "update", "delete"];
+const ACTION_ORDER = [
+  "view",
+  "create",
+  "update",
+  "delete",
+];
 
 function formatLabel(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1).replace(/[-_]/g, " ");
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1).replace(/[-_]/g, " ")
+  );
 }
 
-export function groupPermissions(permissions: Permission[]): PermissionModule[] {
+export function groupPermissions(
+  permissions: Permission[]
+): PermissionModule[] {
   const groups = new Map<string, PermissionModule>();
 
   for (const permission of permissions) {
-    const [moduleKey, action] = permission.name.split(".");
+    const [moduleKey, action] =
+      permission.name.split(".");
+
     if (!moduleKey || !action) continue;
 
     if (!groups.has(moduleKey)) {
       groups.set(moduleKey, {
         key: moduleKey,
-        label: MODULE_LABELS[moduleKey] ?? formatLabel(moduleKey),
+        label:
+          MODULE_LABELS[moduleKey] ??
+          formatLabel(moduleKey),
         permissions: [],
       });
     }
 
     groups.get(moduleKey)!.permissions.push({
       name: permission.name,
-      label: ACTION_LABELS[action] ?? formatLabel(action),
+      label:
+        ACTION_LABELS[action] ??
+        formatLabel(action),
       action,
     });
   }
 
   for (const group of groups.values()) {
     group.permissions.sort(
-      (a, b) => ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action)
+      (left, right) =>
+        ACTION_ORDER.indexOf(left.action) -
+        ACTION_ORDER.indexOf(right.action)
     );
   }
 
-  return Array.from(groups.values()).sort((a, b) =>
-    a.label.localeCompare(b.label, "pt-BR")
+  return Array.from(groups.values()).sort(
+    (left, right) =>
+      left.label.localeCompare(
+        right.label,
+        "pt-BR"
+      )
   );
 }
 
@@ -85,6 +111,8 @@ export function isModuleFullySelected(
 ): boolean {
   return (
     module.permissions.length > 0 &&
-    module.permissions.every((permission) => selected.includes(permission.name))
+    module.permissions.every((permission) =>
+      selected.includes(permission.name)
+    )
   );
 }

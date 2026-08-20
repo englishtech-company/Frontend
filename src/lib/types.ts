@@ -136,7 +136,10 @@ export type Teacher = {
   };
 };
 
-export type PlanCommitment = "monthly" | "quarterly" | "semiannual";
+export type PlanCommitment =
+  | "monthly"
+  | "quarterly"
+  | "semiannual";
 
 export type PlanVariant = {
   id?: number;
@@ -181,7 +184,9 @@ export type Plan = {
   deleted_at?: string | null;
 };
 
-export type LeadRegistrationSource = "manual" | "webhook";
+export type LeadRegistrationSource =
+  | "manual"
+  | "webhook";
 
 export type Lead = {
   id: number;
@@ -198,9 +203,15 @@ export type Lead = {
   deleted_at?: string | null;
 };
 
-export type EnrollmentStatus = "pending" | "submitted" | "confirmed" | "cancelled";
+export type EnrollmentStatus =
+  | "pending"
+  | "submitted"
+  | "confirmed"
+  | "cancelled";
 
-export type EnrollmentPaymentMethod = "pix" | "credit_card";
+export type EnrollmentPaymentMethod =
+  | "pix"
+  | "credit_card";
 
 export type EnrollmentQuestionType =
   | "text"
@@ -296,4 +307,44 @@ export type PublicEnrollment = {
     birthdate?: string | null;
   } | null;
   form_questions: EnrollmentFormQuestion[];
+};
+
+export type ChargeStatus =
+  | "open"
+  | "paid"
+  | "partial"
+  | "overdue"
+  | "cancelled";
+
+export type Charge = {
+  id: number;
+  student_id: number;
+  enrollment_id: number;
+  expected_amount: string;
+  due_date: string;
+  status: ChargeStatus;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  student?: Student | null;
+  enrollment?: Enrollment | null;
+  relationships?: {
+    student?: Student | null;
+    enrollment?: Enrollment | null;
+  };
+};
+
+export type Payment = {
+  id: number;
+  charge_id: number;
+  amount: string;
+  paid_at: string;
+  receipt_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  charge?: Charge | null;
+  relationships?: {
+    charge?: Charge | null;
+  };
 };
