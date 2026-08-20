@@ -74,6 +74,23 @@ const MenuItems = reactive<menuType[]>([
     ],
   },
   {
+    icons: "la la-wallet",
+    title: "Financeiro",
+    className: "sub-menu",
+    subMenuItems: [
+      {
+        menu: "Cobranças",
+        to: "/charges",
+        permission: PERMISSIONS.charges.view,
+      },
+      {
+        menu: "Pagamentos",
+        to: "/payments",
+        permission: PERMISSIONS.payments.view,
+      },
+    ],
+  },
+  {
     icons: "la la-cog",
     title: "Administração",
     className: "sub-menu",
