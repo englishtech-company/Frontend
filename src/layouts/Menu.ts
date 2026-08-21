@@ -57,6 +57,23 @@ const MenuItems = reactive<menuType[]>([
     permission: PERMISSIONS.experimentalClasses.view,
   },
   {
+    icons: "la la-users",
+    title: "Turmas",
+    className: "sub-menu",
+    subMenuItems: [
+      {
+        menu: "Turmas",
+        to: "/group-classes",
+        permission: PERMISSIONS.groupClasses.view,
+      },
+      {
+        menu: "Alunos da Turma",
+        to: "/group-students",
+        permission: PERMISSIONS.groupStudents.view,
+      },
+    ],
+  },
+  {
     icons: "la la-file-alt",
     title: "Matrículas",
     className: "sub-menu",

@@ -311,6 +311,42 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.update },
     },
     {
+      path: "/group-classes",
+      name: "GroupClasses",
+      component: () => import("../views/admin/group-classes/GroupClassList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.view },
+    },
+    {
+      path: "/group-classes/create",
+      name: "GroupClassCreate",
+      component: () => import("../views/admin/group-classes/GroupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.create },
+    },
+    {
+      path: "/group-classes/:id/edit",
+      name: "GroupClassEdit",
+      component: () => import("../views/admin/group-classes/GroupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.update },
+    },
+    {
+      path: "/group-students",
+      name: "GroupStudents",
+      component: () => import("../views/admin/group-students/GroupStudentList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupStudents.view },
+    },
+    {
+      path: "/group-students/create",
+      name: "GroupStudentCreate",
+      component: () => import("../views/admin/group-students/GroupStudentForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupStudents.create },
+    },
+    {
+      path: "/group-students/:id/edit",
+      name: "GroupStudentEdit",
+      component: () => import("../views/admin/group-students/GroupStudentForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupStudents.update },
+    },
+    {
       path: "/enrollment/:token",
       name: "PublicEnrollment",
       component: () => import("../views/pages/PublicEnrollmentForm.vue"),

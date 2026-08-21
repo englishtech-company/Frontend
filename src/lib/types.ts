@@ -428,3 +428,26 @@ export type Payment = {
     charge?: Charge | null;
   };
 };
+
+export type GroupClass = {
+  id: number;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  relationships?: Record<string, unknown>;
+};
+
+export type GroupStudent = {
+  id: number;
+  group_class_id: number;
+  student_id: number;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  group_class?: GroupClass | null;
+  student?: Student | null;
+  relationships?: {
+    group_class?: GroupClass | null;
+    student?: Student | null;
+  };
+};

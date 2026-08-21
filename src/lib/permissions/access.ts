@@ -71,6 +71,18 @@ export const PERMISSIONS = {
     update: "experimental-classes.update",
     delete: "experimental-classes.delete",
   },
+  groupClasses: {
+    view: "group_classes.view",
+    create: "group_classes.create",
+    update: "group_classes.update",
+    delete: "group_classes.delete",
+  },
+  groupStudents: {
+    view: "group_students.view",
+    create: "group_students.create",
+    update: "group_students.update",
+    delete: "group_students.delete",
+  },
 } as const;
 
 export type PermissionName =
@@ -86,7 +98,9 @@ export type PermissionName =
   | (typeof PERMISSIONS.payments)[keyof typeof PERMISSIONS.payments]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
-  | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses];
+  | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses]
+  | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses]
+  | (typeof PERMISSIONS.groupStudents)[keyof typeof PERMISSIONS.groupStudents];
 
 export function canAccessPath(
   path: string,
@@ -304,6 +318,14 @@ export function canAccessPath(
   if (/^\/experimental-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.experimentalClasses.update);
   if (path.startsWith("/experimental-classes")) return hasPermission(PERMISSIONS.experimentalClasses.view);
 
+  if (path === "/group-classes/create") return hasPermission(PERMISSIONS.groupClasses.create);
+  if (/^\/group-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.groupClasses.update);
+  if (path.startsWith("/group-classes")) return hasPermission(PERMISSIONS.groupClasses.view);
+
+  if (path === "/group-students/create") return hasPermission(PERMISSIONS.groupStudents.create);
+  if (/^\/group-students\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.groupStudents.update);
+  if (path.startsWith("/group-students")) return hasPermission(PERMISSIONS.groupStudents.view);
+
   return true;
 }
 
@@ -461,6 +483,14 @@ export function resolveRoutePermission(
   if (path === "/experimental-classes/create") return PERMISSIONS.experimentalClasses.create;
   if (/^\/experimental-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.experimentalClasses.update;
   if (path.startsWith("/experimental-classes")) return PERMISSIONS.experimentalClasses.view;
+
+  if (path === "/group-classes/create") return PERMISSIONS.groupClasses.create;
+  if (/^\/group-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.groupClasses.update;
+  if (path.startsWith("/group-classes")) return PERMISSIONS.groupClasses.view;
+
+  if (path === "/group-students/create") return PERMISSIONS.groupStudents.create;
+  if (/^\/group-students\/\d+\/edit$/.test(path)) return PERMISSIONS.groupStudents.update;
+  if (path.startsWith("/group-students")) return PERMISSIONS.groupStudents.view;
 
   return null;
 }
