@@ -428,3 +428,28 @@ export type Payment = {
     charge?: Charge | null;
   };
 };
+
+export type GroupClassStatus = "active" | "inactive";
+
+export type GroupClass = {
+  id: number;
+  name: string;
+  description?: string | null;
+  teacher_id?: number | null;
+  plan_id?: number | null;
+  schedule?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  max_students?: number | null;
+  status: GroupClassStatus;
+  level?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  teacher?: Teacher | null;
+  plan?: Plan | null;
+  relationships?: {
+    teacher?: Teacher | null;
+    plan?: Plan | null;
+  };
+};

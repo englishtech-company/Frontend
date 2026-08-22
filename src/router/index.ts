@@ -109,6 +109,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.teachers.view },
     },
     {
+      path: "/group-classes",
+      name: "GroupClasses",
+      component: () => import("../views/admin/group-classes/GroupClassList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.view },
+    },
+    {
+      path: "/group-classes/create",
+      name: "GroupClassCreate",
+      component: () => import("../views/admin/group-classes/GroupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.create },
+    },
+    {
+      path: "/group-classes/:id/edit",
+      name: "GroupClassEdit",
+      component: () => import("../views/admin/group-classes/GroupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.update },
+    },
+    {
       path: "/leads",
       name: "Leads",
       component: () => import("../views/admin/leads/LeadList.vue"),
