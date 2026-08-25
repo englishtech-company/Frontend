@@ -19,6 +19,7 @@ export type ListChargesParams = {
 export type CreateChargePayload = {
   enrollment_id: number;
   due_date: string;
+  generate_recurrence?: boolean;
 };
 
 export type UpdateChargePayload = {
@@ -27,6 +28,7 @@ export type UpdateChargePayload = {
     ChargeStatus,
     "open" | "overdue" | "cancelled"
   >;
+  cancel_recurrence?: boolean;
 };
 
 type ChargePlucksResponse = {
@@ -35,6 +37,7 @@ type ChargePlucksResponse = {
   msg: string;
   plucks: {
     charges: Record<string, string>;
+    students: Record<string, string>;
   };
 };
 
@@ -106,6 +109,14 @@ export async function updateCharge(
   return response.charge;
 }
 
+export async function cancelChargeRecurrence(
+  id: number
+): Promise<Charge> {
+  return updateCharge(id, {
+    cancel_recurrence: true,
+  });
+}
+
 export async function deleteCharge(
   id: number
 ): Promise<void> {
@@ -122,4 +133,14 @@ export async function getChargeOptions(): Promise<
   );
 
   return response.plucks.charges;
+}
+
+export async function getChargeStudentOptions(): Promise<
+  Record<string, string>
+> {
+  const response = await api<ChargePlucksResponse>(
+    "/charges/plucks"
+  );
+
+  return response.plucks.students;
 }

@@ -5,10 +5,13 @@ import {
   ref,
 } from "vue";
 import { RouterLink } from "vue-router";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
 import {
   deleteCharge,
+  getChargeStudentOptions,
   listCharges,
 } from "@/lib/charges";
 import {
@@ -24,6 +27,7 @@ import {
 import type {
   Charge,
   ChargeStatus,
+  Paginated,
 } from "@/lib/types";
 
 const {
@@ -34,6 +38,7 @@ const {
 } = usePermissions();
 
 const charges = ref<Charge[]>([]);
+const studentOptions = ref<SelectOption[]>([]);
 const loading = ref(true);
 const error = ref("");
 
@@ -41,6 +46,9 @@ const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 
+const studentIdFilter = ref<
+  string | number | null
+>(null);
 const dueDateFilter = ref("");
 const statusFilter = ref<ChargeStatus | "">("");
 
@@ -49,6 +57,60 @@ const showActions = computed(
     canUpdateCharges.value ||
     canDeleteCharges.value
 );
+
+function applyChargeResult(
+  result: Paginated<Charge>
+) {
+  charges.value = result.data;
+  lastPage.value = result.last_page;
+  total.value = result.total;
+}
+
+function currentListParams() {
+  return {
+    page: page.value,
+    studentId: studentIdFilter.value
+      ? Number(studentIdFilter.value)
+      : undefined,
+    dueDate: dueDateFilter.value || undefined,
+    status: statusFilter.value || undefined,
+  };
+}
+
+async function loadInitialData() {
+  if (!canViewCharges.value) {
+    error.value =
+      "Você não tem permissão para listar cobranças.";
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
+  error.value = "";
+
+  try {
+    const [students, result] = await Promise.all([
+      getChargeStudentOptions(),
+      listCharges(currentListParams()),
+    ]);
+
+    studentOptions.value = Object.entries(
+      students
+    ).map(([value, label]) => ({
+      value,
+      label,
+    }));
+
+    applyChargeResult(result);
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : "Erro ao carregar cobranças.";
+  } finally {
+    loading.value = false;
+  }
+}
 
 async function loadCharges() {
   if (!canViewCharges.value) {
@@ -62,15 +124,11 @@ async function loadCharges() {
   error.value = "";
 
   try {
-    const result = await listCharges({
-      page: page.value,
-      dueDate: dueDateFilter.value || undefined,
-      status: statusFilter.value || undefined,
-    });
+    const result = await listCharges(
+      currentListParams()
+    );
 
-    charges.value = result.data;
-    lastPage.value = result.last_page;
-    total.value = result.total;
+    applyChargeResult(result);
   } catch (exception) {
     error.value =
       exception instanceof Error
@@ -87,6 +145,7 @@ function handleFilter() {
 }
 
 function clearFilters() {
+  studentIdFilter.value = null;
   dueDateFilter.value = "";
   statusFilter.value = "";
   page.value = 1;
@@ -138,7 +197,7 @@ async function removeCharge(charge: Charge) {
   }
 }
 
-onMounted(loadCharges);
+onMounted(loadInitialData);
 </script>
 
 <template>
@@ -184,6 +243,16 @@ onMounted(loadCharges);
             </h4>
 
             <div class="charge-list__filters">
+              <SingleSelect
+                id="charge-student-filter"
+                v-model="studentIdFilter"
+                class="charge-list__student-filter"
+                :options="studentOptions"
+                placeholder="Todos os alunos"
+                aria-label="Filtrar pelo aluno"
+                @change="handleFilter"
+              />
+
               <input
                 v-model="dueDateFilter"
                 type="date"
@@ -436,6 +505,7 @@ onMounted(loadCharges);
 .charge-list__filters {
   display: grid;
   grid-template-columns:
+    minmax(220px, 280px)
     minmax(160px, 190px)
     minmax(150px, 180px)
     auto
@@ -444,9 +514,21 @@ onMounted(loadCharges);
   gap: 0.5rem;
 }
 
-@media (max-width: 991.98px) {
+.charge-list__student-filter
+  :deep(.single-select__trigger) {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.375rem;
+}
+
+@media (max-width: 1199.98px) {
   .charge-list__filters {
     width: 100%;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .charge-list__filters {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
   }
