@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import MultiSelect from "@/components/ui/MultiSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -12,6 +13,7 @@ import {
 import type { GroupClassPayload } from "@/lib/groupClasses";
 import { getTeacherOptions } from "@/lib/teachers";
 import { getPlanOptions } from "@/lib/plans";
+import { getStudentOptions } from "@/lib/students";
 import type { GroupClassStatus } from "@/lib/types";
 
 const route = useRoute();
@@ -35,12 +37,14 @@ const planId = ref<string>("");
 const schedule = ref("");
 const startDate = ref("");
 const endDate = ref("");
-const maxStudents = ref<number | null>(null);
 const status = ref<GroupClassStatus>("active");
 const level = ref("");
+const maxStudents = ref<number>(4);
+const studentIds = ref<number[]>([]);
 
 const teachers = ref<SelectOption[]>([]);
 const plans = ref<SelectOption[]>([]);
+const students = ref<SelectOption[]>([]);
 
 const loading = ref(false);
 const saving = ref(false);
@@ -53,9 +57,10 @@ const statusOptions: SelectOption[] = [
 
 async function loadOptions() {
   try {
-    const [teachersMap, plansMap] = await Promise.all([
+    const [teachersMap, plansMap, studentsMap] = await Promise.all([
       getTeacherOptions(),
       getPlanOptions(),
+      getStudentOptions(),
     ]);
 
     teachers.value = Object.entries(teachersMap).map(([value, label]) => ({
@@ -65,6 +70,11 @@ async function loadOptions() {
 
     plans.value = Object.entries(plansMap).map(([value, label]) => ({
       value,
+      label,
+    }));
+
+    students.value = Object.entries(studentsMap).map(([value, label]) => ({
+      value: Number(value),
       label,
     }));
   } catch (e) {
@@ -93,9 +103,13 @@ async function loadForm() {
     schedule.value = groupClass.schedule ?? "";
     startDate.value = groupClass.start_date ?? "";
     endDate.value = groupClass.end_date ?? "";
-    maxStudents.value = groupClass.max_students ?? null;
     status.value = groupClass.status;
     level.value = groupClass.level ?? "";
+    maxStudents.value = groupClass.max_students ?? 4;
+    studentIds.value =
+      groupClass.relationships?.students?.map((s) => s.id) ??
+      groupClass.students?.map((s) => s.id) ??
+      [];
   } catch (e) {
     error.value =
       e instanceof Error
@@ -115,6 +129,13 @@ async function submit() {
   saving.value = true;
   error.value = "";
 
+  const max = maxStudents.value;
+  if (studentIds.value.length > max) {
+    error.value = `O número de alunos não pode exceder a capacidade máxima (${max}).`;
+    saving.value = false;
+    return;
+  }
+
   const payload: GroupClassPayload = {
     name: name.value.trim(),
     description: description.value.trim() || null,
@@ -126,6 +147,7 @@ async function submit() {
     max_students: maxStudents.value,
     status: status.value,
     level: level.value.trim() || null,
+    student_ids: studentIds.value,
   };
 
   try {
@@ -294,7 +316,7 @@ onMounted(loadForm);
                   </div>
                 </div>
 
-                <div class="col-sm-4">
+                <div class="col-sm-6">
                   <div class="form-group">
                     <label
                       class="form-label"
@@ -311,7 +333,7 @@ onMounted(loadForm);
                   </div>
                 </div>
 
-                <div class="col-sm-4">
+                <div class="col-sm-6">
                   <div class="form-group">
                     <label
                       class="form-label"
@@ -328,20 +350,34 @@ onMounted(loadForm);
                   </div>
                 </div>
 
-                <div class="col-sm-4">
+                <div class="col-sm-6">
                   <div class="form-group">
                     <label
                       class="form-label"
                       for="class-max-students"
                     >
-                      Limite de alunos
+                      Capacidade máxima de alunos
                     </label>
                     <input
                       id="class-max-students"
                       v-model.number="maxStudents"
                       type="number"
                       class="form-control"
-                      min="1"
+                      min="0"
+                      max="5"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="form-group">
+                    <MultiSelect
+                      id="class-students"
+                      v-model="studentIds"
+                      label="Alunos"
+                      :options="students"
+                      placeholder="Selecione os alunos"
                     />
                   </div>
                 </div>

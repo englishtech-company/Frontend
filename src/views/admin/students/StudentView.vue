@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { getStudent } from "@/lib/students";
 import {
@@ -20,18 +22,28 @@ import {
   getStudentTeacherHistory,
   STUDENT_MODULE_TABS,
 } from "@/lib/students/format";
+import { enrollStudentInGroupClass, getGroupClassOptions } from "@/lib/groupClasses";
 import type { Student } from "@/lib/types";
 
 const route = useRoute();
-const { canUpdateStudents, canViewTeachers, canViewPlans } = usePermissions();
+const { canUpdateStudents, canViewTeachers, canViewPlans, canUpdateGroupClasses, canViewGroupClasses } = usePermissions();
 
 const studentId = computed(() => Number(route.params.id));
 const student = ref<Student | null>(null);
 const loading = ref(true);
 const error = ref("");
 const activeTab = ref<
-  "overview" | "classes" | "payments" | "documents" | "history"
+  "overview" | "classes" | "payments" | "documents" | "history" | "turmas"
 >("overview");
+
+// --- Modal state ---
+const showEnrollModal = ref(false);
+const enrollError = ref("");
+const enrollSuccess = ref("");
+const enrolling = ref(false);
+const selectedGroupClassId = ref<string>("");
+const groupClassOptions = ref<SelectOption[]>([]);
+const loadingClassOptions = ref(false);
 
 const statusBadge = computed(() =>
   formatStudentStatusBadge(student.value?.status ?? "")
@@ -65,6 +77,54 @@ async function loadStudent() {
     error.value = e instanceof Error ? e.message : "Erro ao carregar aluno";
   } finally {
     loading.value = false;
+  }
+}
+
+async function openEnrollModal() {
+  enrollError.value = "";
+  enrollSuccess.value = "";
+  selectedGroupClassId.value = "";
+  showEnrollModal.value = true;
+
+  if (groupClassOptions.value.length === 0) {
+    loadingClassOptions.value = true;
+    try {
+      const options = await getGroupClassOptions();
+      groupClassOptions.value = Object.entries(options).map(([value, label]) => ({
+        value,
+        label,
+      }));
+    } catch {
+      enrollError.value = "Erro ao carregar as turmas disponíveis.";
+    } finally {
+      loadingClassOptions.value = false;
+    }
+  }
+}
+
+function closeEnrollModal() {
+  showEnrollModal.value = false;
+  enrollError.value = "";
+  enrollSuccess.value = "";
+  selectedGroupClassId.value = "";
+}
+
+async function submitEnrollment() {
+  if (!selectedGroupClassId.value || !student.value) return;
+
+  enrolling.value = true;
+  enrollError.value = "";
+  enrollSuccess.value = "";
+
+  try {
+    await enrollStudentInGroupClass(Number(selectedGroupClassId.value), student.value.id);
+    enrollSuccess.value = "Aluno matriculado com sucesso!";
+    // Reload student so their turmas list (if shown) refreshes
+    await loadStudent();
+  } catch (e) {
+    enrollError.value = e instanceof Error ? e.message : "Erro ao matricular aluno.";
+  } finally {
+    enrolling.value = false;
   }
 }
 
@@ -130,6 +190,14 @@ onMounted(loadStudent);
                 >
                   Editar
                 </RouterLink>
+                <button
+                  v-if="canUpdateGroupClasses"
+                  type="button"
+                  class="btn btn-success px-4 me-1"
+                  @click="openEnrollModal"
+                >
+                  <i class="fa fa-graduation-cap me-1"></i> Matricular em Turma
+                </button>
                 <RouterLink to="/students" class="btn btn-warning px-4">Voltar</RouterLink>
               </div>
             </div>
@@ -259,6 +327,16 @@ onMounted(loadStudent);
                           @click="activeTab = 'history'"
                         >
                           Histórico
+                        </button>
+                      </li>
+                      <li class="nav-item" role="presentation">
+                        <button
+                          type="button"
+                          class="nav-link"
+                          :class="{ active: activeTab === 'turmas' }"
+                          @click="activeTab = 'turmas'"
+                        >
+                          Turmas
                         </button>
                       </li>
                     </ul>
@@ -414,6 +492,67 @@ onMounted(loadStudent);
                         />
                       </div>
 
+                      <!-- Turmas Tab -->
+                      <div
+                        v-show="activeTab === 'turmas'"
+                        class="tab-pane fade active show"
+                        role="tabpanel"
+                      >
+                        <div class="pt-4">
+                          <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="text-primary mb-0">Turmas do aluno</h4>
+                            <button
+                              v-if="canUpdateGroupClasses"
+                              type="button"
+                              class="btn btn-sm btn-success"
+                              @click="openEnrollModal"
+                            >
+                              <i class="fa fa-plus me-1"></i> Matricular em Turma
+                            </button>
+                          </div>
+                          <p class="text-muted small mb-4">
+                            Turmas em que este aluno está matriculado no momento.
+                          </p>
+                          <div v-if="student.relationships?.group_classes?.length" class="table-responsive">
+                            <table class="table table-responsive-md">
+                              <thead>
+                                <tr>
+                                  <th>Turma</th>
+                                  <th>Status</th>
+                                  <th>Data de Ingresso</th>
+                                  <th>Ações</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr v-for="groupClass in student.relationships.group_classes" :key="groupClass.id">
+                                  <td>
+                                    <RouterLink v-if="canViewGroupClasses" :to="`/group-classes/${groupClass.id}`" class="text-primary">
+                                      <strong>{{ groupClass.name }}</strong>
+                                    </RouterLink>
+                                    <strong v-else>{{ groupClass.name }}</strong>
+                                  </td>
+                                  <td>
+                                    <span class="badge" :class="groupClass.pivot?.status === 'enrolled' ? 'badge-success' : 'badge-secondary'">
+                                      {{ groupClass.pivot?.status === 'enrolled' ? 'Inscrito' : (groupClass.pivot?.status || 'Inscrito') }}
+                                    </span>
+                                  </td>
+                                  <td>{{ groupClass.pivot?.joined_at ? formatStudentDate(groupClass.pivot.joined_at) : '—' }}</td>
+                                  <td>
+                                    <RouterLink v-if="canViewGroupClasses" :to="`/group-classes/${groupClass.id}`" class="btn btn-primary shadow btn-xs sharp">
+                                      <i class="fa fa-eye"></i>
+                                    </RouterLink>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div v-else class="text-muted text-center py-4">
+                            <i class="fa fa-info-circle me-1"></i>
+                            O aluno não está matriculado em nenhuma turma.
+                          </div>
+                        </div>
+                      </div>
+
                       <div
                         v-show="activeTab === 'history'"
                         class="tab-pane fade active show"
@@ -521,6 +660,87 @@ onMounted(loadStudent);
         </div>
       </div>
     </div>
+
+    <!-- Enroll in Group Class Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showEnrollModal"
+        class="modal fade show"
+        style="display: block; z-index: 1055;"
+        tabindex="-1"
+        aria-modal="true"
+        role="dialog"
+        @click.self="closeEnrollModal"
+      >
+        <div class="modal-dialog modal-dialog-centered" style="z-index: 1056;">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Matricular em Turma</h5>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Fechar"
+                @click="closeEnrollModal"
+              ></button>
+            </div>
+
+            <div class="modal-body">
+              <p class="text-muted mb-3">
+                Selecione a turma em que deseja matricular
+                <strong>{{ student?.name }}</strong>.
+              </p>
+
+              <div v-if="enrollSuccess" class="alert alert-success py-2">
+                <i class="fa fa-check-circle me-1"></i> {{ enrollSuccess }}
+              </div>
+              <div v-if="enrollError" class="alert alert-danger py-2">
+                <i class="fa fa-exclamation-circle me-1"></i> {{ enrollError }}
+              </div>
+
+              <div v-if="loadingClassOptions" class="text-center py-3">
+                Carregando turmas...
+              </div>
+
+              <div v-else>
+                <SingleSelect
+                  id="enroll-group-class-select"
+                  v-model="selectedGroupClassId"
+                  label="Turma"
+                  :options="groupClassOptions"
+                  placeholder="Selecione uma turma..."
+                />
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                :disabled="enrolling"
+                @click="closeEnrollModal"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="btn btn-success"
+                :disabled="!selectedGroupClassId || enrolling || !!enrollSuccess"
+                @click="submitEnrollment"
+              >
+                <span v-if="enrolling">Matriculando...</span>
+                <span v-else>Confirmar Matrícula</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Backdrop -->
+      <div
+        v-if="showEnrollModal"
+        class="modal-backdrop fade show"
+        style="z-index: 1054;"
+      ></div>
+    </Teleport>
   </div>
 </template>
 

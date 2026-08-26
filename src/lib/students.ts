@@ -21,6 +21,7 @@ export type StudentPayload = {
   end_date?: string | null;
   teacher_id?: number | null;
   plan_variant_id?: number | null;
+  group_class_ids?: number[];
 };
 
 export async function listStudents(params: ListParams = {}): Promise<Paginated<Student>> {

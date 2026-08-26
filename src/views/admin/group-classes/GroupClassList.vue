@@ -215,7 +215,7 @@ onMounted(() => {
                     <th class="text-nowrap">Plano</th>
                     <th class="text-nowrap">Horário</th>
                     <th class="text-nowrap">Nível</th>
-                    <th class="text-nowrap">Alunos Máx</th>
+                    <th class="text-nowrap">Alunos</th>
                     <th class="text-nowrap">Status</th>
                     <th
                       v-if="showActions"
@@ -237,10 +237,10 @@ onMounted(() => {
                   </tr>
 
                   <tr
-                    v-for="groupClass in groupClasses"
+                    v-for="(groupClass, index) in groupClasses"
                     :key="groupClass.id"
                   >
-                    <td>{{ groupClass.id }}</td>
+                    <td>{{ index + 1 }}</td>
 
                     <td class="text-nowrap">
                       <strong>{{ groupClass.name }}</strong>
@@ -263,7 +263,7 @@ onMounted(() => {
                     </td>
 
                     <td class="text-nowrap">
-                      {{ groupClass.max_students || "—" }}
+                      {{ groupClass.students_count ?? 0 }} / {{ groupClass.max_students || "—" }}
                     </td>
 
                     <td class="text-nowrap">
@@ -279,6 +279,15 @@ onMounted(() => {
                       v-if="showActions"
                       class="text-end text-nowrap"
                     >
+                      <RouterLink
+                        v-if="canViewGroupClasses"
+                        :to="`/group-classes/${groupClass.id}`"
+                        class="btn btn-xs sharp btn-info me-1 text-white"
+                        :aria-label="`Visualizar ${groupClass.name}`"
+                      >
+                        <i class="fa fa-eye"></i>
+                      </RouterLink>
+
                       <RouterLink
                         v-if="canUpdateGroupClasses"
                         :to="`/group-classes/${groupClass.id}/edit`"

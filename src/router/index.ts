@@ -121,6 +121,12 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.create },
     },
     {
+      path: "/group-classes/:id",
+      name: "GroupClassView",
+      component: () => import("../views/admin/group-classes/GroupClassView.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.view },
+    },
+    {
       path: "/group-classes/:id/edit",
       name: "GroupClassEdit",
       component: () => import("../views/admin/group-classes/GroupClassForm.vue"),

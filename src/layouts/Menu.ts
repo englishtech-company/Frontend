@@ -37,6 +37,7 @@ const MenuItems = reactive<menuType[]>([
     icons: "la la-user",
     title: "Alunos",
     to: "/students",
+    permission: PERMISSIONS.students.view,
   },
   {
     icons: "la la-chalkboard-teacher",

@@ -35,6 +35,7 @@ export type GroupClassPayload = {
   max_students?: number | null;
   status: GroupClassStatus;
   level?: string | null;
+  student_ids?: number[];
 };
 
 export async function listGroupClasses(
@@ -110,3 +111,4 @@ export async function getGroupClassOptions(): Promise<Record<string, string>> {
 
   return response.plucks.group_classes;
 }
+
