@@ -10,6 +10,7 @@ export type ListPaymentsParams = {
   page?: number;
   limit?: number;
   chargeId?: number;
+  studentId?: number;
   paidAt?: string;
 };
 
@@ -45,6 +46,10 @@ export async function listPayments(
 
   if (params.chargeId !== undefined) {
     query.set("charge_id", String(params.chargeId));
+  }
+
+  if (params.studentId !== undefined) {
+    query.set("student_id", String(params.studentId));
   }
 
   if (params.paidAt) {
