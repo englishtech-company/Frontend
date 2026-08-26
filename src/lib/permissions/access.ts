@@ -59,6 +59,12 @@ export const PERMISSIONS = {
     update: "payments.update",
     delete: "payments.delete",
   },
+  studentDocuments: {
+    view: "student-documents.view",
+    create: "student-documents.create",
+    update: "student-documents.update",
+    delete: "student-documents.delete",
+  },
   permissions: {
     view: "permissions.view",
   },
@@ -84,6 +90,7 @@ export type PermissionName =
   | (typeof PERMISSIONS.enrollmentQuestions)[keyof typeof PERMISSIONS.enrollmentQuestions]
   | (typeof PERMISSIONS.charges)[keyof typeof PERMISSIONS.charges]
   | (typeof PERMISSIONS.payments)[keyof typeof PERMISSIONS.payments]
+  | (typeof PERMISSIONS.studentDocuments)[keyof typeof PERMISSIONS.studentDocuments]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
   | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses];

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
+import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { getStudent } from "@/lib/students";
@@ -406,7 +407,12 @@ onMounted(loadStudent);
                         class="tab-pane fade active show"
                         role="tabpanel"
                       >
+                        <StudentDocumentsPanel
+                          v-if="moduleTab.id === 'documents'"
+                          :student-id="student.id"
+                        />
                         <ProfileModulePlaceholder
+                          v-else
                           :title="moduleTab.title"
                           :description="moduleTab.description"
                           :icon="moduleTab.icon"
