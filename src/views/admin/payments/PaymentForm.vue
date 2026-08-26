@@ -9,6 +9,7 @@ import {
   useRoute,
   useRouter,
 } from "vue-router";
+import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
@@ -16,6 +17,7 @@ import {
   getCharge,
   getChargeOptions,
 } from "@/lib/charges";
+import { confirmDeleteWithReason } from "@/lib/confirm";
 import {
   formatChargeStatus,
   formatCurrency,
@@ -26,16 +28,25 @@ import {
 import {
   createPayment,
   getPayment,
+  getPaymentReceipt,
   updatePayment,
+} from "@/lib/payments";
+import type {
+  PaymentWithReceipt,
 } from "@/lib/payments";
 import {
   formatPriceForInput,
   formatPriceInput,
   parsePriceInput,
 } from "@/lib/plans/format";
+import {
+  createStudentDocument,
+  deleteStudentDocument,
+  replaceStudentDocument,
+} from "@/lib/studentDocuments";
 import type {
   Charge,
-  Payment,
+  StudentDocument,
 } from "@/lib/types";
 
 const route = useRoute();
@@ -44,6 +55,10 @@ const router = useRouter();
 const {
   canCreatePayments,
   canUpdatePayments,
+  canViewStudentDocuments,
+  canCreateStudentDocuments,
+  canUpdateStudentDocuments,
+  canDeleteStudentDocuments,
 } = usePermissions();
 
 const isEdit = computed(
@@ -63,16 +78,30 @@ const hasSavePermission = computed(() =>
 const chargeId = ref<string | null>(null);
 const amount = ref("");
 const paidAt = ref("");
-const receiptUrl = ref("");
 
-const payment = ref<Payment | null>(null);
+const payment =
+  ref<PaymentWithReceipt | null>(null);
+
+const receipt =
+  ref<StudentDocument | null>(null);
+
+const receiptFile = ref<File | null>(null);
+
+const previewedReceipt =
+  ref<StudentDocument | null>(null);
+
+const receiptInput =
+  ref<HTMLInputElement | null>(null);
+
 const selectedCharge = ref<Charge | null>(null);
 const chargeOptions = ref<SelectOption[]>([]);
 
 const loading = ref(false);
 const loadingCharge = ref(false);
 const saving = ref(false);
+const deletingReceipt = ref(false);
 const error = ref("");
+const success = ref("");
 
 const selectedStudent = computed(() =>
   selectedCharge.value
@@ -98,10 +127,17 @@ const chargeAcceptsNewPayment = computed(
   }
 );
 
+const canManageReceipt = computed(() =>
+  receipt.value
+    ? canUpdateStudentDocuments.value
+    : canCreateStudentDocuments.value
+);
+
 const canSubmit = computed(
   () =>
     hasSavePermission.value &&
     !saving.value &&
+    !deletingReceipt.value &&
     !loadingCharge.value &&
     chargeAcceptsNewPayment.value
 );
@@ -147,10 +183,98 @@ function toUtcDateTimePayload(
     .replace("T", " ");
 }
 
+function formatFileSize(size: number): string {
+  if (!Number.isFinite(size) || size < 0) {
+    return "—";
+  }
+
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(
+    size /
+    (1024 * 1024)
+  ).toFixed(1)} MB`;
+}
+
+function validateReceiptFile(
+  file: File
+): string | null {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+  ];
+
+  const allowedExtensions = [
+    "pdf",
+    "png",
+    "jpg",
+    "jpeg",
+  ];
+
+  const extension =
+    file.name
+      .split(".")
+      .pop()
+      ?.toLowerCase() ?? "";
+
+  if (
+    !allowedMimeTypes.includes(file.type) ||
+    !allowedExtensions.includes(extension)
+  ) {
+    return "Selecione um arquivo PDF, PNG, JPG ou JPEG.";
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    return "O comprovante não pode ser maior que 10 MB.";
+  }
+
+  return null;
+}
+
 function handleAmountInput(event: Event) {
   const input = event.target as HTMLInputElement;
 
   amount.value = formatPriceInput(input.value);
+}
+
+function handleReceiptFile(event: Event) {
+  error.value = "";
+  success.value = "";
+
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+
+  if (!file) {
+    receiptFile.value = null;
+    return;
+  }
+
+  const validationError =
+    validateReceiptFile(file);
+
+  if (validationError) {
+    error.value = validationError;
+    receiptFile.value = null;
+    input.value = "";
+    return;
+  }
+
+  receiptFile.value = file;
+}
+
+function clearReceiptInput() {
+  receiptFile.value = null;
+
+  if (receiptInput.value) {
+    receiptInput.value.value = "";
+  }
 }
 
 function buildChargeFallbackLabel(
@@ -199,6 +323,7 @@ async function handleChargeChange(
   value: string | number | null
 ) {
   selectedCharge.value = null;
+  success.value = "";
 
   if (value === null || value === "") {
     return;
@@ -224,6 +349,7 @@ async function handleChargeChange(
 async function loadForm() {
   loading.value = true;
   error.value = "";
+  success.value = "";
 
   try {
     await loadChargeOptions();
@@ -241,6 +367,10 @@ async function loadForm() {
     );
 
     payment.value = currentPayment;
+    receipt.value = getPaymentReceipt(
+      currentPayment
+    );
+
     chargeId.value = String(
       currentPayment.charge_id
     );
@@ -252,9 +382,6 @@ async function loadForm() {
     paidAt.value = toLocalDateTimeInput(
       currentPayment.paid_at
     );
-
-    receiptUrl.value =
-      currentPayment.receipt_url ?? "";
 
     const currentCharge =
       getPaymentCharge(currentPayment);
@@ -278,6 +405,108 @@ async function loadForm() {
         : "Erro ao carregar o pagamento.";
   } finally {
     loading.value = false;
+  }
+}
+
+async function saveReceipt(
+  savedPayment: PaymentWithReceipt
+): Promise<void> {
+  if (!receiptFile.value) {
+    return;
+  }
+
+  if (!canManageReceipt.value) {
+    throw new Error(
+      receipt.value
+        ? "Você não tem permissão para substituir este comprovante."
+        : "Você não tem permissão para enviar comprovantes."
+    );
+  }
+
+  const paymentCharge =
+    getPaymentCharge(savedPayment) ??
+    selectedCharge.value;
+
+  if (!paymentCharge) {
+    throw new Error(
+      "Não foi possível identificar o aluno deste pagamento."
+    );
+  }
+
+  const savedReceipt = receipt.value
+    ? await replaceStudentDocument(
+        receipt.value.id,
+        receiptFile.value
+      )
+    : await createStudentDocument({
+        student_id: paymentCharge.student_id,
+        payment_id: savedPayment.id,
+        category: "payment_receipt",
+        description: null,
+        document: receiptFile.value,
+      });
+
+  receipt.value = savedReceipt;
+  clearReceiptInput();
+}
+
+async function removeReceipt() {
+  if (!receipt.value) {
+    return;
+  }
+
+  error.value = "";
+  success.value = "";
+
+  if (!canDeleteStudentDocuments.value) {
+    error.value =
+      "Você não tem permissão para excluir comprovantes.";
+    return;
+  }
+
+  const currentReceipt = receipt.value;
+
+  const reason = await confirmDeleteWithReason({
+    entityLabel: "comprovante",
+    itemName: currentReceipt.original_name,
+    message:
+      "O arquivo será removido do armazenamento, mas o pagamento e os metadados de auditoria serão preservados.",
+    reasonLabel: "Motivo da exclusão",
+    reasonPlaceholder:
+      "Exemplo: comprovante anexado ao pagamento incorreto.",
+  });
+
+  if (!reason) {
+    return;
+  }
+
+  deletingReceipt.value = true;
+
+  try {
+    await deleteStudentDocument(
+      currentReceipt.id,
+      reason
+    );
+
+    if (
+      previewedReceipt.value?.id ===
+      currentReceipt.id
+    ) {
+      previewedReceipt.value = null;
+    }
+
+    receipt.value = null;
+    clearReceiptInput();
+
+    success.value =
+      "Comprovante excluído com sucesso. O pagamento foi preservado.";
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : "Erro ao excluir o comprovante.";
+  } finally {
+    deletingReceipt.value = false;
   }
 }
 
@@ -323,25 +552,46 @@ async function submit() {
 
   saving.value = true;
   error.value = "";
+  success.value = "";
+
+  let savedPayment: PaymentWithReceipt | null =
+    null;
 
   try {
     const data = {
       amount: parsedAmount,
       paid_at: paidAtPayload,
-      receipt_url:
-        receiptUrl.value.trim() || null,
     };
 
     if (isEdit.value) {
-      await updatePayment(
+      savedPayment = await updatePayment(
         paymentId.value,
         data
       );
     } else {
-      await createPayment({
+      savedPayment = await createPayment({
         charge_id: Number(chargeId.value),
         ...data,
       });
+    }
+
+    payment.value = savedPayment;
+
+    try {
+      await saveReceipt(savedPayment);
+    } catch (receiptException) {
+      if (!isEdit.value) {
+        await router.replace(
+          `/payments/${savedPayment.id}/edit`
+        );
+      }
+
+      error.value =
+        receiptException instanceof Error
+          ? `Pagamento salvo, mas o comprovante não foi enviado: ${receiptException.message}`
+          : "Pagamento salvo, mas o comprovante não foi enviado.";
+
+      return;
     }
 
     await router.push("/payments");
@@ -398,6 +648,13 @@ onMounted(loadForm);
       class="alert alert-danger"
     >
       {{ error }}
+    </div>
+
+    <div
+      v-if="success"
+      class="alert alert-success"
+    >
+      {{ success }}
     </div>
 
     <div class="row">
@@ -516,25 +773,137 @@ onMounted(loadForm);
                 <div class="col-lg-7 mb-3">
                   <label
                     class="form-label payment-form__label"
-                    for="payment-receipt-url"
+                    for="payment-receipt"
                   >
-                    URL do comprovante
+                    Comprovante privado
                   </label>
 
                   <input
-                    id="payment-receipt-url"
-                    v-model="receiptUrl"
-                    type="url"
+                    id="payment-receipt"
+                    ref="receiptInput"
+                    type="file"
                     class="form-control payment-form__input"
-                    maxlength="2048"
-                    placeholder="https://exemplo.com/comprovante.pdf"
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                    :disabled="
+                      !canManageReceipt ||
+                      saving ||
+                      deletingReceipt
+                    "
+                    @change="handleReceiptFile"
                   />
 
                   <small class="text-muted">
-                    Campo opcional. Informe um endereço
-                    completo iniciado por http ou https.
+                    {{
+                      receipt
+                        ? "Selecione um arquivo somente se desejar substituir o comprovante atual."
+                        : "Campo opcional. PDF, PNG ou JPEG, com no máximo 10 MB."
+                    }}
                   </small>
+
+                  <div
+                    v-if="receiptFile"
+                    class="payment-form__selected-file"
+                  >
+                    <i class="la la-paperclip"></i>
+                    {{ receiptFile.name }}
+                  </div>
                 </div>
+              </div>
+
+              <div
+                v-if="receipt"
+                class="payment-form__receipt mb-4"
+              >
+                <div
+                  class="payment-form__receipt-icon"
+                  aria-hidden="true"
+                >
+                  <i class="la la-file-alt"></i>
+                </div>
+
+                <div
+                  class="payment-form__receipt-details"
+                >
+                  <strong>
+                    {{ receipt.original_name }}
+                  </strong>
+
+                  <span>
+                    {{ formatFileSize(receipt.size) }}
+                  </span>
+                </div>
+
+                <div
+                  class="payment-form__receipt-actions"
+                >
+                  <button
+                    v-if="canViewStudentDocuments"
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    :disabled="deletingReceipt"
+                    @click="
+                      previewedReceipt = receipt
+                    "
+                  >
+                    <i class="la la-eye me-1"></i>
+                    Visualizar
+                  </button>
+
+                  <button
+                    v-if="canDeleteStudentDocuments"
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    :disabled="
+                      deletingReceipt || saving
+                    "
+                    @click="removeReceipt"
+                  >
+                    <span
+                      v-if="deletingReceipt"
+                      class="spinner-border spinner-border-sm me-1"
+                      aria-hidden="true"
+                    ></span>
+
+                    <i
+                      v-else
+                      class="la la-trash me-1"
+                    ></i>
+
+                    {{
+                      deletingReceipt
+                        ? "Excluindo..."
+                        : "Excluir"
+                    }}
+                  </button>
+                </div>
+              </div>
+
+              <div
+                v-else-if="payment?.receipt_url"
+                class="payment-form__legacy-receipt mb-4"
+              >
+                <div>
+                  <strong>
+                    Comprovante legado
+                  </strong>
+
+                  <span>
+                    Este registro utiliza uma URL
+                    cadastrada anteriormente.
+                  </span>
+                </div>
+
+                <a
+                  :href="payment.receipt_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn btn-sm btn-outline-primary"
+                >
+                  <i
+                    class="la la-external-link-alt me-1"
+                  ></i>
+                  Abrir URL
+                </a>
               </div>
 
               <div
@@ -649,6 +1018,11 @@ onMounted(loadForm);
         </div>
       </div>
     </div>
+
+    <StudentDocumentPreviewModal
+      :document="previewedReceipt"
+      @close="previewedReceipt = null"
+    />
   </div>
 </template>
 
@@ -656,11 +1030,11 @@ onMounted(loadForm);
 .payment-form__label {
   display: block;
   margin-bottom: 0.5rem;
+  color: #6c757d;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #6c757d;
 }
 
 .payment-form__label span {
@@ -671,15 +1045,26 @@ onMounted(loadForm);
   min-height: 3rem;
 }
 
+.payment-form__selected-file {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .payment-form__identifier {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.5rem 1rem;
   padding: 1rem 1.25rem;
+  background: #f8f9fa;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  background: #f8f9fa;
 }
 
 .payment-form__identifier strong {
@@ -692,15 +1077,68 @@ onMounted(loadForm);
   color: #6c757d;
 }
 
+.payment-form__receipt,
+.payment-form__legacy-receipt {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.payment-form__receipt-icon {
+  display: flex;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.25rem;
+  background: #f7edf1;
+  border-radius: 0.5rem;
+}
+
+.payment-form__receipt-details,
+.payment-form__legacy-receipt > div {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.payment-form__receipt-details strong {
+  overflow: hidden;
+  color: var(--primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payment-form__receipt-details span,
+.payment-form__legacy-receipt span {
+  color: #6c757d;
+  font-size: 0.8125rem;
+}
+
+.payment-form__receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .payment-form__summary {
   display: grid;
   grid-template-columns:
     repeat(5, minmax(0, 1fr));
   gap: 1rem;
   padding: 1.25rem;
+  background: #f8f9fa;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  background: #f8f9fa;
 }
 
 .payment-form__summary div {
@@ -736,6 +1174,21 @@ onMounted(loadForm);
 @media (max-width: 575.98px) {
   .payment-form__summary {
     grid-template-columns: 1fr;
+  }
+
+  .payment-form__receipt,
+  .payment-form__legacy-receipt {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payment-form__receipt-actions {
+    flex-direction: column;
+  }
+
+  .payment-form__receipt .btn,
+  .payment-form__legacy-receipt .btn {
+    width: 100%;
   }
 }
 </style>

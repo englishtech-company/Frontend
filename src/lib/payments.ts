@@ -4,7 +4,15 @@ import type {
   ApiListResponse,
   Paginated,
   Payment,
+  StudentDocument,
 } from "@/lib/types";
+
+export type PaymentWithReceipt = Payment & {
+  receipt_document?: StudentDocument | null;
+  relationships?: Payment["relationships"] & {
+    receipt_document?: StudentDocument | null;
+  };
+};
 
 export type ListPaymentsParams = {
   page?: number;
@@ -36,9 +44,19 @@ type PaymentPlucksResponse = {
   };
 };
 
+export function getPaymentReceipt(
+  payment: PaymentWithReceipt
+): StudentDocument | null {
+  return (
+    payment.receipt_document ??
+    payment.relationships?.receipt_document ??
+    null
+  );
+}
+
 export async function listPayments(
   params: ListPaymentsParams = {}
-): Promise<Paginated<Payment>> {
+): Promise<Paginated<PaymentWithReceipt>> {
   const query = new URLSearchParams({
     "pagination[page]": String(params.page ?? 1),
     "pagination[limit]": String(params.limit ?? 20),
@@ -57,7 +75,10 @@ export async function listPayments(
   }
 
   const response = await api<
-    ApiListResponse<"payments", Payment>
+    ApiListResponse<
+      "payments",
+      PaymentWithReceipt
+    >
   >(`/payments?${query.toString()}`);
 
   return response.payments;
@@ -65,9 +86,12 @@ export async function listPayments(
 
 export async function getPayment(
   id: number
-): Promise<Payment> {
+): Promise<PaymentWithReceipt> {
   const response = await api<
-    ApiItemResponse<"payment", Payment>
+    ApiItemResponse<
+      "payment",
+      PaymentWithReceipt
+    >
   >(`/payments/${id}`);
 
   return response.payment;
@@ -75,9 +99,12 @@ export async function getPayment(
 
 export async function createPayment(
   data: CreatePaymentPayload
-): Promise<Payment> {
+): Promise<PaymentWithReceipt> {
   const response = await api<
-    ApiItemResponse<"payment", Payment>
+    ApiItemResponse<
+      "payment",
+      PaymentWithReceipt
+    >
   >("/payments/create", {
     method: "POST",
     body: data,
@@ -89,9 +116,12 @@ export async function createPayment(
 export async function updatePayment(
   id: number,
   data: UpdatePaymentPayload
-): Promise<Payment> {
+): Promise<PaymentWithReceipt> {
   const response = await api<
-    ApiItemResponse<"payment", Payment>
+    ApiItemResponse<
+      "payment",
+      PaymentWithReceipt
+    >
   >(`/payments/${id}`, {
     method: "PUT",
     body: data,

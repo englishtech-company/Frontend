@@ -12,6 +12,16 @@ type ConfirmDeleteWithReasonOptions =
     reasonPlaceholder?: string;
   };
 
+function raiseConfirmationAboveModals() {
+  const container = Swal.getContainer();
+
+  if (!container) {
+    return;
+  }
+
+  container.style.zIndex = "3000";
+}
+
 export async function confirmDelete(
   options: ConfirmDeleteOptions
 ): Promise<boolean> {
@@ -31,6 +41,7 @@ export async function confirmDelete(
     cancelButtonColor: "#6c757d",
     reverseButtons: true,
     focusCancel: true,
+    didOpen: raiseConfirmationAboveModals,
   });
 
   return result.isConfirmed;
@@ -75,6 +86,7 @@ export async function confirmDeleteWithReason(
     cancelButtonColor: "#6c757d",
     reverseButtons: true,
     focusCancel: true,
+    didOpen: raiseConfirmationAboveModals,
   });
 
   if (

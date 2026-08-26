@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import {
   computed,
+  nextTick,
   onMounted,
   ref,
 } from "vue";
 import { RouterLink } from "vue-router";
+import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import StudentPaymentDetailsModal from "@/components/admin/StudentPaymentDetailsModal.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -14,9 +16,15 @@ import {
   formatDateTime,
   getPaymentCharge,
 } from "@/lib/finance/format";
-import { listPayments } from "@/lib/payments";
+import {
+  getPaymentReceipt,
+  listPayments,
+} from "@/lib/payments";
 import type {
-  Payment,
+  PaymentWithReceipt,
+} from "@/lib/payments";
+import type {
+  StudentDocument,
 } from "@/lib/types";
 
 const props = defineProps<{
@@ -29,10 +37,12 @@ const {
   canUpdatePayments,
 } = usePermissions();
 
-const payments = ref<Payment[]>([]);
-const selectedPayment = ref<Payment | null>(
-  null
-);
+const payments = ref<PaymentWithReceipt[]>([]);
+const selectedPayment =
+  ref<PaymentWithReceipt | null>(null);
+
+const previewedReceipt =
+  ref<StudentDocument | null>(null);
 
 const loading = ref(true);
 const error = ref("");
@@ -48,7 +58,7 @@ const showActions = computed(
 );
 
 function getChargeStatus(
-  payment: Payment
+  payment: PaymentWithReceipt
 ) {
   const charge = getPaymentCharge(payment);
 
@@ -58,9 +68,90 @@ function getChargeStatus(
 }
 
 function openPaymentDetails(
-  payment: Payment
+  payment: PaymentWithReceipt
 ) {
   selectedPayment.value = payment;
+}
+
+function attachReceipt(
+  payment: PaymentWithReceipt,
+  receipt: StudentDocument
+): PaymentWithReceipt {
+  return {
+    ...payment,
+    receipt_document: receipt,
+    relationships: {
+      ...(payment.relationships ?? {}),
+      receipt_document: receipt,
+    },
+  };
+}
+
+function detachReceipt(
+  payment: PaymentWithReceipt
+): PaymentWithReceipt {
+  return {
+    ...payment,
+    receipt_document: null,
+    relationships: {
+      ...(payment.relationships ?? {}),
+      receipt_document: null,
+    },
+  };
+}
+
+function handleReceiptUpdated(
+  receipt: StudentDocument
+) {
+  if (!receipt.payment_id) {
+    return;
+  }
+
+  payments.value = payments.value.map(
+    (payment) =>
+      payment.id === receipt.payment_id
+        ? attachReceipt(payment, receipt)
+        : payment
+  );
+
+  if (
+    selectedPayment.value?.id ===
+    receipt.payment_id
+  ) {
+    selectedPayment.value = attachReceipt(
+      selectedPayment.value,
+      receipt
+    );
+  }
+}
+
+function handleReceiptDeleted(
+  paymentId: number
+) {
+  payments.value = payments.value.map(
+    (payment) =>
+      payment.id === paymentId
+        ? detachReceipt(payment)
+        : payment
+  );
+
+  if (
+    selectedPayment.value?.id === paymentId
+  ) {
+    selectedPayment.value = detachReceipt(
+      selectedPayment.value
+    );
+  }
+}
+
+async function openReceiptPreview(
+  receipt: StudentDocument
+) {
+  selectedPayment.value = null;
+
+  await nextTick();
+
+  previewedReceipt.value = receipt;
 }
 
 async function loadPayments() {
@@ -175,6 +266,7 @@ onMounted(loadPayments);
 
           <div>
             <span>Último pagamento</span>
+
             <strong>
               {{
                 formatDateTime(
@@ -312,8 +404,26 @@ onMounted(loadPayments);
                 </td>
 
                 <td>
+                  <button
+                    v-if="getPaymentReceipt(payment)"
+                    type="button"
+                    class="student-payments__receipt"
+                    :title="
+                      getPaymentReceipt(payment)!
+                        .original_name
+                    "
+                    @click="
+                      openReceiptPreview(
+                        getPaymentReceipt(payment)!
+                      )
+                    "
+                  >
+                    <i class="la la-file-alt me-1"></i>
+                    Visualizar
+                  </button>
+
                   <a
-                    v-if="payment.receipt_url"
+                    v-else-if="payment.receipt_url"
                     :href="payment.receipt_url"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -409,6 +519,14 @@ onMounted(loadPayments);
     <StudentPaymentDetailsModal
       :payment="selectedPayment"
       @close="selectedPayment = null"
+      @receipt-updated="handleReceiptUpdated"
+      @receipt-deleted="handleReceiptDeleted"
+      @preview-receipt="openReceiptPreview"
+    />
+
+    <StudentDocumentPreviewModal
+      :document="previewedReceipt"
+      @close="previewedReceipt = null"
     />
   </div>
 </template>
@@ -484,7 +602,8 @@ onMounted(loadPayments);
   width: 96px;
 }
 
-.student-payments__payment {
+.student-payments__payment,
+.student-payments__receipt {
   padding: 0;
   color: var(--primary);
   font: inherit;
@@ -494,8 +613,14 @@ onMounted(loadPayments);
   cursor: pointer;
 }
 
+.student-payments__receipt {
+  font-size: 0.8125rem;
+}
+
 .student-payments__payment:hover,
-.student-payments__payment:focus-visible {
+.student-payments__payment:focus-visible,
+.student-payments__receipt:hover,
+.student-payments__receipt:focus-visible {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
