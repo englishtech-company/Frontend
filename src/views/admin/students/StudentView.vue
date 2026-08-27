@@ -26,7 +26,6 @@ import {
   STUDENT_MODULE_TABS,
 } from "@/lib/students/format";
 import { enrollStudentInGroupClass, getGroupClassOptions } from "@/lib/groupClasses";
-import { notify } from "@/lib/actionNotification";
 import type { Student } from "@/lib/types";
 
 const route = useRoute();
