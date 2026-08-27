@@ -5,6 +5,7 @@ import {
   ref,
 } from "vue";
 import { RouterLink } from "vue-router";
+import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
 import { getChargeOptions } from "@/lib/charges";
@@ -17,9 +18,11 @@ import {
 } from "@/lib/finance/format";
 import {
   deletePayment,
+  getPaymentReceipt,
   listPayments,
 } from "@/lib/payments";
-import type { Payment } from "@/lib/types";
+import type { PaymentWithReceipt } from "@/lib/payments";
+import type { StudentDocument } from "@/lib/types";
 
 const {
   canViewPayments,
@@ -28,7 +31,7 @@ const {
   canDeletePayments,
 } = usePermissions();
 
-const payments = ref<Payment[]>([]);
+const payments = ref<PaymentWithReceipt[]>([]);
 const chargeOptions = ref<
   Array<{
     value: string;
@@ -38,6 +41,9 @@ const chargeOptions = ref<
 
 const loading = ref(true);
 const error = ref("");
+
+const previewedReceipt =
+  ref<StudentDocument | null>(null);
 
 const page = ref(1);
 const lastPage = ref(1);
@@ -52,7 +58,7 @@ const showActions = computed(
 );
 
 function getPaymentStudentName(
-  payment: Payment
+  payment: PaymentWithReceipt
 ): string {
   const charge = getPaymentCharge(payment);
 
@@ -67,7 +73,7 @@ function getPaymentStudentName(
 }
 
 function getPaymentStudentEmail(
-  payment: Payment
+  payment: PaymentWithReceipt
 ): string {
   const charge = getPaymentCharge(payment);
 
@@ -79,6 +85,12 @@ function getPaymentStudentEmail(
     getChargeStudent(charge)?.email ??
     "Sem e-mail"
   );
+}
+
+function openReceiptPreview(
+  receipt: StudentDocument
+) {
+  previewedReceipt.value = receipt;
 }
 
 async function loadChargeOptions() {
@@ -163,7 +175,9 @@ function goToPage(nextPage: number) {
   loadPayments();
 }
 
-async function removePayment(payment: Payment) {
+async function removePayment(
+  payment: PaymentWithReceipt
+) {
   if (!canDeletePayments.value) {
     error.value =
       "Você não tem permissão para excluir pagamentos.";
@@ -422,8 +436,22 @@ onMounted(loadPage);
                     </td>
 
                     <td>
+                      <button
+                        v-if="getPaymentReceipt(payment)"
+                        type="button"
+                        class="btn btn-xs btn-outline-primary text-nowrap"
+                        @click="
+                          openReceiptPreview(
+                            getPaymentReceipt(payment)!
+                          )
+                        "
+                      >
+                        <i class="la la-eye me-1"></i>
+                        Visualizar
+                      </button>
+
                       <a
-                        v-if="payment.receipt_url"
+                        v-else-if="payment.receipt_url"
                         :href="payment.receipt_url"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -498,6 +526,11 @@ onMounted(loadPage);
         </div>
       </div>
     </div>
+
+    <StudentDocumentPreviewModal
+      :document="previewedReceipt"
+      @close="previewedReceipt = null"
+    />
   </div>
 </template>
 

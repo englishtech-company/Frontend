@@ -32,6 +32,7 @@ const MODULE_LABELS: Record<string, string> = {
   "experimental-classes": "Aulas experimentais",
   charges: "Cobranças",
   payments: "Pagamentos",
+  "student-documents": "Documentos de alunos",
   enrollments: "Matrículas",
   "enrollment-questions": "Perguntas de matrícula",
   "group-classes": "Turmas",

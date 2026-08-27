@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
+import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
+import StudentPaymentsPanel from "@/components/admin/StudentPaymentsPanel.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
@@ -484,7 +486,16 @@ onMounted(loadStudent);
                         class="tab-pane fade active show"
                         role="tabpanel"
                       >
+                        <StudentPaymentsPanel
+                          v-if="moduleTab.id === 'payments'"
+                          :student-id="student.id"
+                        />
+                        <StudentDocumentsPanel
+                          v-else-if="moduleTab.id === 'documents'"
+                          :student-id="student.id"
+                        />
                         <ProfileModulePlaceholder
+                          v-else
                           :title="moduleTab.title"
                           :description="moduleTab.description"
                           :icon="moduleTab.icon"

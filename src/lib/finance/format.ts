@@ -6,6 +6,7 @@ import {
 } from "@/lib/plans/format";
 import type {
   Charge,
+  ChargeSchedule,
   ChargeStatus,
   Enrollment,
   Payment,
@@ -38,6 +39,16 @@ export function getChargeEnrollment(
   return (
     charge.relationships?.enrollment ??
     charge.enrollment ??
+    null
+  );
+}
+
+export function getChargeSchedule(
+  charge: Charge
+): ChargeSchedule | null {
+  return (
+    charge.relationships?.charge_schedule ??
+    charge.charge_schedule ??
     null
   );
 }

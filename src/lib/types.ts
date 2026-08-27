@@ -397,10 +397,37 @@ export type ChargeStatus =
   | "overdue"
   | "cancelled";
 
+export type ChargeScheduleStatus =
+  | "active"
+  | "completed"
+  | "cancelled";
+
+export type ChargeSchedule = {
+  id: number;
+  enrollment_id: number;
+  plan_variant_id: number;
+  contracted_monthly_price: string;
+  discount_percent: string;
+  installment_amount: string;
+  duration_months: number;
+  first_due_date: string;
+  billing_day: number;
+  renews_automatically: boolean;
+  next_due_date?: string | null;
+  status: ChargeScheduleStatus;
+  cancelled_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  enrollment?: Enrollment | null;
+  plan_variant?: PlanVariant | null;
+};
+
 export type Charge = {
   id: number;
   student_id: number;
   enrollment_id: number;
+  charge_schedule_id?: number | null;
   expected_amount: string;
   due_date: string;
   status: ChargeStatus;
@@ -409,9 +436,11 @@ export type Charge = {
   deleted_at?: string | null;
   student?: Student | null;
   enrollment?: Enrollment | null;
+  charge_schedule?: ChargeSchedule | null;
   relationships?: {
     student?: Student | null;
     enrollment?: Enrollment | null;
+    charge_schedule?: ChargeSchedule | null;
   };
 };
 
@@ -464,5 +493,37 @@ export type GroupClass = {
     teacher?: Teacher | null;
     plan?: Plan | null;
     students?: GroupClassStudent[];
+export type StudentDocumentCategory =
+  | "payment_receipt"
+  | "contract"
+  | "personal_document"
+  | "address_proof"
+  | "other";
+
+export type StudentDocument = {
+  id: number;
+  student_id: number;
+  payment_id?: number | null;
+  category: StudentDocumentCategory;
+  description?: string | null;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  sha256: string;
+  uploaded_by: number;
+  deleted_by?: number | null;
+  deletion_reason?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  student?: Student | null;
+  payment?: Payment | null;
+  uploader?: User | null;
+  deleter?: User | null;
+  relationships?: {
+    student?: Student | null;
+    payment?: Payment | null;
+    uploaded_by?: User | null;
+    deleted_by?: User | null;
   };
 };

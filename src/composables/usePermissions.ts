@@ -218,6 +218,27 @@ export function usePermissions() {
       )
     ),
 
+    canViewStudentDocuments: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.studentDocuments.view
+      )
+    ),
+    canCreateStudentDocuments: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.studentDocuments.create
+      )
+    ),
+    canUpdateStudentDocuments: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.studentDocuments.update
+      )
+    ),
+    canDeleteStudentDocuments: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.studentDocuments.delete
+      )
+    ),
+
     canViewExperimentalClasses: computed(() =>
       auth.hasPermission(
         PERMISSIONS.experimentalClasses.view
