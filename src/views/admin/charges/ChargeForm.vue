@@ -3,6 +3,7 @@ import {
   computed,
   onMounted,
   ref,
+  watch,
 } from "vue";
 import {
   RouterLink,
@@ -13,20 +14,25 @@ import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
+  cancelChargeRecurrence,
   createCharge,
   getCharge,
   updateCharge,
 } from "@/lib/charges";
+import { confirmAction } from "@/lib/confirm";
 import { listEnrollments } from "@/lib/enrollments";
 import {
   formatEnrollmentNumber,
   formatEnrollmentPlanLabel,
+  getEnrollmentPlanVariant,
 } from "@/lib/enrollments/format";
 import {
   calculateEnrollmentExpectedAmount,
   formatChargeStatus,
   formatCurrency,
+  formatDate,
   getChargeEnrollment,
+  getChargeSchedule,
   getChargeStudent,
   getEnrollmentStudent,
 } from "@/lib/finance/format";
@@ -61,6 +67,7 @@ const canSave = computed(() =>
 const enrollmentId = ref<string | null>(null);
 const dueDate = ref("");
 const status = ref<ChargeStatus>("open");
+const generateRecurrence = ref(false);
 
 const charge = ref<Charge | null>(null);
 const enrollments = ref<Enrollment[]>([]);
@@ -68,6 +75,7 @@ const enrollmentOptions = ref<SelectOption[]>([]);
 
 const loading = ref(false);
 const saving = ref(false);
+const cancellingRecurrence = ref(false);
 const error = ref("");
 
 const statusOptions = computed<SelectOption[]>(() => {
@@ -128,6 +136,147 @@ const selectedEnrollment = computed<
   );
 });
 
+const selectedPlanDuration = computed<
+  number | null
+>(() => {
+  if (!selectedEnrollment.value) {
+    return null;
+  }
+
+  const variant = getEnrollmentPlanVariant(
+    selectedEnrollment.value
+  );
+
+  const plan =
+    variant?.plan ??
+    variant?.relationships?.plan;
+
+  return plan?.duration_months ?? null;
+});
+
+const recurrenceAvailable = computed(
+  () =>
+    selectedPlanDuration.value !== null &&
+    [1, 3, 6].includes(
+      selectedPlanDuration.value
+    )
+);
+
+const recurrenceHint = computed(() => {
+  if (!selectedEnrollment.value) {
+    return "Selecione uma matrícula para consultar a regra do plano.";
+  }
+
+  if (selectedPlanDuration.value === 1) {
+    return "Será criada a primeira cobrança. As próximas serão geradas mensalmente até o cancelamento da recorrência.";
+  }
+
+  if (selectedPlanDuration.value === 3) {
+    return "Serão criadas três cobranças mensais, usando esta data como primeiro vencimento.";
+  }
+
+  if (selectedPlanDuration.value === 6) {
+    return "Serão criadas seis cobranças mensais, usando esta data como primeiro vencimento.";
+  }
+
+  return "A recorrência está disponível apenas para planos mensais, trimestrais ou semestrais.";
+});
+
+const chargeSchedule = computed(() => {
+  if (!charge.value) {
+    return null;
+  }
+
+  return getChargeSchedule(charge.value);
+});
+
+const recurrenceStatusLabel = computed(() => {
+  if (!chargeSchedule.value) {
+    return "";
+  }
+
+  if (
+    chargeSchedule.value.status === "cancelled"
+  ) {
+    return "Cancelada";
+  }
+
+  if (
+    chargeSchedule.value.status === "active"
+  ) {
+    return "Ativa";
+  }
+
+  return "Parcelas geradas";
+});
+
+const recurrenceStatusClass = computed(() => {
+  if (!chargeSchedule.value) {
+    return "badge-secondary";
+  }
+
+  if (
+    chargeSchedule.value.status === "cancelled"
+  ) {
+    return "badge-secondary";
+  }
+
+  if (
+    chargeSchedule.value.status === "active"
+  ) {
+    return "badge-success";
+  }
+
+  return "badge-info";
+});
+
+const recurrenceTypeLabel = computed(() => {
+  if (!chargeSchedule.value) {
+    return "—";
+  }
+
+  if (
+    chargeSchedule.value.renews_automatically
+  ) {
+    return "Mensal com renovação automática";
+  }
+
+  if (
+    chargeSchedule.value.duration_months === 3
+  ) {
+    return "Trimestral, com 3 cobranças";
+  }
+
+  if (
+    chargeSchedule.value.duration_months === 6
+  ) {
+    return "Semestral, com 6 cobranças";
+  }
+
+  return `${chargeSchedule.value.duration_months} cobranças`;
+});
+
+const canCancelRecurrence = computed(
+  () =>
+    isEdit.value &&
+    canUpdateCharges.value &&
+    chargeSchedule.value !== null &&
+    chargeSchedule.value.status !==
+      "cancelled"
+);
+
+const statusHint = computed(() => {
+  if (statusIsAutomatic.value) {
+    return "Este status é calculado automaticamente pelos pagamentos.";
+  }
+
+  if (chargeSchedule.value) {
+    return "Alterar o status afeta somente esta cobrança. Para encerrar todo o ciclo, use Cancelar recorrência.";
+  }
+
+  return "Os status Paga e Parcial são calculados automaticamente.";
+});
+
 const selectedStudent = computed(() => {
   if (charge.value) {
     return getChargeStudent(charge.value);
@@ -155,6 +304,15 @@ const expectedAmount = computed(() => {
 
   return 0;
 });
+
+watch(
+  recurrenceAvailable,
+  (available) => {
+    if (!available) {
+      generateRecurrence.value = false;
+    }
+  }
+);
 
 function buildEnrollmentOption(
   enrollment: Enrollment
@@ -258,6 +416,47 @@ async function loadForm() {
   }
 }
 
+async function cancelRecurrence() {
+  if (
+    !charge.value ||
+    !canCancelRecurrence.value
+  ) {
+    return;
+  }
+
+  const confirmed = await confirmAction({
+    title: "Cancelar recorrência?",
+    message:
+      "Novas cobranças deixarão de ser geradas. Somente cobranças futuras ainda abertas serão canceladas; cobranças pagas, parciais e vencidas serão preservadas. A matrícula não será alterada.",
+    confirmButtonText:
+      "Sim, cancelar recorrência",
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  cancellingRecurrence.value = true;
+  error.value = "";
+
+  try {
+    const updatedCharge =
+      await cancelChargeRecurrence(
+        charge.value.id
+      );
+
+    charge.value = updatedCharge;
+    status.value = updatedCharge.status;
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : "Erro ao cancelar a recorrência.";
+  } finally {
+    cancellingRecurrence.value = false;
+  }
+}
+
 async function submit() {
   if (!canSave.value) {
     error.value =
@@ -309,6 +508,8 @@ async function submit() {
           enrollmentId.value
         ),
         due_date: dueDate.value,
+        generate_recurrence:
+          generateRecurrence.value,
       });
     }
 
@@ -343,7 +544,7 @@ onMounted(loadForm);
             {{
               isEdit
                 ? "Atualize o vencimento e o status da cobrança"
-                : "Gere uma cobrança para uma matrícula confirmada"
+                : "Gere cobranças para uma matrícula confirmada"
             }}
           </p>
         </div>
@@ -427,7 +628,12 @@ onMounted(loadForm);
                     class="form-label charge-form__label"
                     for="charge-due-date"
                   >
-                    Data de vencimento
+                    {{
+                      !isEdit &&
+                      generateRecurrence
+                        ? "Primeiro vencimento"
+                        : "Data de vencimento"
+                    }}
                     <span>*</span>
                   </label>
 
@@ -447,6 +653,38 @@ onMounted(loadForm);
               </div>
 
               <div
+                v-if="!isEdit"
+                class="row"
+              >
+                <div class="col-12 mb-4">
+                  <div
+                    class="form-check charge-form__recurrence"
+                  >
+                    <input
+                      id="charge-generate-recurrence"
+                      v-model="generateRecurrence"
+                      type="checkbox"
+                      class="form-check-input"
+                      :disabled="
+                        !recurrenceAvailable
+                      "
+                    />
+
+                    <label
+                      class="form-check-label"
+                      for="charge-generate-recurrence"
+                    >
+                      Gerar cobranças automaticamente
+                    </label>
+
+                    <small>
+                      {{ recurrenceHint }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div
                 v-if="isEdit"
                 class="row"
               >
@@ -458,13 +696,108 @@ onMounted(loadForm);
                     :options="statusOptions"
                     placeholder="Selecione o status"
                     :disabled="statusIsAutomatic"
-                    :hint="
-                      statusIsAutomatic
-                        ? 'Este status é calculado automaticamente pelos pagamentos.'
-                        : 'Os status Paga e Parcial são calculados automaticamente.'
-                    "
+                    :hint="statusHint"
                     required
                   />
+                </div>
+              </div>
+
+              <div
+                v-if="isEdit && chargeSchedule"
+                class="charge-form__schedule mb-4"
+              >
+                <div
+                  class="charge-form__schedule-header"
+                >
+                  <div>
+                    <span>Recorrência</span>
+
+                    <strong>
+                      {{ recurrenceTypeLabel }}
+                    </strong>
+                  </div>
+
+                  <span
+                    class="badge"
+                    :class="recurrenceStatusClass"
+                  >
+                    {{ recurrenceStatusLabel }}
+                  </span>
+                </div>
+
+                <div
+                  class="charge-form__schedule-grid"
+                >
+                  <div>
+                    <span>Primeiro vencimento</span>
+
+                    <strong>
+                      {{
+                        formatDate(
+                          chargeSchedule.first_due_date
+                        )
+                      }}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Próximo vencimento</span>
+
+                    <strong>
+                      {{
+                        formatDate(
+                          chargeSchedule.next_due_date
+                        )
+                      }}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Dia-base</span>
+
+                    <strong>
+                      Dia
+                      {{ chargeSchedule.billing_day }}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Valor por cobrança</span>
+
+                    <strong>
+                      {{
+                        formatCurrency(
+                          chargeSchedule.installment_amount
+                        )
+                      }}
+                    </strong>
+                  </div>
+                </div>
+
+                <div
+                  v-if="canCancelRecurrence"
+                  class="charge-form__schedule-actions"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    :disabled="
+                      cancellingRecurrence ||
+                      saving
+                    "
+                    @click="cancelRecurrence"
+                  >
+                    {{
+                      cancellingRecurrence
+                        ? "Cancelando..."
+                        : "Cancelar recorrência"
+                    }}
+                  </button>
+
+                  <small>
+                    A matrícula e o histórico financeiro
+                    não serão alterados.
+                  </small>
                 </div>
               </div>
 
@@ -528,7 +861,9 @@ onMounted(loadForm);
                   type="submit"
                   class="btn btn-primary"
                   :disabled="
-                    saving || !canSave
+                    saving ||
+                    cancellingRecurrence ||
+                    !canSave
                   "
                 >
                   {{
@@ -593,6 +928,90 @@ onMounted(loadForm);
   color: #6c757d;
 }
 
+.charge-form__recurrence {
+  min-height: 5rem;
+  padding: 1rem 1.25rem 1rem 2.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #f8f9fa;
+}
+
+.charge-form__recurrence .form-check-label {
+  display: block;
+  color: #343a40;
+  font-weight: 600;
+}
+
+.charge-form__recurrence small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6c757d;
+}
+
+.charge-form__schedule {
+  padding: 1.25rem;
+  border: 1px solid #d9e8df;
+  border-left: 4px solid #2f9e62;
+  border-radius: 0.5rem;
+  background: #f7fbf8;
+}
+
+.charge-form__schedule-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.charge-form__schedule-header div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.charge-form__schedule-header div > span,
+.charge-form__schedule-grid span {
+  color: #6c757d;
+  font-size: 0.8125rem;
+}
+
+.charge-form__schedule-header strong {
+  color: #343a40;
+  font-size: 1rem;
+}
+
+.charge-form__schedule-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.charge-form__schedule-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.charge-form__schedule-grid strong {
+  color: #343a40;
+}
+
+.charge-form__schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d9e8df;
+}
+
+.charge-form__schedule-actions small {
+  color: #6c757d;
+}
+
 .charge-form__summary {
   display: grid;
   grid-template-columns:
@@ -621,6 +1040,7 @@ onMounted(loadForm);
 }
 
 @media (max-width: 991.98px) {
+  .charge-form__schedule-grid,
   .charge-form__summary {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
@@ -628,8 +1048,13 @@ onMounted(loadForm);
 }
 
 @media (max-width: 575.98px) {
+  .charge-form__schedule-grid,
   .charge-form__summary {
     grid-template-columns: 1fr;
+  }
+
+  .charge-form__schedule-header {
+    flex-direction: column;
   }
 }
 </style>

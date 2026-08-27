@@ -21,12 +21,24 @@ function raiseConfirmationAboveModals() {
 
   container.style.zIndex = "3000";
 }
+type ConfirmActionOptions = {
+  title: string;
+  message: string;
+  confirmButtonText: string;
+  cancelButtonText?: string;
+  confirmButtonColor?: string;
+};
 
 export async function confirmDelete(
   options: ConfirmDeleteOptions
 ): Promise<boolean> {
   const { entityLabel, itemName, message } =
     options;
+  const {
+    entityLabel,
+    itemName,
+    message,
+  } = options;
 
   const result = await Swal.fire({
     icon: "warning",
@@ -99,4 +111,24 @@ export async function confirmDeleteWithReason(
   const reason = result.value.trim();
 
   return reason || null;
+export async function confirmAction(
+  options: ConfirmActionOptions
+): Promise<boolean> {
+  const result = await Swal.fire({
+    icon: "warning",
+    title: options.title,
+    text: options.message,
+    showCancelButton: true,
+    confirmButtonText:
+      options.confirmButtonText,
+    cancelButtonText:
+      options.cancelButtonText ?? "Voltar",
+    confirmButtonColor:
+      options.confirmButtonColor ?? "#600022",
+    cancelButtonColor: "#6c757d",
+    reverseButtons: true,
+    focusCancel: true,
+  });
+
+  return result.isConfirmed;
 }
