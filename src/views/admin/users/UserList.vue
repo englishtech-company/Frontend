@@ -1,8 +1,10 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import ListPagination from "@/components/ui/ListPagination.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notifyRemoved } from "@/lib/actionNotification";
 import { deleteUser, listUsers } from "@/lib/users";
 import { formatUserRoleLabel } from "@/lib/roles";
 import type { User } from "@/lib/types";
@@ -55,6 +57,7 @@ async function removeUser(user: User) {
 
   try {
     await deleteUser(user.id);
+    notifyRemoved("Usuário");
     await loadUsers();
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao remover usuário";
@@ -156,28 +159,12 @@ onMounted(loadUsers);
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-              <span>Página {{ page }} de {{ lastPage }}</span>
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>

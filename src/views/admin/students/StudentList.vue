@@ -1,8 +1,15 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import { deleteStudent, listStudents } from "@/lib/students";
 import {
   formatStudentPlanShortLabel,
@@ -24,11 +31,38 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
-const search = ref("");
-const statusFilter = ref("");
+const idFilter = ref("");
+const nameFilter = ref("");
+const emailFilter = ref("");
+const phoneFilter = ref("");
+const statusFilter = ref<string | number | null>(null);
+const teacherFilter = ref("");
+const planFilter = ref("");
+const startDateFrom = ref("");
+const startDateTo = ref("");
+
+const statusOptions: SelectOption[] = [
+  { value: "active", label: "Ativo" },
+  { value: "inactive", label: "Inativo" },
+  { value: "pending", label: "Pendente" },
+];
 
 const showActions = computed(
   () => canViewStudents.value || canUpdateStudents.value || canDeleteStudents.value
+);
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    nameFilter.value,
+    emailFilter.value,
+    phoneFilter.value,
+    statusFilter.value,
+    teacherFilter.value,
+    planFilter.value,
+    startDateFrom.value,
+    startDateTo.value,
+  ])
 );
 
 async function loadStudents() {
@@ -44,8 +78,15 @@ async function loadStudents() {
   try {
     const result = await listStudents({
       page: page.value,
-      search: search.value.trim() || undefined,
-      status: statusFilter.value || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      name: nameFilter.value.trim() || undefined,
+      email: emailFilter.value.trim() || undefined,
+      phone: phoneFilter.value.trim() || undefined,
+      status: statusFilter.value ? String(statusFilter.value) : undefined,
+      teacherName: teacherFilter.value.trim() || undefined,
+      planName: planFilter.value.trim() || undefined,
+      startDateFrom: startDateFrom.value || undefined,
+      startDateTo: startDateTo.value || undefined,
     });
     students.value = result.data;
     lastPage.value = result.last_page;
@@ -62,6 +103,20 @@ function handleSearch() {
   loadStudents();
 }
 
+function clearFilters() {
+  idFilter.value = "";
+  nameFilter.value = "";
+  emailFilter.value = "";
+  phoneFilter.value = "";
+  statusFilter.value = null;
+  teacherFilter.value = "";
+  planFilter.value = "";
+  startDateFrom.value = "";
+  startDateTo.value = "";
+  page.value = 1;
+  loadStudents();
+}
+
 async function removeStudent(student: Student) {
   const confirmed = await confirmDelete({
     entityLabel: "aluno",
@@ -72,6 +127,7 @@ async function removeStudent(student: Student) {
 
   try {
     await deleteStudent(student.id);
+    notifyRemoved("Aluno");
     await loadStudents();
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao remover aluno";
@@ -116,36 +172,126 @@ onMounted(loadStudents);
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleSearch"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="student-filter-id" hint="ID do aluno">
+            <input
+              id="student-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Nome" id="student-filter-name">
+            <input
+              id="student-filter-name"
+              v-model="nameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o nome..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="E-mail" id="student-filter-email">
+            <input
+              id="student-filter-email"
+              v-model="emailFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o e-mail..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Telefone" id="student-filter-phone">
+            <input
+              id="student-filter-phone"
+              v-model="phoneFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o telefone..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="student-filter-status">
+            <SingleSelect
+              id="student-filter-status"
+              v-model="statusFilter"
+              :options="statusOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar por status"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Professor" id="student-filter-teacher">
+            <input
+              id="student-filter-teacher"
+              v-model="teacherFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do professor..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Plano" id="student-filter-plan">
+            <input
+              id="student-filter-plan"
+              v-model="planFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do plano..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Início desde" id="student-filter-start-from">
+            <input
+              id="student-filter-start-from"
+              v-model="startDateFrom"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Início até" id="student-filter-start-to">
+            <input
+              id="student-filter-start-to"
+              v-model="startDateTo"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h4 class="card-title mb-0">Lista de alunos ({{ total }})</h4>
-            <div class="d-flex align-items-center gap-2">
-              <input
-                v-model="search"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Buscar por nome..."
-                style="max-width: 200px;"
-                @keyup.enter="handleSearch"
-              />
-              <select
-                v-model="statusFilter"
-                class="form-select form-select-sm"
-                style="max-width: 140px;"
-                @change="handleSearch"
-              >
-                <option value="">Todos os status</option>
-                <option value="active">Ativo</option>
-                <option value="inactive">Inativo</option>
-                <option value="pending">Pendente</option>
-              </select>
-              <button type="button" class="btn btn-sm btn-outline-secondary" @click="handleSearch">
-                Filtrar
-              </button>
-              <span v-if="!showActions" class="badge bg-light text-dark">Somente leitura</span>
-            </div>
+            <span v-if="!showActions" class="badge bg-light text-dark">Somente leitura</span>
           </div>
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">Carregando...</div>
@@ -230,28 +376,12 @@ onMounted(loadStudents);
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-              <span>Página {{ page }} de {{ lastPage }}</span>
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>

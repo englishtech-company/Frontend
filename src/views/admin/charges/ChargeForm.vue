@@ -10,6 +10,7 @@ import {
   useRoute,
   useRouter,
 } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
@@ -513,6 +514,7 @@ async function submit() {
       });
     }
 
+    notifySaved("Cobrança", isEdit.value);
     await router.push("/charges");
   } catch (exception) {
     error.value =

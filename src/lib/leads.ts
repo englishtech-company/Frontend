@@ -1,4 +1,9 @@
 import { api } from "@/lib/api";
+import {
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type {
   ApiItemResponse,
@@ -8,13 +13,17 @@ import type {
   Paginated,
 } from "@/lib/types";
 
-type ListLeadsParams = {
+export type ListLeadsParams = {
   page?: number;
   limit?: number;
-  search?: string;
+  id?: number;
+  name?: string;
+  email?: string;
+  whatsappPhone?: string;
   source?: string;
-  self_declared_level?: string;
-  registration_source?: LeadRegistrationSource;
+  selfDeclaredLevel?: string;
+  registrationSource?: LeadRegistrationSource;
+  objective?: string;
 };
 
 type LeadPlucksResponse = {
@@ -38,30 +47,16 @@ export type LeadPayload = {
 export async function listLeads(
   params: ListLeadsParams = {}
 ): Promise<Paginated<Lead>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
-  });
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
-  const search = params.search?.trim();
-  const source = params.source?.trim();
-  const selfDeclaredLevel = params.self_declared_level?.trim();
-
-  if (search) {
-    query.set("name", `%${search}%`);
-  }
-
-  if (source) {
-    query.set("source", `%${source}%`);
-  }
-
-  if (selfDeclaredLevel) {
-    query.set("self_declared_level", selfDeclaredLevel);
-  }
-
-  if (params.registration_source) {
-    query.set("registration_source", params.registration_source);
-  }
+  appendExact(query, "id", params.id);
+  appendLike(query, "name", params.name);
+  appendLike(query, "email", params.email);
+  appendLike(query, "whatsapp_phone", params.whatsappPhone);
+  appendLike(query, "source", params.source);
+  appendLike(query, "self_declared_level", params.selfDeclaredLevel);
+  appendExact(query, "registration_source", params.registrationSource);
+  appendLike(query, "objective", params.objective);
 
   const response = await api<ApiListResponse<"leads", Lead>>(
     `/leads?${query.toString()}`

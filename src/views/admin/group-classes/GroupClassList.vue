@@ -1,8 +1,15 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import { deleteGroupClass, listGroupClasses } from "@/lib/groupClasses";
 import type { GroupClass, GroupClassStatus } from "@/lib/types";
 
@@ -19,8 +26,30 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
-const search = ref("");
-const statusFilter = ref<GroupClassStatus | "">("");
+const idFilter = ref("");
+const nameFilter = ref("");
+const teacherNameFilter = ref("");
+const planNameFilter = ref("");
+const scheduleFilter = ref("");
+const levelFilter = ref("");
+const statusFilter = ref<string | number | null>(null);
+
+const statusOptions: SelectOption[] = [
+  { value: "active", label: "Ativo" },
+  { value: "inactive", label: "Inativo" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    nameFilter.value,
+    teacherNameFilter.value,
+    planNameFilter.value,
+    scheduleFilter.value,
+    levelFilter.value,
+    statusFilter.value,
+  ])
+);
 
 const showActions = computed(
   () => canViewGroupClasses.value || canUpdateGroupClasses.value || canDeleteGroupClasses.value
@@ -39,8 +68,15 @@ async function loadGroupClasses() {
   try {
     const result = await listGroupClasses({
       page: page.value,
-      search: search.value.trim() || undefined,
-      status: statusFilter.value || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      name: nameFilter.value.trim() || undefined,
+      teacherName: teacherNameFilter.value.trim() || undefined,
+      planName: planNameFilter.value.trim() || undefined,
+      schedule: scheduleFilter.value.trim() || undefined,
+      level: levelFilter.value.trim() || undefined,
+      status: statusFilter.value
+        ? (String(statusFilter.value) as GroupClassStatus)
+        : undefined,
     });
 
     groupClasses.value = result.data;
@@ -61,6 +97,18 @@ function handleSearch() {
   loadGroupClasses();
 }
 
+function clearFilters() {
+  idFilter.value = "";
+  nameFilter.value = "";
+  teacherNameFilter.value = "";
+  planNameFilter.value = "";
+  scheduleFilter.value = "";
+  levelFilter.value = "";
+  statusFilter.value = null;
+  page.value = 1;
+  loadGroupClasses();
+}
+
 async function removeGroupClass(groupClass: GroupClass) {
   if (!canDeleteGroupClasses.value) {
     error.value = "Você não tem permissão para excluir turmas.";
@@ -76,6 +124,7 @@ async function removeGroupClass(groupClass: GroupClass) {
 
   try {
     await deleteGroupClass(groupClass.id);
+    notifyRemoved("Turma");
     await loadGroupClasses();
   } catch (e) {
     error.value =
@@ -144,6 +193,100 @@ onMounted(() => {
       {{ error }}
     </div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleSearch"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="group-class-filter-id" hint="ID da turma">
+            <input
+              id="group-class-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Nome" id="group-class-filter-name">
+            <input
+              id="group-class-filter-name"
+              v-model="nameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o nome..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Professor" id="group-class-filter-teacher">
+            <input
+              id="group-class-filter-teacher"
+              v-model="teacherNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do professor..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Plano" id="group-class-filter-plan">
+            <input
+              id="group-class-filter-plan"
+              v-model="planNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do plano..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Horário" id="group-class-filter-schedule">
+            <input
+              id="group-class-filter-schedule"
+              v-model="scheduleFilter"
+              type="text"
+              class="form-control"
+              placeholder="Ex.: Seg/Qua 19h..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Nível" id="group-class-filter-level">
+            <input
+              id="group-class-filter-level"
+              v-model="levelFilter"
+              type="text"
+              class="form-control"
+              placeholder="Ex.: Intermediário..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="group-class-filter-status">
+            <SingleSelect
+              id="group-class-filter-status"
+              v-model="statusFilter"
+              :options="statusOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar turmas por status"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -154,44 +297,12 @@ onMounted(() => {
               Lista de turmas ({{ total }})
             </h4>
 
-            <div class="d-flex align-items-center gap-2">
-              <input
-                v-model="search"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Buscar por nome..."
-                aria-label="Buscar turma por nome"
-                style="max-width: 200px;"
-                @keyup.enter="handleSearch"
-              />
-
-              <select
-                v-model="statusFilter"
-                class="form-select form-select-sm"
-                aria-label="Filtrar turmas por status"
-                style="max-width: 140px;"
-                @change="handleSearch"
-              >
-                <option value="">Todos os status</option>
-                <option value="active">Ativo</option>
-                <option value="inactive">Inativo</option>
-              </select>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="handleSearch"
-              >
-                Filtrar
-              </button>
-
-              <span
-                v-if="!showActions"
-                class="badge bg-light text-dark"
-              >
-                Somente leitura
-              </span>
-            </div>
+            <span
+              v-if="!showActions"
+              class="badge bg-light text-dark"
+            >
+              Somente leitura
+            </span>
           </div>
 
           <div class="card-body">
@@ -282,7 +393,7 @@ onMounted(() => {
                       <RouterLink
                         v-if="canViewGroupClasses"
                         :to="`/group-classes/${groupClass.id}`"
-                        class="btn btn-xs sharp btn-info me-1 text-white"
+                        class="btn btn-xs sharp btn-primary me-1"
                         :aria-label="`Visualizar ${groupClass.name}`"
                       >
                         <i class="fa fa-eye"></i>
@@ -312,32 +423,12 @@ onMounted(() => {
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-
-              <span>
-                Página {{ page }} de {{ lastPage }}
-              </span>
-
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>

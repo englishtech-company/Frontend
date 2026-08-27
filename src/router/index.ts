@@ -25,6 +25,12 @@ const router = createRouter({
       meta: { layout3: "layout3" },
     },
     {
+      path: "/profile",
+      name: "MyProfile",
+      component: () => import("../views/pages/MyProfile.vue"),
+      meta: { layout3: "layout3" },
+    },
+    {
       path: "/users",
       name: "Users",
       component: () => import("../views/admin/users/UserList.vue"),

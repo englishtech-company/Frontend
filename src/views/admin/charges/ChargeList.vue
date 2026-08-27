@@ -6,12 +6,16 @@ import {
 } from "vue";
 import { RouterLink } from "vue-router";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import {
   deleteCharge,
-  getChargeStudentOptions,
   listCharges,
 } from "@/lib/charges";
 import {
@@ -38,7 +42,6 @@ const {
 } = usePermissions();
 
 const charges = ref<Charge[]>([]);
-const studentOptions = ref<SelectOption[]>([]);
 const loading = ref(true);
 const error = ref("");
 
@@ -46,11 +49,33 @@ const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 
-const studentIdFilter = ref<
-  string | number | null
->(null);
-const dueDateFilter = ref("");
-const statusFilter = ref<ChargeStatus | "">("");
+const idFilter = ref("");
+const studentNameFilter = ref("");
+const enrollmentIdFilter = ref("");
+const expectedAmountFilter = ref("");
+const dueDateFrom = ref("");
+const dueDateTo = ref("");
+const statusFilter = ref<string | number | null>(null);
+
+const statusOptions: SelectOption[] = [
+  { value: "open", label: "Aberta" },
+  { value: "paid", label: "Paga" },
+  { value: "partial", label: "Parcial" },
+  { value: "overdue", label: "Atrasada" },
+  { value: "cancelled", label: "Cancelada" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    studentNameFilter.value,
+    enrollmentIdFilter.value,
+    expectedAmountFilter.value,
+    dueDateFrom.value,
+    dueDateTo.value,
+    statusFilter.value,
+  ])
+);
 
 const showActions = computed(
   () =>
@@ -69,47 +94,18 @@ function applyChargeResult(
 function currentListParams() {
   return {
     page: page.value,
-    studentId: studentIdFilter.value
-      ? Number(studentIdFilter.value)
+    id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+    studentName: studentNameFilter.value.trim() || undefined,
+    enrollmentId: enrollmentIdFilter.value.trim()
+      ? Number(enrollmentIdFilter.value)
       : undefined,
-    dueDate: dueDateFilter.value || undefined,
-    status: statusFilter.value || undefined,
+    expectedAmount: expectedAmountFilter.value.trim() || undefined,
+    dueDateFrom: dueDateFrom.value || undefined,
+    dueDateTo: dueDateTo.value || undefined,
+    status: statusFilter.value
+      ? (String(statusFilter.value) as ChargeStatus)
+      : undefined,
   };
-}
-
-async function loadInitialData() {
-  if (!canViewCharges.value) {
-    error.value =
-      "Você não tem permissão para listar cobranças.";
-    loading.value = false;
-    return;
-  }
-
-  loading.value = true;
-  error.value = "";
-
-  try {
-    const [students, result] = await Promise.all([
-      getChargeStudentOptions(),
-      listCharges(currentListParams()),
-    ]);
-
-    studentOptions.value = Object.entries(
-      students
-    ).map(([value, label]) => ({
-      value,
-      label,
-    }));
-
-    applyChargeResult(result);
-  } catch (exception) {
-    error.value =
-      exception instanceof Error
-        ? exception.message
-        : "Erro ao carregar cobranças.";
-  } finally {
-    loading.value = false;
-  }
 }
 
 async function loadCharges() {
@@ -145,9 +141,13 @@ function handleFilter() {
 }
 
 function clearFilters() {
-  studentIdFilter.value = null;
-  dueDateFilter.value = "";
-  statusFilter.value = "";
+  idFilter.value = "";
+  studentNameFilter.value = "";
+  enrollmentIdFilter.value = "";
+  expectedAmountFilter.value = "";
+  dueDateFrom.value = "";
+  dueDateTo.value = "";
+  statusFilter.value = null;
   page.value = 1;
   loadCharges();
 }
@@ -188,6 +188,7 @@ async function removeCharge(charge: Charge) {
 
   try {
     await deleteCharge(charge.id);
+    notifyRemoved("Cobrança");
     await loadCharges();
   } catch (exception) {
     error.value =
@@ -197,7 +198,7 @@ async function removeCharge(charge: Charge) {
   }
 }
 
-onMounted(loadInitialData);
+onMounted(loadCharges);
 </script>
 
 <template>
@@ -234,6 +235,97 @@ onMounted(loadInitialData);
       {{ error }}
     </div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleFilter"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Cobrança" id="charge-filter-id" hint="ID da cobrança">
+            <input
+              id="charge-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Aluno" id="charge-filter-student">
+            <input
+              id="charge-filter-student"
+              v-model="studentNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do aluno..."
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Matrícula" id="charge-filter-enrollment" hint="ID da matrícula">
+            <input
+              id="charge-filter-enrollment"
+              v-model="enrollmentIdFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 45"
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Valor esperado" id="charge-filter-amount">
+            <input
+              id="charge-filter-amount"
+              v-model="expectedAmountFilter"
+              type="text"
+              class="form-control"
+              placeholder="Ex.: 350.00"
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Vencimento desde" id="charge-filter-due-from">
+            <input
+              id="charge-filter-due-from"
+              v-model="dueDateFrom"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Vencimento até" id="charge-filter-due-to">
+            <input
+              id="charge-filter-due-to"
+              v-model="dueDateTo"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="charge-filter-status">
+            <SingleSelect
+              id="charge-filter-status"
+              v-model="statusFilter"
+              :options="statusOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar pelo status"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -241,73 +333,6 @@ onMounted(loadInitialData);
             <h4 class="card-title mb-0">
               Lista de cobranças ({{ total }})
             </h4>
-
-            <div class="charge-list__filters">
-              <SingleSelect
-                id="charge-student-filter"
-                v-model="studentIdFilter"
-                class="charge-list__student-filter"
-                :options="studentOptions"
-                placeholder="Todos os alunos"
-                aria-label="Filtrar pelo aluno"
-                @change="handleFilter"
-              />
-
-              <input
-                v-model="dueDateFilter"
-                type="date"
-                class="form-control form-control-sm"
-                aria-label="Filtrar pela data de vencimento"
-                @keyup.enter="handleFilter"
-              />
-
-              <select
-                v-model="statusFilter"
-                class="form-select form-select-sm"
-                aria-label="Filtrar pelo status"
-                @change="handleFilter"
-              >
-                <option value="">
-                  Todos os status
-                </option>
-
-                <option value="open">
-                  Aberta
-                </option>
-
-                <option value="paid">
-                  Paga
-                </option>
-
-                <option value="partial">
-                  Parcial
-                </option>
-
-                <option value="overdue">
-                  Atrasada
-                </option>
-
-                <option value="cancelled">
-                  Cancelada
-                </option>
-              </select>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                @click="handleFilter"
-              >
-                Filtrar
-              </button>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-light"
-                @click="clearFilters"
-              >
-                Limpar
-              </button>
-            </div>
           </div>
 
           <div class="card-body">
@@ -460,32 +485,12 @@ onMounted(loadInitialData);
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-
-              <span>
-                Página {{ page }} de {{ lastPage }}
-              </span>
-
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>
@@ -500,43 +505,5 @@ onMounted(loadInitialData);
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-}
-
-.charge-list__filters {
-  display: grid;
-  grid-template-columns:
-    minmax(220px, 280px)
-    minmax(160px, 190px)
-    minmax(150px, 180px)
-    auto
-    auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.charge-list__student-filter
-  :deep(.single-select__trigger) {
-  min-height: 2.5rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: 0.375rem;
-}
-
-@media (max-width: 1199.98px) {
-  .charge-list__filters {
-    width: 100%;
-  }
-}
-
-@media (max-width: 991.98px) {
-  .charge-list__filters {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 575.98px) {
-  .charge-list__filters {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

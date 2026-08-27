@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
+import { countActiveFilters } from "@/lib/filters/query";
 import { getAuditFilterOptions, listAudits } from "@/lib/audits";
 import {
   formatAuditEvent,
@@ -22,17 +26,40 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
+const idFilter = ref("");
+const createdAtFrom = ref("");
+const createdAtTo = ref("");
+const userNameFilter = ref("");
 const selectedEvent = ref<string | null>(null);
+const auditableTypeFilter = ref<string | null>(null);
 const eventOptions = ref<SelectOption[]>([]);
+const auditableTypeOptions = ref<SelectOption[]>([]);
 const expandedId = ref<number | null>(null);
 
-const eventFilterOptions = computed<SelectOption[]>(() => [
-  { value: "all", label: "Todas as ações" },
-  ...eventOptions.value.map((event) => ({
+const eventFilterOptions = computed<SelectOption[]>(() =>
+  eventOptions.value.map((event) => ({
     value: event.value,
     label: formatAuditEvent(String(event.label)),
-  })),
-]);
+  }))
+);
+
+const auditableTypeFilterOptions = computed<SelectOption[]>(() =>
+  auditableTypeOptions.value.map((type) => ({
+    value: type.value,
+    label: formatAuditableType(String(type.label)),
+  }))
+);
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    createdAtFrom.value,
+    createdAtTo.value,
+    userNameFilter.value,
+    selectedEvent.value,
+    auditableTypeFilter.value,
+  ])
+);
 
 async function loadFilters() {
   try {
@@ -41,8 +68,13 @@ async function loadFilters() {
       value: event,
       label: event,
     }));
+    auditableTypeOptions.value = options.auditableTypes.map((type) => ({
+      value: type,
+      label: type,
+    }));
   } catch {
     eventOptions.value = [];
+    auditableTypeOptions.value = [];
   }
 }
 
@@ -59,10 +91,14 @@ async function loadAudits() {
   try {
     const result = await listAudits({
       page: page.value,
-      event:
-        selectedEvent.value && selectedEvent.value !== "all"
-          ? selectedEvent.value
-          : undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      createdAtFrom: createdAtFrom.value || undefined,
+      createdAtTo: createdAtTo.value || undefined,
+      userName: userNameFilter.value.trim() || undefined,
+      event: selectedEvent.value ? String(selectedEvent.value) : undefined,
+      auditableType: auditableTypeFilter.value
+        ? String(auditableTypeFilter.value)
+        : undefined,
     });
     audits.value = result.data;
     lastPage.value = result.last_page;
@@ -80,18 +116,27 @@ function goToPage(next: number) {
   loadAudits();
 }
 
-function toggleDetails(id: number) {
-  expandedId.value = expandedId.value === id ? null : id;
-}
-
-function onFilterChange(value: string | number | null) {
-  selectedEvent.value = value ? String(value) : null;
+function handleFilter() {
   page.value = 1;
   loadAudits();
 }
 
+function clearFilters() {
+  idFilter.value = "";
+  createdAtFrom.value = "";
+  createdAtTo.value = "";
+  userNameFilter.value = "";
+  selectedEvent.value = null;
+  auditableTypeFilter.value = null;
+  page.value = 1;
+  loadAudits();
+}
+
+function toggleDetails(id: number) {
+  expandedId.value = expandedId.value === id ? null : id;
+}
+
 onMounted(async () => {
-  selectedEvent.value = "all";
   await loadFilters();
   await loadAudits();
 });
@@ -110,21 +155,89 @@ onMounted(async () => {
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleFilter"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="audit-filter-id" hint="ID do registro">
+            <input
+              id="audit-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Data desde" id="audit-filter-date-from">
+            <input
+              id="audit-filter-date-from"
+              v-model="createdAtFrom"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Data até" id="audit-filter-date-to">
+            <input
+              id="audit-filter-date-to"
+              v-model="createdAtTo"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Usuário" id="audit-filter-user">
+            <input
+              id="audit-filter-user"
+              v-model="userNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do usuário..."
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Ação" id="audit-filter-event">
+            <SingleSelect
+              id="audit-filter-event"
+              v-model="selectedEvent"
+              :options="eventFilterOptions"
+              placeholder="Todas as ações"
+              :searchable="false"
+              aria-label="Filtrar por ação"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Recurso" id="audit-filter-type">
+            <SingleSelect
+              id="audit-filter-type"
+              v-model="auditableTypeFilter"
+              :options="auditableTypeFilterOptions"
+              placeholder="Todos os recursos"
+              :searchable="false"
+              aria-label="Filtrar por recurso"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
             <h4 class="card-title mb-0">Registros ({{ total }})</h4>
-            <div class="audit-filter">
-              <SingleSelect
-                id="audit-event-filter"
-                :model-value="selectedEvent"
-                :options="eventFilterOptions"
-                placeholder="Filtrar por ação"
-                :searchable="false"
-                @update:model-value="onFilterChange"
-              />
-            </div>
           </div>
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">Carregando...</div>
@@ -230,28 +343,12 @@ onMounted(async () => {
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-              <span>Página {{ page }} de {{ lastPage }}</span>
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>
@@ -260,10 +357,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.audit-filter {
-  width: min(100%, 240px);
-}
-
 .audit-table__user-link {
   color: inherit;
   font-weight: 500;

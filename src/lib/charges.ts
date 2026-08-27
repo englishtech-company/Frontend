@@ -1,4 +1,10 @@
 import { api } from "@/lib/api";
+import {
+  appendDateRange,
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import type {
   ApiItemResponse,
   ApiListResponse,
@@ -10,9 +16,13 @@ import type {
 export type ListChargesParams = {
   page?: number;
   limit?: number;
+  id?: number;
   studentId?: number;
+  studentName?: string;
   enrollmentId?: number;
-  dueDate?: string;
+  expectedAmount?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
   status?: ChargeStatus;
 };
 
@@ -44,26 +54,15 @@ type ChargePlucksResponse = {
 export async function listCharges(
   params: ListChargesParams = {}
 ): Promise<Paginated<Charge>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? 20),
-  });
+  const query = createListQuery(params.page, params.limit ?? 20);
 
-  if (params.studentId !== undefined) {
-    query.set("student_id", String(params.studentId));
-  }
-
-  if (params.enrollmentId !== undefined) {
-    query.set("enrollment_id", String(params.enrollmentId));
-  }
-
-  if (params.dueDate) {
-    query.set("due_date", params.dueDate);
-  }
-
-  if (params.status) {
-    query.set("status", params.status);
-  }
+  appendExact(query, "id", params.id);
+  appendExact(query, "student_id", params.studentId);
+  appendLike(query, "student_name", params.studentName);
+  appendExact(query, "enrollment_id", params.enrollmentId);
+  appendExact(query, "expected_amount", params.expectedAmount);
+  appendDateRange(query, "due_date", params.dueDateFrom, params.dueDateTo);
+  appendExact(query, "status", params.status);
 
   const response = await api<
     ApiListResponse<"charges", Charge>

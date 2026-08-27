@@ -6,8 +6,15 @@ import {
   ref,
 } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { deleteLead, listLeads } from "@/lib/leads";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import type {
   Lead,
   LeadRegistrationSource,
@@ -28,10 +35,32 @@ const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 
-const search = ref("");
+const idFilter = ref("");
+const nameFilter = ref("");
+const emailFilter = ref("");
+const whatsappPhoneFilter = ref("");
 const sourceFilter = ref("");
-const registrationSourceFilter =
-  ref<LeadRegistrationSource | "">("");
+const selfDeclaredLevelFilter = ref("");
+const registrationSourceFilter = ref<string | number | null>(null);
+const objectiveFilter = ref("");
+
+const registrationSourceOptions: SelectOption[] = [
+  { value: "manual", label: "Manual" },
+  { value: "webhook", label: "Webhook" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    nameFilter.value,
+    emailFilter.value,
+    whatsappPhoneFilter.value,
+    sourceFilter.value,
+    selfDeclaredLevelFilter.value,
+    registrationSourceFilter.value,
+    objectiveFilter.value,
+  ])
+);
 
 const showActions = computed(
   () => canUpdateLeads.value || canDeleteLeads.value
@@ -50,10 +79,16 @@ async function loadLeads() {
   try {
     const result = await listLeads({
       page: page.value,
-      search: search.value.trim() || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      name: nameFilter.value.trim() || undefined,
+      email: emailFilter.value.trim() || undefined,
+      whatsappPhone: whatsappPhoneFilter.value.trim() || undefined,
       source: sourceFilter.value.trim() || undefined,
-      registration_source:
-        registrationSourceFilter.value || undefined,
+      selfDeclaredLevel: selfDeclaredLevelFilter.value.trim() || undefined,
+      registrationSource: registrationSourceFilter.value
+        ? (String(registrationSourceFilter.value) as LeadRegistrationSource)
+        : undefined,
+      objective: objectiveFilter.value.trim() || undefined,
     });
 
     leads.value = result.data;
@@ -70,6 +105,19 @@ async function loadLeads() {
 }
 
 function handleSearch() {
+  page.value = 1;
+  loadLeads();
+}
+
+function clearFilters() {
+  idFilter.value = "";
+  nameFilter.value = "";
+  emailFilter.value = "";
+  whatsappPhoneFilter.value = "";
+  sourceFilter.value = "";
+  selfDeclaredLevelFilter.value = "";
+  registrationSourceFilter.value = null;
+  objectiveFilter.value = "";
   page.value = 1;
   loadLeads();
 }
@@ -102,6 +150,7 @@ async function removeLead(lead: Lead) {
 
   try {
     await deleteLead(lead.id);
+    notifyRemoved("Interessado");
     await loadLeads();
   } catch (e) {
     error.value =
@@ -208,6 +257,112 @@ onBeforeUnmount(() => {
       {{ error }}
     </div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleSearch"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="lead-filter-id" hint="ID do interessado">
+            <input
+              id="lead-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Nome" id="lead-filter-name">
+            <input
+              id="lead-filter-name"
+              v-model="nameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o nome..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="E-mail" id="lead-filter-email">
+            <input
+              id="lead-filter-email"
+              v-model="emailFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o e-mail..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Telefone" id="lead-filter-phone">
+            <input
+              id="lead-filter-phone"
+              v-model="whatsappPhoneFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o telefone..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Origem" id="lead-filter-source">
+            <input
+              id="lead-filter-source"
+              v-model="sourceFilter"
+              type="text"
+              class="form-control"
+              placeholder="Ex.: Instagram, site..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Nível" id="lead-filter-level">
+            <input
+              id="lead-filter-level"
+              v-model="selfDeclaredLevelFilter"
+              type="text"
+              class="form-control"
+              placeholder="Ex.: Intermediário..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Entrada" id="lead-filter-registration">
+            <SingleSelect
+              id="lead-filter-registration"
+              v-model="registrationSourceFilter"
+              :options="registrationSourceOptions"
+              placeholder="Todas as entradas"
+              :searchable="false"
+              aria-label="Filtrar pela origem do registro"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Objetivo" id="lead-filter-objective">
+            <input
+              id="lead-filter-objective"
+              v-model="objectiveFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o objetivo..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -218,51 +373,12 @@ onBeforeUnmount(() => {
               Lista de interessados ({{ total }})
             </h4>
 
-            <div class="lead-filters">
-              <input
-                v-model="search"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Buscar por nome..."
-                aria-label="Buscar interessado por nome"
-                @keyup.enter="handleSearch"
-              />
-
-              <input
-                v-model="sourceFilter"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Filtrar por origem..."
-                aria-label="Filtrar interessados por origem"
-                @keyup.enter="handleSearch"
-              />
-
-              <select
-                v-model="registrationSourceFilter"
-                class="form-select form-select-sm"
-                aria-label="Filtrar pela origem do registro"
-                @change="handleSearch"
-              >
-                <option value="">Todas as entradas</option>
-                <option value="manual">Manual</option>
-                <option value="webhook">Webhook</option>
-              </select>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="handleSearch"
-              >
-                Filtrar
-              </button>
-
-              <span
-                v-if="!showActions"
-                class="badge bg-light text-dark"
-              >
-                Somente leitura
-              </span>
-            </div>
+            <span
+              v-if="!showActions"
+              class="badge bg-light text-dark"
+            >
+              Somente leitura
+            </span>
           </div>
 
           <div class="card-body">
@@ -406,32 +522,12 @@ onBeforeUnmount(() => {
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-
-              <span>
-                Página {{ page }} de {{ lastPage }}
-              </span>
-
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>
@@ -498,21 +594,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.lead-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.lead-filters .form-control {
-  width: 190px;
-}
-
-.lead-filters .form-select {
-  width: 160px;
-}
-
 .lead-table {
   font-size: 0.88rem;
 }
@@ -688,17 +769,5 @@ onBeforeUnmount(() => {
 .lead-objective-modal-enter-from .lead-objective-dialog,
 .lead-objective-modal-leave-to .lead-objective-dialog {
   transform: translateY(0.5rem) scale(0.98);
-}
-
-@media (max-width: 767.98px) {
-  .lead-filters {
-    width: 100%;
-  }
-
-  .lead-filters .form-control,
-  .lead-filters .form-select,
-  .lead-filters .btn {
-    width: 100%;
-  }
 }
 </style>

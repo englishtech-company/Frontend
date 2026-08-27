@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
@@ -159,6 +160,7 @@ async function submit() {
       await createExperimentalClass(payload);
     }
 
+    notifySaved("Aula experimental", isEdit.value);
     await router.push("/experimental-classes");
   } catch (e) {
     error.value =

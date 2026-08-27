@@ -5,8 +5,15 @@ import {
   ref,
 } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import { deleteTeacher, listTeachers } from "@/lib/teachers";
 import type { Teacher, TeacherStatus } from "@/lib/types";
 
@@ -23,8 +30,26 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
-const search = ref("");
-const statusFilter = ref<TeacherStatus | "">("");
+const idFilter = ref("");
+const nameFilter = ref("");
+const emailFilter = ref("");
+const phoneFilter = ref("");
+const statusFilter = ref<string | number | null>(null);
+
+const statusOptions: SelectOption[] = [
+  { value: "active", label: "Ativo" },
+  { value: "inactive", label: "Inativo" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    nameFilter.value,
+    emailFilter.value,
+    phoneFilter.value,
+    statusFilter.value,
+  ])
+);
 
 const showActions = computed(
   () => canViewTeachers.value || canUpdateTeachers.value || canDeleteTeachers.value
@@ -43,8 +68,13 @@ async function loadTeachers() {
   try {
     const result = await listTeachers({
       page: page.value,
-      search: search.value.trim() || undefined,
-      status: statusFilter.value || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      name: nameFilter.value.trim() || undefined,
+      email: emailFilter.value.trim() || undefined,
+      phone: phoneFilter.value.trim() || undefined,
+      status: statusFilter.value
+        ? (String(statusFilter.value) as TeacherStatus)
+        : undefined,
     });
 
     teachers.value = result.data;
@@ -65,6 +95,16 @@ function handleSearch() {
   loadTeachers();
 }
 
+function clearFilters() {
+  idFilter.value = "";
+  nameFilter.value = "";
+  emailFilter.value = "";
+  phoneFilter.value = "";
+  statusFilter.value = null;
+  page.value = 1;
+  loadTeachers();
+}
+
 async function removeTeacher(teacher: Teacher) {
   if (!canDeleteTeachers.value) {
     error.value = "Você não tem permissão para excluir professores.";
@@ -80,6 +120,7 @@ async function removeTeacher(teacher: Teacher) {
 
   try {
     await deleteTeacher(teacher.id);
+    notifyRemoved("Professor");
     await loadTeachers();
   } catch (e) {
     error.value =
@@ -148,6 +189,76 @@ onMounted(() => {
       {{ error }}
     </div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleSearch"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="teacher-filter-id" hint="ID do professor">
+            <input
+              id="teacher-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Nome" id="teacher-filter-name">
+            <input
+              id="teacher-filter-name"
+              v-model="nameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o nome..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="E-mail" id="teacher-filter-email">
+            <input
+              id="teacher-filter-email"
+              v-model="emailFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o e-mail..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Telefone" id="teacher-filter-phone">
+            <input
+              id="teacher-filter-phone"
+              v-model="phoneFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o telefone..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="teacher-filter-status">
+            <SingleSelect
+              id="teacher-filter-status"
+              v-model="statusFilter"
+              :options="statusOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar professores por status"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -158,44 +269,12 @@ onMounted(() => {
               Lista de professores ({{ total }})
             </h4>
 
-            <div class="d-flex align-items-center gap-2">
-              <input
-                v-model="search"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Buscar por nome..."
-                aria-label="Buscar professor por nome"
-                style="max-width: 200px;"
-                @keyup.enter="handleSearch"
-              />
-
-              <select
-                v-model="statusFilter"
-                class="form-select form-select-sm"
-                aria-label="Filtrar professores por status"
-                style="max-width: 140px;"
-                @change="handleSearch"
-              >
-                <option value="">Todos os status</option>
-                <option value="active">Ativo</option>
-                <option value="inactive">Inativo</option>
-              </select>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="handleSearch"
-              >
-                Filtrar
-              </button>
-
-              <span
-                v-if="!showActions"
-                class="badge bg-light text-dark"
-              >
-                Somente leitura
-              </span>
-            </div>
+            <span
+              v-if="!showActions"
+              class="badge bg-light text-dark"
+            >
+              Somente leitura
+            </span>
           </div>
 
           <div class="card-body">
@@ -308,32 +387,12 @@ onMounted(() => {
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-
-              <span>
-                Página {{ page }} de {{ lastPage }}
-              </span>
-
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>

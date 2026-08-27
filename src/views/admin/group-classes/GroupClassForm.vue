@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import MultiSelect from "@/components/ui/MultiSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
@@ -157,6 +158,7 @@ async function submit() {
       await createGroupClass(payload);
     }
 
+    notifySaved("Turma", isEdit.value);
     await router.push("/group-classes");
   } catch (e) {
     error.value =

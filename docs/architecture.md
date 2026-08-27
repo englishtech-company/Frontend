@@ -33,7 +33,7 @@ src/
 │
 ├── composables/            # Lógica reutilizável
 ├── components/
-│   ├── ui/                 # Genéricos (SingleSelect)
+│   ├── ui/                 # FilterPanel, ListPagination, SingleSelect, ActionNotificationHost
 │   └── admin/              # Domínio admin
 ├── stores/
 │   └── auth.ts
@@ -59,28 +59,45 @@ src/
 
 ## Padrão de View — Listagem
 
+Detalhes em [ui-patterns.md](./ui-patterns.md).
+
 ```typescript
-const { canViewX, canCreateX, canUpdateX, canDeleteX } = usePermissions();
+const search = ref("");
+const statusFilter = ref<string | number | null>(null);
 
-const items = ref<Entity[]>([]);
-const loading = ref(true);
-const error = ref("");
-const page = ref(1);
-const lastPage = ref(1);
-const total = ref(0);
-
-const showActions = computed(() => canUpdateX.value || canDeleteX.value);
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (search.value.trim()) count += 1;
+  if (statusFilter.value) count += 1;
+  return count;
+});
 
 async function load() {
   if (!canViewX.value) { error.value = "Sem permissão"; return; }
-  const result = await listEntities({ page: page.value });
+  const result = await listEntities({
+    page: page.value,
+    search: search.value.trim() || undefined,
+    status: statusFilter.value ? String(statusFilter.value) : undefined,
+  });
   items.value = result.data;
   lastPage.value = result.last_page;
   total.value = result.total;
 }
+
+function handleSearch() {
+  page.value = 1;
+  load();
+}
+
+function clearFilters() {
+  search.value = "";
+  statusFilter.value = null;
+  page.value = 1;
+  load();
+}
 ```
 
-Template: `page-titles` → card → table → paginação manual.
+Template: `page-titles` → `FilterPanel` → card (tabela) → `ListPagination`.
 
 ## Padrão de View — Formulário
 
@@ -93,9 +110,12 @@ const entityId = computed(() => Number(route.params.id));
 async function submit() {
   if (isEdit.value) await updateEntity(entityId.value, form);
   else await createEntity(form);
+  notifySaved("Entidade", isEdit.value);
   router.push("/entities");
 }
 ```
+
+Usar `notifySaved` / `notifyRemoved` / `notify` — ver [ui-patterns.md](./ui-patterns.md).
 
 ## Convenções de nomenclatura
 
@@ -125,7 +145,8 @@ Fluxo: buscar no template → copiar/adaptar para `frontend/src/` → integrar A
 
 Após consultar o template, use ou estenda:
 
-- `components/ui/` — widgets genéricos do projeto (`SingleSelect`)
+- `components/ui/` — widgets genéricos: `FilterPanel`, `FilterField`, `ListPagination`, `SingleSelect`, `MultiSelect`, `ActionNotificationHost`
+- `lib/actionNotification.ts` — `notify`, `notifySaved`, `notifyRemoved`
 - `components/admin/` — widgets de domínio (`PermissionModulePicker`)
 - Layouts já adaptados em `frontend/src/layouts/`
 

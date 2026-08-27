@@ -11,6 +11,7 @@ import {
 } from "@/lib/teachers";
 import type { TeacherPayload } from "@/lib/teachers";
 import type { TeacherStatus } from "@/lib/types";
+import { notifySaved } from "@/lib/actionNotification";
 
 const route = useRoute();
 const router = useRouter();
@@ -102,6 +103,7 @@ async function submit() {
       await createTeacher(payload);
     }
 
+    notifySaved("Professor", isEdit.value);
     await router.push("/teachers");
   } catch (e) {
     error.value =

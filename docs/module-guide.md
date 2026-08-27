@@ -20,6 +20,26 @@ export type Client = {
 
 Implemente: `listClients`, `getClient`, `createClient`, `updateClient`, `deleteClient`.
 
+Listagem com filtros — use `URLSearchParams` e chaves na **raiz** da query (ver [ui-patterns.md](./ui-patterns.md) e [api-contract.md](../../backend/docs/api-contract.md)):
+
+```typescript
+export async function listClients(params: ListParams = {}): Promise<Paginated<Client>> {
+  const query = new URLSearchParams({
+    "pagination[page]": String(params.page ?? 1),
+    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
+  });
+
+  const search = params.search?.trim();
+  if (search) query.set("name", `%${search}%`);
+  if (params.status) query.set("status", params.status);
+
+  const response = await api<ApiListResponse<"clients", Client>>(
+    `/clients?${query.toString()}`
+  );
+  return response.clients;
+}
+```
+
 Opcional: `getClientOptions()` via `/clients/plucks`.
 
 ## 3. Permissões — `lib/permissions/access.ts`
@@ -58,17 +78,22 @@ Ver [template-base.md](./template-base.md).
 
 ### `ClientList.vue`
 
+Referência: `views/admin/students/StudentList.vue` e [ui-patterns.md](./ui-patterns.md).
+
 - Título + botão "Novo Cliente" (`RouterLink` → `/clients/create`) se `canCreateClients`
-- Tabela com paginação
-- Ações: Editar (`/clients/:id/edit`), Excluir com confirm
+- **`FilterPanel`** com filtros (fora do card da tabela); selects com **`SingleSelect`**
+- Tabela `table-striped`
+- **`ListPagination`** alinhada à direita
+- Ações: Editar, Excluir com `confirmDelete` + **`notifyRemoved`** após sucesso
 - Badge "Somente leitura" se sem update/delete
 
 ### `ClientForm.vue`
 
 - Detecta create vs edit por `route.params.id`
-- Form com `@submit.prevent="submit"`
+- Form com `@submit.prevent="submit"`; selects com **`SingleSelect`**
+- **`notifySaved("Cliente", isEdit.value)`** antes do redirect
 - Botão Voltar → `/clients`
-- Redirect após sucesso
+- Redirect após sucesso → `/clients`
 
 ## 6. Rotas — `router/index.ts`
 
@@ -114,7 +139,7 @@ Como `permissions/` ou `audits/`:
 - Apenas `{Entity}List.vue`
 - Uma rota com `{modulo}.view`
 - Sem botões create/edit/delete
-- Filtros opcionais com `SingleSelect`
+- Filtros com `FilterPanel` + `SingleSelect` (ver [ui-patterns.md](./ui-patterns.md))
 
 ## Formatadores
 

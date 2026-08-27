@@ -1,4 +1,9 @@
 import { api } from "@/lib/api";
+import {
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type {
   ApiItemResponse,
@@ -8,10 +13,13 @@ import type {
   TeacherStatus,
 } from "@/lib/types";
 
-type ListTeachersParams = {
+export type ListTeachersParams = {
   page?: number;
   limit?: number;
-  search?: string;
+  id?: number;
+  name?: string;
+  email?: string;
+  phone?: string;
   status?: TeacherStatus;
 };
 
@@ -35,20 +43,13 @@ export type TeacherPayload = {
 export async function listTeachers(
   params: ListTeachersParams = {}
 ): Promise<Paginated<Teacher>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
-  });
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
-  const search = params.search?.trim();
-
-  if (search) {
-    query.set("name", `%${search}%`);
-  }
-
-  if (params.status) {
-    query.set("status", params.status);
-  }
+  appendExact(query, "id", params.id);
+  appendLike(query, "name", params.name);
+  appendLike(query, "email", params.email);
+  appendLike(query, "phone", params.phone);
+  appendExact(query, "status", params.status);
 
   const response = await api<ApiListResponse<"teachers", Teacher>>(
     `/teachers?${query.toString()}`

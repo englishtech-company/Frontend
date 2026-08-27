@@ -8,6 +8,7 @@ import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholde
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
+import { notify } from "@/lib/actionNotification";
 import { getStudent } from "@/lib/students";
 import {
   formatCpf,
@@ -25,6 +26,7 @@ import {
   STUDENT_MODULE_TABS,
 } from "@/lib/students/format";
 import { enrollStudentInGroupClass, getGroupClassOptions } from "@/lib/groupClasses";
+import { notify } from "@/lib/actionNotification";
 import type { Student } from "@/lib/types";
 
 const route = useRoute();
@@ -121,6 +123,7 @@ async function submitEnrollment() {
   try {
     await enrollStudentInGroupClass(Number(selectedGroupClassId.value), student.value.id);
     enrollSuccess.value = "Aluno matriculado com sucesso!";
+    notify.success("Aluno matriculado com sucesso!");
     // Reload student so their turmas list (if shown) refreshes
     await loadStudent();
   } catch (e) {
@@ -185,22 +188,35 @@ onMounted(loadStudent);
                 </li>
               </ul>
               <div class="card-footer text-center border-0 mt-0">
-                <RouterLink
-                  v-if="canUpdateStudents"
-                  :to="`/students/${student.id}/edit`"
-                  class="btn btn-primary px-4 me-1"
-                >
-                  Editar
-                </RouterLink>
-                <button
-                  v-if="canUpdateGroupClasses"
-                  type="button"
-                  class="btn btn-success px-4 me-1"
-                  @click="openEnrollModal"
-                >
-                  <i class="fa fa-graduation-cap me-1"></i> Matricular em Turma
-                </button>
-                <RouterLink to="/students" class="btn btn-warning px-4">Voltar</RouterLink>
+                <div class="profile-actions">
+                  <RouterLink
+                    to="/students"
+                    class="btn btn-warning"
+                    data-tooltip="Voltar"
+                    aria-label="Voltar"
+                  >
+                    <i class="fa fa-arrow-left"></i>
+                  </RouterLink>
+                  <RouterLink
+                    v-if="canUpdateStudents"
+                    :to="`/students/${student.id}/edit`"
+                    class="btn btn-primary"
+                    data-tooltip="Editar"
+                    aria-label="Editar"
+                  >
+                    <i class="fa fa-pencil"></i>
+                  </RouterLink>
+                  <button
+                    v-if="canUpdateGroupClasses"
+                    type="button"
+                    class="btn btn-success"
+                    data-tooltip="Matricular em Turma"
+                    aria-label="Matricular em Turma"
+                    @click="openEnrollModal"
+                  >
+                    <i class="fa fa-graduation-cap"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -350,108 +366,70 @@ onMounted(loadStudent);
                         role="tabpanel"
                       >
                         <div class="profile-personal-info pt-4">
-                          <h4 class="text-primary mb-4">Informações cadastrais</h4>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Nome <span class="pull-right">:</span></h5>
+                          <h4 class="text-primary mb-3">Informações cadastrais</h4>
+                          <div class="info-grid">
+                            <div class="info-item">
+                              <span class="info-label">Nome</span>
+                              <span class="info-value">{{ student.name }}</span>
                             </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ student.name }}</span>
-                            </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">E-mail <span class="pull-right">:</span></h5>
-                            </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ student.email }}</span>
-                            </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Status <span class="pull-right">:</span></h5>
-                            </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span class="badge" :class="statusBadge.class">
-                                {{ statusBadge.label }}
+                            <div class="info-item">
+                              <span class="info-label">Status</span>
+                              <span class="info-value">
+                                <span class="badge" :class="statusBadge.class">
+                                  {{ statusBadge.label }}
+                                </span>
                               </span>
                             </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Telefone <span class="pull-right">:</span></h5>
+                            <div class="info-item">
+                              <span class="info-label">E-mail</span>
+                              <span class="info-value">{{ student.email }}</span>
                             </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ student.phone || "—" }}</span>
+                            <div class="info-item">
+                              <span class="info-label">Telefone</span>
+                              <span class="info-value">{{ student.phone || "—" }}</span>
                             </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Nascimento <span class="pull-right">:</span></h5>
+                            <div class="info-item">
+                              <span class="info-label">Nascimento</span>
+                              <span class="info-value">{{ formatStudentDate(student.birthdate) }}</span>
                             </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ formatStudentDate(student.birthdate) }}</span>
+                            <div class="info-item">
+                              <span class="info-label">Professor</span>
+                              <span class="info-value">
+                                <RouterLink
+                                  v-if="currentTeacher && canViewTeachers"
+                                  :to="`/teachers/${currentTeacher.id}`"
+                                  class="text-primary"
+                                >
+                                  {{ currentTeacher.name }}
+                                </RouterLink>
+                                <span v-else>{{ currentTeacher?.name || "—" }}</span>
+                              </span>
                             </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Início <span class="pull-right">:</span></h5>
+                            <div class="info-item">
+                              <span class="info-label">Início</span>
+                              <span class="info-value">{{ formatStudentDate(student.start_date) }}</span>
                             </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ formatStudentDate(student.start_date) }}</span>
+                            <div class="info-item">
+                              <span class="info-label">Término</span>
+                              <span class="info-value">{{ formatStudentDate(student.end_date) }}</span>
                             </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Término <span class="pull-right">:</span></h5>
+                            <div class="info-item">
+                              <span class="info-label">Plano</span>
+                              <span class="info-value">{{ formatStudentPlanVariantLabel(currentPlanVariant) }}</span>
                             </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ formatStudentDate(student.end_date) }}</span>
+                            <div class="info-item">
+                              <span class="info-label">Atualizado em</span>
+                              <span class="info-value">{{ formatStudentDateTime(student.updated_at) }}</span>
                             </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Endereço <span class="pull-right">:</span></h5>
-                            </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ student.address || "—" }}</span>
-                            </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Professor <span class="pull-right">:</span></h5>
-                            </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <RouterLink
-                                v-if="currentTeacher && canViewTeachers"
-                                :to="`/teachers/${currentTeacher.id}`"
-                                class="text-primary"
-                              >
-                                {{ currentTeacher.name }}
-                              </RouterLink>
-                              <span v-else>{{ currentTeacher?.name || "—" }}</span>
-                            </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Plano <span class="pull-right">:</span></h5>
-                            </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ formatStudentPlanVariantLabel(currentPlanVariant) }}</span>
-                            </div>
-                          </div>
-                          <div class="row mb-4">
-                            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
-                              <h5 class="f-w-500">Atualizado em <span class="pull-right">:</span></h5>
-                            </div>
-                            <div class="col-lg-9 col-md-8 col-sm-6 col-6">
-                              <span>{{ formatStudentDateTime(student.updated_at) }}</span>
+                            <div class="info-item info-item--wide">
+                              <span class="info-label">Endereço</span>
+                              <span class="info-value">{{ student.address || "—" }}</span>
                             </div>
                           </div>
                         </div>
 
-                        <div class="pt-2 border-top">
-                          <h4 class="text-primary mb-4">Plano contratado</h4>
+                        <div class="pt-3 mt-3 border-top">
+                          <h4 class="text-primary mb-3">Plano contratado</h4>
                           <div v-if="currentPlanVariant" class="card border mb-4">
                             <div class="card-body">
                               <div class="d-flex align-items-start justify-content-between gap-3">
@@ -549,7 +527,7 @@ onMounted(loadStudent);
                                   </td>
                                   <td>{{ groupClass.pivot?.joined_at ? formatStudentDate(groupClass.pivot.joined_at) : '—' }}</td>
                                   <td>
-                                    <RouterLink v-if="canViewGroupClasses" :to="`/group-classes/${groupClass.id}`" class="btn btn-primary shadow btn-xs sharp">
+                                    <RouterLink v-if="canViewGroupClasses" :to="`/group-classes/${groupClass.id}`" class="btn btn-xs sharp btn-primary">
                                       <i class="fa fa-eye"></i>
                                     </RouterLink>
                                   </td>
@@ -763,5 +741,85 @@ onMounted(loadStudent);
 
 .nav-link.active {
   color: var(--primary);
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-actions .btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-actions .btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 5;
+}
+
+.profile-actions .btn:hover::after,
+.profile-actions .btn:focus-visible::after {
+  opacity: 1;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 2rem;
+}
+
+.info-item {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.65rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.info-item--wide {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  color: #6e6e6e;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.info-value {
+  color: #111827;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

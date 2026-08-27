@@ -120,14 +120,25 @@ onMounted(loadTeacher);
                 </li>
               </ul>
               <div class="card-footer text-center border-0 mt-0">
-                <RouterLink
-                  v-if="canUpdateTeachers"
-                  :to="`/teachers/${teacher.id}/edit`"
-                  class="btn btn-primary px-4 me-1"
-                >
-                  Editar
-                </RouterLink>
-                <RouterLink to="/teachers" class="btn btn-warning px-4">Voltar</RouterLink>
+                <div class="profile-actions">
+                  <RouterLink
+                    to="/teachers"
+                    class="btn btn-warning"
+                    data-tooltip="Voltar"
+                    aria-label="Voltar"
+                  >
+                    <i class="fa fa-arrow-left"></i>
+                  </RouterLink>
+                  <RouterLink
+                    v-if="canUpdateTeachers"
+                    :to="`/teachers/${teacher.id}/edit`"
+                    class="btn btn-primary"
+                    data-tooltip="Editar"
+                    aria-label="Editar"
+                  >
+                    <i class="fa fa-pencil"></i>
+                  </RouterLink>
+                </div>
               </div>
             </div>
           </div>
@@ -496,5 +507,46 @@ onMounted(loadTeacher);
 
 .nav-link.active {
   color: var(--primary);
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-actions .btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-actions .btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 5;
+}
+
+.profile-actions .btn:hover::after,
+.profile-actions .btn:focus-visible::after {
+  opacity: 1;
 }
 </style>

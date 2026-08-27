@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   createLead,
@@ -120,6 +121,7 @@ async function submit() {
       await createLead(payload);
     }
 
+    notifySaved("Interessado", isEdit.value);
     await router.push("/leads");
   } catch (e) {
     error.value =

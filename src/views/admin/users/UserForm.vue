@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { SUPERADMIN_ROLE, getRoleOptions, getUserRoles } from "@/lib/roles";
@@ -79,6 +80,7 @@ async function submit() {
         roles: [selectedRole.value],
       });
     }
+    notifySaved("Usuário", isEdit.value);
     router.push("/users");
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao salvar usuário";

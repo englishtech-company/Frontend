@@ -5,7 +5,8 @@ Instruções obrigatórias ao criar ou modificar código frontend neste projeto.
 ## Antes de codar
 
 1. **Consulte o template base** → [template-base.md](./template-base.md) (`template/src/`)
-2. Leia [architecture.md](./architecture.md) e [api-client.md](./api-client.md)
+2. Leia [ui-patterns.md](./ui-patterns.md) para listagens, filtros, paginação e notificações
+3. Leia [architecture.md](./architecture.md) e [api-client.md](./api-client.md)
 3. Consulte [backend/docs/api-contract.md](../../backend/docs/api-contract.md) para paths e envelope JSON
 4. Use `users/` como referência CRUD EnglishTech e `audits/` para read-only com filtros
 
@@ -16,6 +17,8 @@ Instruções obrigatórias ao criar ou modificar código frontend neste projeto.
 - [ ] `PERMISSIONS` + `resolveRoutePermission` + `canAccessPath`
 - [ ] `canView/Create/Update/Delete` em `usePermissions.ts`
 - [ ] Views `{Entity}List.vue` e `{Entity}Form.vue` (ou só List se read-only)
+- [ ] List: `FilterPanel` + `ListPagination` + `notifyRemoved` (ver [ui-patterns.md](./ui-patterns.md))
+- [ ] Form: `notifySaved` após create/update; selects com `SingleSelect`
 - [ ] 3 rotas em `router/index.ts` com `layout3` e `meta.permission`
 - [ ] Item em `layouts/Menu.ts` com `permission`
 - [ ] UI em português
@@ -38,11 +41,16 @@ Instruções obrigatórias ao criar ou modificar código frontend neste projeto.
 
 ## Padrões de UI
 
-- **Fonte visual:** `template/src/` (Edumin) — ver [template-base.md](./template-base.md)
-- List: `page-titles` + card + `table-striped` + paginação manual (padrão template)
-- Form: create/edit no mesmo componente via `route.params.id`
-- Erros: `alert alert-danger`
-- Selects de formulário admin: `SingleSelect` (`@/components/ui/`) ou select do template adaptado
+Ver [ui-patterns.md](./ui-patterns.md) (documento completo).
+
+- **Fonte visual:** `template/src/` (Edumin) — [template-base.md](./template-base.md)
+- **Listagem:** `FilterPanel` (fora do card) + tabela + `ListPagination` (direita, números pequenos)
+- **Filtros:** `FilterField` + `SingleSelect` (nunca `<select>` nativo); query com chaves na raiz (`name=%termo%`, não `filter[name]`)
+- **Form:** create/edit no mesmo componente; `notifySaved` antes do redirect
+- **Delete:** `notifyRemoved` após sucesso
+- **Notificações:** `notify` / `notifySaved` / `notifyRemoved` — canto superior direito, 5s (`ActionNotificationHost` em `App.vue`)
+- **Erros de página:** `alert alert-danger`
+- **Selects de formulário:** `SingleSelect` ou `MultiSelect` (`@/components/ui/`)
 - Redirect após save: `router.push("/recurso-plural")`
 
 ## Nomenclatura

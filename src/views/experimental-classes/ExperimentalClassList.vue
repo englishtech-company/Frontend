@@ -1,11 +1,18 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   listExperimentalClasses,
   deleteExperimentalClass,
 } from "@/lib/experimentalClasses";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import type { ExperimentalClass } from "@/lib/types";
 
 const {
@@ -22,7 +29,36 @@ const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 
-const statusFilter = ref("");
+const idFilter = ref("");
+const interestedNameFilter = ref("");
+const teacherNameFilter = ref("");
+const dateClassFrom = ref("");
+const dateClassTo = ref("");
+const statusFilter = ref<string | number | null>(null);
+const conversionFilter = ref<string | number | null>(null);
+
+const statusOptions: SelectOption[] = [
+  { value: "agendada", label: "Agendada" },
+  { value: "realizada", label: "Realizada" },
+  { value: "cancelada", label: "Cancelada" },
+];
+
+const conversionOptions: SelectOption[] = [
+  { value: "true", label: "Sim" },
+  { value: "false", label: "Não" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    interestedNameFilter.value,
+    teacherNameFilter.value,
+    dateClassFrom.value,
+    dateClassTo.value,
+    statusFilter.value,
+    conversionFilter.value,
+  ])
+);
 
 const showActions = computed(
   () => canUpdateExperimentalClasses.value || canDeleteExperimentalClasses.value
@@ -41,7 +77,18 @@ async function loadList() {
   try {
     const result = await listExperimentalClasses({
       page: page.value,
-      status_class: statusFilter.value || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      interestedName: interestedNameFilter.value.trim() || undefined,
+      teacherName: teacherNameFilter.value.trim() || undefined,
+      dateClassFrom: dateClassFrom.value || undefined,
+      dateClassTo: dateClassTo.value || undefined,
+      status_class: statusFilter.value ? String(statusFilter.value) : undefined,
+      conversion:
+        conversionFilter.value === "true"
+          ? true
+          : conversionFilter.value === "false"
+            ? false
+            : undefined,
     });
 
     experimentalClasses.value = result.data;
@@ -60,6 +107,18 @@ function handleSearch() {
   loadList();
 }
 
+function clearFilters() {
+  idFilter.value = "";
+  interestedNameFilter.value = "";
+  teacherNameFilter.value = "";
+  dateClassFrom.value = "";
+  dateClassTo.value = "";
+  statusFilter.value = null;
+  conversionFilter.value = null;
+  page.value = 1;
+  loadList();
+}
+
 async function removeExperimentalClass(item: ExperimentalClass) {
   if (!canDeleteExperimentalClasses.value) {
     error.value = "Você não tem permissão para excluir aulas experimentais.";
@@ -71,6 +130,7 @@ async function removeExperimentalClass(item: ExperimentalClass) {
 
   try {
     await deleteExperimentalClass(item.id);
+    notifyRemoved("Aula experimental");
     await loadList();
   } catch (e) {
     error.value =
@@ -128,6 +188,96 @@ onMounted(loadList);
       {{ error }}
     </div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleSearch"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="experimental-class-filter-id" hint="ID da aula">
+            <input
+              id="experimental-class-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Interessado" id="experimental-class-filter-interested">
+            <input
+              id="experimental-class-filter-interested"
+              v-model="interestedNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do interessado..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Professor" id="experimental-class-filter-teacher">
+            <input
+              id="experimental-class-filter-teacher"
+              v-model="teacherNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do professor..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Data desde" id="experimental-class-filter-date-from">
+            <input
+              id="experimental-class-filter-date-from"
+              v-model="dateClassFrom"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Data até" id="experimental-class-filter-date-to">
+            <input
+              id="experimental-class-filter-date-to"
+              v-model="dateClassTo"
+              type="date"
+              class="form-control"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="experimental-class-filter-status">
+            <SingleSelect
+              id="experimental-class-filter-status"
+              v-model="statusFilter"
+              :options="statusOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar por status da aula"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Conversão" id="experimental-class-filter-conversion">
+            <SingleSelect
+              id="experimental-class-filter-conversion"
+              v-model="conversionFilter"
+              :options="conversionOptions"
+              placeholder="Todas"
+              :searchable="false"
+              aria-label="Filtrar por conversão"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -138,31 +288,9 @@ onMounted(loadList);
               Lista de aulas experimentais ({{ total }})
             </h4>
 
-            <div class="exp-filters">
-              <select
-                v-model="statusFilter"
-                class="form-select form-select-sm"
-                aria-label="Filtrar por status da aula"
-                @change="handleSearch"
-              >
-                <option value="">Todos os status</option>
-                <option value="agendada">Agendada</option>
-                <option value="realizada">Realizada</option>
-                <option value="cancelada">Cancelada</option>
-              </select>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="handleSearch"
-              >
-                Filtrar
-              </button>
-
-              <span v-if="!showActions" class="badge bg-light text-dark">
-                Somente leitura
-              </span>
-            </div>
+            <span v-if="!showActions" class="badge bg-light text-dark">
+              Somente leitura
+            </span>
           </div>
 
           <div class="card-body">
@@ -260,30 +388,12 @@ onMounted(loadList);
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-
-              <span>Página {{ page }} de {{ lastPage }}</span>
-
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>
@@ -292,17 +402,6 @@ onMounted(loadList);
 </template>
 
 <style scoped>
-.exp-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.exp-filters .form-select {
-  width: 160px;
-}
-
 .exp-table {
   font-size: 0.88rem;
 }
@@ -320,16 +419,5 @@ onMounted(loadList);
 
 .exp-table .badge {
   font-size: 0.72rem;
-}
-
-@media (max-width: 767.98px) {
-  .exp-filters {
-    width: 100%;
-  }
-
-  .exp-filters .form-select,
-  .exp-filters .btn {
-    width: 100%;
-  }
 }
 </style>

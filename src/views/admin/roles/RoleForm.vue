@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import PermissionModulePicker from "@/components/admin/PermissionModulePicker.vue";
 import { listPermissions } from "@/lib/permissions";
 import { createRole, getRole, isProtectedRole, updateRole } from "@/lib/roles";
@@ -64,6 +65,7 @@ async function submit() {
     } else {
       await createRole(payload);
     }
+    notifySaved("Perfil", isEdit.value);
     router.push("/roles");
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao salvar perfil";

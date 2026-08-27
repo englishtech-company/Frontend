@@ -1,4 +1,10 @@
 import { api } from "@/lib/api";
+import {
+  appendDateRange,
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import type {
   ApiItemResponse,
   ApiListResponse,
@@ -17,9 +23,15 @@ export type PaymentWithReceipt = Payment & {
 export type ListPaymentsParams = {
   page?: number;
   limit?: number;
+  id?: number;
   chargeId?: number;
   studentId?: number;
-  paidAt?: string;
+  studentName?: string;
+  amount?: string;
+  paidAtFrom?: string;
+  paidAtTo?: string;
+  chargeStatus?: string;
+  hasReceipt?: boolean;
 };
 
 export type CreatePaymentPayload = {
@@ -57,21 +69,18 @@ export function getPaymentReceipt(
 export async function listPayments(
   params: ListPaymentsParams = {}
 ): Promise<Paginated<PaymentWithReceipt>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? 20),
-  });
+  const query = createListQuery(params.page, params.limit ?? 20);
 
-  if (params.chargeId !== undefined) {
-    query.set("charge_id", String(params.chargeId));
-  }
+  appendExact(query, "id", params.id);
+  appendExact(query, "charge_id", params.chargeId);
+  appendExact(query, "student_id", params.studentId);
+  appendLike(query, "student_name", params.studentName);
+  appendExact(query, "amount", params.amount);
+  appendDateRange(query, "paid_at", params.paidAtFrom, params.paidAtTo);
+  appendExact(query, "charge_status", params.chargeStatus);
 
-  if (params.studentId !== undefined) {
-    query.set("student_id", String(params.studentId));
-  }
-
-  if (params.paidAt) {
-    query.set("paid_at", params.paidAt);
+  if (params.hasReceipt !== undefined) {
+    query.set("has_receipt", params.hasReceipt ? "1" : "0");
   }
 
   const response = await api<

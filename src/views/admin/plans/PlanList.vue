@@ -1,16 +1,24 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import { deletePlan, listPlans } from "@/lib/plans";
 import {
+  COMMITMENT_OPTIONS,
   countActiveVariants,
   formatCommitmentLabel,
   formatDurationLabel,
   formatPriceRange,
 } from "@/lib/plans/format";
-import type { Plan } from "@/lib/types";
+import type { Plan, PlanCommitment } from "@/lib/types";
 
 const {
   canViewPlans,
@@ -25,8 +33,31 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
-const search = ref("");
-const activeFilter = ref<boolean | "">("");
+const idFilter = ref("");
+const nameFilter = ref("");
+const commitmentFilter = ref<string | number | null>(null);
+const durationMonthsFilter = ref("");
+const activeFilter = ref<string | number | null>(null);
+
+const commitmentOptions: SelectOption[] = COMMITMENT_OPTIONS.map((option) => ({
+  value: option.value,
+  label: formatCommitmentLabel(option.value),
+}));
+
+const activeOptions: SelectOption[] = [
+  { value: "true", label: "Ativo" },
+  { value: "false", label: "Inativo" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    nameFilter.value,
+    commitmentFilter.value,
+    durationMonthsFilter.value,
+    activeFilter.value,
+  ])
+);
 
 const showActions = computed(
   () => canUpdatePlans.value || canDeletePlans.value
@@ -45,11 +76,20 @@ async function loadPlans() {
   try {
     const result = await listPlans({
       page: page.value,
-      search: search.value.trim() || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      name: nameFilter.value.trim() || undefined,
+      commitment: commitmentFilter.value
+        ? (String(commitmentFilter.value) as PlanCommitment)
+        : undefined,
+      durationMonths: durationMonthsFilter.value.trim()
+        ? Number(durationMonthsFilter.value)
+        : undefined,
       active:
-        activeFilter.value === ""
-          ? undefined
-          : activeFilter.value,
+        activeFilter.value === "true"
+          ? true
+          : activeFilter.value === "false"
+            ? false
+            : undefined,
     });
 
     plans.value = result.data;
@@ -70,6 +110,16 @@ function handleSearch() {
   loadPlans();
 }
 
+function clearFilters() {
+  idFilter.value = "";
+  nameFilter.value = "";
+  commitmentFilter.value = null;
+  durationMonthsFilter.value = "";
+  activeFilter.value = null;
+  page.value = 1;
+  loadPlans();
+}
+
 async function removePlan(plan: Plan) {
   if (!canDeletePlans.value) {
     error.value = "Você não tem permissão para excluir planos.";
@@ -86,6 +136,7 @@ async function removePlan(plan: Plan) {
 
   try {
     await deletePlan(plan.id);
+    notifyRemoved("Plano");
     await loadPlans();
   } catch (e) {
     error.value =
@@ -149,6 +200,77 @@ onMounted(loadPlans);
       {{ error }}
     </div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleSearch"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="plan-filter-id" hint="ID do plano">
+            <input
+              id="plan-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Plano" id="plan-filter-name">
+            <input
+              id="plan-filter-name"
+              v-model="nameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Digite o nome..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Vínculo" id="plan-filter-commitment">
+            <SingleSelect
+              id="plan-filter-commitment"
+              v-model="commitmentFilter"
+              :options="commitmentOptions"
+              placeholder="Todos os vínculos"
+              :searchable="false"
+              aria-label="Filtrar planos por vínculo"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Duração" id="plan-filter-duration" hint="Duração em meses">
+            <input
+              id="plan-filter-duration"
+              v-model="durationMonthsFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 3"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="plan-filter-active">
+            <SingleSelect
+              id="plan-filter-active"
+              v-model="activeFilter"
+              :options="activeOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar planos por status"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -159,44 +281,12 @@ onMounted(loadPlans);
               Lista de planos ({{ total }})
             </h4>
 
-            <div class="d-flex align-items-center gap-2">
-              <input
-                v-model="search"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Buscar por nome..."
-                aria-label="Buscar plano por nome"
-                style="max-width: 200px;"
-                @keyup.enter="handleSearch"
-              />
-
-              <select
-                v-model="activeFilter"
-                class="form-select form-select-sm"
-                aria-label="Filtrar planos por status"
-                style="max-width: 140px;"
-                @change="handleSearch"
-              >
-                <option value="">Todos os status</option>
-                <option :value="true">Ativo</option>
-                <option :value="false">Inativo</option>
-              </select>
-
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="handleSearch"
-              >
-                Filtrar
-              </button>
-
-              <span
-                v-if="!showActions"
-                class="badge bg-light text-dark"
-              >
-                Somente leitura
-              </span>
-            </div>
+            <span
+              v-if="!showActions"
+              class="badge bg-light text-dark"
+            >
+              Somente leitura
+            </span>
           </div>
 
           <div class="card-body">
@@ -297,32 +387,12 @@ onMounted(loadPlans);
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-
-              <span>
-                Página {{ page }} de {{ lastPage }}
-              </span>
-
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>

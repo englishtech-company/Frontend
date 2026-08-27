@@ -9,6 +9,7 @@ import {
   useRoute,
   useRouter,
 } from "vue-router";
+import { notify, notifySaved } from "@/lib/actionNotification";
 import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
@@ -586,6 +587,11 @@ async function submit() {
         );
       }
 
+      notify.warning(
+        receiptException instanceof Error
+          ? `Pagamento salvo, mas o comprovante não foi enviado: ${receiptException.message}`
+          : "Pagamento salvo, mas o comprovante não foi enviado."
+      );
       error.value =
         receiptException instanceof Error
           ? `Pagamento salvo, mas o comprovante não foi enviado: ${receiptException.message}`
@@ -594,6 +600,7 @@ async function submit() {
       return;
     }
 
+    notifySaved("Pagamento", isEdit.value);
     await router.push("/payments");
   } catch (exception) {
     error.value =

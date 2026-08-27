@@ -1,4 +1,9 @@
 import { api } from "@/lib/api";
+import {
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type {
   ApiItemResponse,
@@ -9,10 +14,13 @@ import type {
   PlanVariant,
 } from "@/lib/types";
 
-type ListPlansParams = {
+export type ListPlansParams = {
   page?: number;
   limit?: number;
-  search?: string;
+  id?: number;
+  name?: string;
+  commitment?: PlanCommitment;
+  durationMonths?: number;
   active?: boolean;
 };
 
@@ -42,16 +50,12 @@ export type PlanPayload = {
 export async function listPlans(
   params: ListPlansParams = {}
 ): Promise<Paginated<Plan>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
-  });
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
-  const search = params.search?.trim();
-
-  if (search) {
-    query.set("name", `%${search}%`);
-  }
+  appendExact(query, "id", params.id);
+  appendLike(query, "name", params.name);
+  appendExact(query, "commitment", params.commitment);
+  appendExact(query, "duration_months", params.durationMonths);
 
   if (params.active !== undefined) {
     query.set("active", params.active ? "1" : "0");

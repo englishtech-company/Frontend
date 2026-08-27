@@ -9,6 +9,7 @@ Padrões oficiais para desenvolvimento e criação de módulos no frontend Vue 3
 | Documento | Conteúdo |
 |-----------|----------|
 | [template-base.md](./template-base.md) | **Template Edumin — fonte visual obrigatória** |
+| [ui-patterns.md](./ui-patterns.md) | **Filtros, paginação e notificações padronizadas** |
 | [architecture.md](./architecture.md) | Camadas, pastas e responsabilidades |
 | [api-client.md](./api-client.md) | Cliente HTTP e integração com backend |
 | [module-guide.md](./module-guide.md) | Passo a passo para criar um módulo CRUD |
@@ -36,7 +37,9 @@ Padrões oficiais para desenvolvimento e criação de módulos no frontend Vue 3
 | CRUD completo | `users/` | `template/src/views/app/userManeger/AddUser.vue` |
 | CRUD + relações | `roles/` | `template/src/views/app/userManeger/AddRole.vue` |
 | Somente leitura | `permissions/`, `audits/` | `template/src/views/table/TableBootstrap.vue` |
-| Listagem | `UserList.vue` | `template/src/views/students/AllStudents.vue` |
+| Listagem | `StudentList.vue` | `template/src/views/students/AllStudents.vue` |
+
+Padrões de UI obrigatórios (filtros, paginação, notificações): [ui-patterns.md](./ui-patterns.md).
 
 ## Contrato com backend
 

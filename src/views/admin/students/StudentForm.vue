@@ -14,6 +14,7 @@ import {
   getStudentCurrentTeacher,
 } from "@/lib/students/format";
 import { maskCpf, maskPhone } from "@/lib/br/masks";
+import { notifySaved } from "@/lib/actionNotification";
 
 const route = useRoute();
 const router = useRouter();
@@ -131,6 +132,7 @@ async function submit() {
       await createStudent(payload);
     }
 
+    notifySaved("Aluno", isEdit.value);
     router.push("/students");
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao salvar aluno";

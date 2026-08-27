@@ -1,4 +1,9 @@
 import { api } from "@/lib/api";
+import {
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type {
   ApiItemResponse,
@@ -9,10 +14,15 @@ import type {
   Paginated,
 } from "@/lib/types";
 
-type ListEnrollmentsParams = {
+export type ListEnrollmentsParams = {
   page?: number;
   limit?: number;
+  id?: number;
+  studentName?: string;
+  planName?: string;
+  paymentMethod?: EnrollmentPaymentMethod;
   status?: EnrollmentStatus;
+  publicToken?: string;
 };
 
 export type EnrollmentPayload = {
@@ -37,14 +47,14 @@ type EnrollmentPlucksResponse = {
 export async function listEnrollments(
   params: ListEnrollmentsParams = {}
 ): Promise<Paginated<Enrollment>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
-  });
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
-  if (params.status) {
-    query.set("status", params.status);
-  }
+  appendExact(query, "id", params.id);
+  appendLike(query, "student_name", params.studentName);
+  appendLike(query, "plan_name", params.planName);
+  appendExact(query, "payment_method", params.paymentMethod);
+  appendExact(query, "status", params.status);
+  appendLike(query, "public_token", params.publicToken);
 
   const response = await api<ApiListResponse<"enrollments", Enrollment>>(
     `/enrollments?${query.toString()}`

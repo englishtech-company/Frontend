@@ -7,6 +7,7 @@ import Header from "./layouts/Header.vue";
 import ChatBox from "./layouts/chatbox/ChatBox.vue";
 import Sidebar from "./layouts/Sidebar.vue";
 import AddNewTask from "./components/AddNewTask.vue";
+import ActionNotificationHost from "./components/ui/ActionNotificationHost.vue";
 import { useStore } from "./stores/Store";
 import { storeToRefs } from "pinia";
 import { onMounted, onUnmounted, watchEffect, ref } from "vue";
@@ -125,5 +126,6 @@ onUnmounted(() => {
       </div>
     </component>
     <AddNewTask />
+    <ActionNotificationHost />
   </div>
 </template>

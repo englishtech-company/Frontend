@@ -1,14 +1,25 @@
 import { api } from "@/lib/api";
+import {
+  appendDateRange,
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, ExperimentalClass, Paginated } from "@/lib/types";
 
 const MODULE = "experimental-classes";
 
-type ListParams = {
+export type ListExperimentalClassesParams = {
   page?: number;
   limit?: number;
-  search?: string;
+  id?: number;
+  interestedName?: string;
+  teacherName?: string;
+  dateClassFrom?: string;
+  dateClassTo?: string;
   status_class?: string;
+  conversion?: boolean;
 };
 
 type ExperimentalClassPlucksResponse = {
@@ -45,15 +56,18 @@ export async function getExperimentalClassPlucks(): Promise<{
 }
 
 export async function listExperimentalClasses(
-  params: ListParams = {}
+  params: ListExperimentalClassesParams = {}
 ): Promise<Paginated<ExperimentalClass>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
-  });
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
-  if (params.status_class) {
-    query.set("status_class", params.status_class);
+  appendExact(query, "id", params.id);
+  appendLike(query, "interested_name", params.interestedName);
+  appendLike(query, "teacher_name", params.teacherName);
+  appendDateRange(query, "date_class", params.dateClassFrom, params.dateClassTo);
+  appendExact(query, "status_class", params.status_class);
+
+  if (params.conversion !== undefined) {
+    query.set("conversion", params.conversion ? "1" : "0");
   }
 
   const response = await api<ApiListResponse<"experimental-classes", ExperimentalClass>>(

@@ -1,12 +1,25 @@
 import { api } from "@/lib/api";
+import {
+  appendDateRange,
+  appendExact,
+  appendLike,
+  createListQuery,
+} from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, Paginated, Student } from "@/lib/types";
 
-type ListParams = {
+export type ListStudentsParams = {
   page?: number;
   limit?: number;
-  search?: string;
+  id?: number;
+  name?: string;
+  email?: string;
+  phone?: string;
   status?: string;
+  teacherName?: string;
+  planName?: string;
+  startDateFrom?: string;
+  startDateTo?: string;
 };
 
 export type StudentPayload = {
@@ -24,19 +37,23 @@ export type StudentPayload = {
   group_class_ids?: number[];
 };
 
-export async function listStudents(params: ListParams = {}): Promise<Paginated<Student>> {
-  const page = params.page ?? 1;
-  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
-  let url = `/students?pagination[page]=${page}&pagination[limit]=${limit}`;
-  
-  if (params.search) {
-    url += `&filter[name]=${encodeURIComponent(params.search)}`;
-  }
-  if (params.status) {
-    url += `&filter[status]=${encodeURIComponent(params.status)}`;
-  }
+export async function listStudents(
+  params: ListStudentsParams = {}
+): Promise<Paginated<Student>> {
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
-  const response = await api<ApiListResponse<"students", Student>>(url);
+  appendExact(query, "id", params.id);
+  appendLike(query, "name", params.name);
+  appendLike(query, "email", params.email);
+  appendLike(query, "phone", params.phone);
+  appendExact(query, "status", params.status);
+  appendLike(query, "teacher_name", params.teacherName);
+  appendLike(query, "plan_name", params.planName);
+  appendDateRange(query, "start_date", params.startDateFrom, params.startDateTo);
+
+  const response = await api<ApiListResponse<"students", Student>>(
+    `/students?${query.toString()}`
+  );
   return response.students;
 }
 

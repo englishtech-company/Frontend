@@ -135,7 +135,7 @@ export type Student = {
     current_plan_variant?:
       | PlanVariant
       | null;
-    group_classes?: GroupClassStudent[];
+    group_classes?: EnrolledGroupClass[];
   };
 };
 
@@ -493,6 +493,18 @@ export type GroupClass = {
     teacher?: Teacher | null;
     plan?: Plan | null;
     students?: GroupClassStudent[];
+  };
+};
+
+export type EnrolledGroupClass = GroupClass & {
+  pivot?: {
+    status?: string;
+    joined_at?: string | null;
+    left_at?: string | null;
+    notes?: string | null;
+  };
+};
+
 export type StudentDocumentCategory =
   | "payment_receipt"
   | "contract"

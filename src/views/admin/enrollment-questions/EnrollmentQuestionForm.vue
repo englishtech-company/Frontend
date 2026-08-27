@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import {
@@ -111,6 +112,7 @@ async function submit() {
       await createEnrollmentQuestion(payload);
     }
 
+    notifySaved("Pergunta", isEdit.value);
     await router.push("/enrollment-questions");
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao salvar pergunta";

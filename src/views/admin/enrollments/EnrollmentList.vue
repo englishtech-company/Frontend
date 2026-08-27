@@ -1,8 +1,15 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
+import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
+import { notify, notifyRemoved } from "@/lib/actionNotification";
+import { countActiveFilters } from "@/lib/filters/query";
 import { deleteEnrollment, listEnrollments } from "@/lib/enrollments";
 import {
   ENROLLMENT_STATUS_CLASSES,
@@ -14,7 +21,7 @@ import {
   canCopyEnrollmentLink,
   PAYMENT_METHOD_LABELS,
 } from "@/lib/enrollments/format";
-import type { Enrollment, EnrollmentStatus } from "@/lib/types";
+import type { Enrollment, EnrollmentPaymentMethod, EnrollmentStatus } from "@/lib/types";
 
 const {
   canViewEnrollments,
@@ -29,8 +36,39 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
-const statusFilter = ref<EnrollmentStatus | "">("");
+const idFilter = ref("");
+const studentNameFilter = ref("");
+const planNameFilter = ref("");
+const paymentMethodFilter = ref<string | number | null>(null);
+const statusFilter = ref<string | number | null>(null);
+const publicTokenFilter = ref("");
+
+const statusOptions: SelectOption[] = [
+  { value: "pending", label: "Pendente" },
+  { value: "submitted", label: "Preenchida" },
+  { value: "confirmed", label: "Confirmada" },
+  { value: "cancelled", label: "Cancelada" },
+];
+
+const paymentMethodOptions: SelectOption[] = Object.entries(
+  PAYMENT_METHOD_LABELS
+).map(([value, label]) => ({
+  value,
+  label,
+}));
+
 const copiedId = ref<number | null>(null);
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([
+    idFilter.value,
+    studentNameFilter.value,
+    planNameFilter.value,
+    paymentMethodFilter.value,
+    statusFilter.value,
+    publicTokenFilter.value,
+  ])
+);
 
 const showActions = computed(
   () =>
@@ -52,7 +90,16 @@ async function loadEnrollments() {
   try {
     const result = await listEnrollments({
       page: page.value,
-      status: statusFilter.value || undefined,
+      id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
+      studentName: studentNameFilter.value.trim() || undefined,
+      planName: planNameFilter.value.trim() || undefined,
+      paymentMethod: paymentMethodFilter.value
+        ? (String(paymentMethodFilter.value) as EnrollmentPaymentMethod)
+        : undefined,
+      status: statusFilter.value
+        ? (String(statusFilter.value) as EnrollmentStatus)
+        : undefined,
+      publicToken: publicTokenFilter.value.trim() || undefined,
     });
     enrollments.value = result.data;
     lastPage.value = result.last_page;
@@ -65,6 +112,17 @@ async function loadEnrollments() {
 }
 
 function handleFilter() {
+  page.value = 1;
+  loadEnrollments();
+}
+
+function clearFilters() {
+  idFilter.value = "";
+  studentNameFilter.value = "";
+  planNameFilter.value = "";
+  paymentMethodFilter.value = null;
+  statusFilter.value = null;
+  publicTokenFilter.value = "";
   page.value = 1;
   loadEnrollments();
 }
@@ -85,6 +143,7 @@ async function removeEnrollment(enrollment: Enrollment) {
 
   try {
     await deleteEnrollment(enrollment.id);
+    notifyRemoved("Matrícula");
     await loadEnrollments();
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao remover matrícula";
@@ -101,6 +160,7 @@ async function copyLink(enrollment: Enrollment) {
 
   try {
     await navigator.clipboard.writeText(url);
+    notify.success("Link copiado!");
     copiedId.value = enrollment.id;
     window.setTimeout(() => {
       if (copiedId.value === enrollment.id) {
@@ -138,25 +198,93 @@ onMounted(loadEnrollments);
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
+    <FilterPanel
+      :active-count="activeFilterCount"
+      @filter="handleFilter"
+      @clear="clearFilters"
+    >
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="#" id="enrollment-filter-id" hint="ID da matrícula">
+            <input
+              id="enrollment-filter-id"
+              v-model="idFilter"
+              type="number"
+              min="1"
+              class="form-control"
+              placeholder="Ex.: 12"
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Aluno" id="enrollment-filter-student">
+            <input
+              id="enrollment-filter-student"
+              v-model="studentNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do aluno..."
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Plano" id="enrollment-filter-plan">
+            <input
+              id="enrollment-filter-plan"
+              v-model="planNameFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do plano..."
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Pagamento" id="enrollment-filter-payment">
+            <SingleSelect
+              id="enrollment-filter-payment"
+              v-model="paymentMethodFilter"
+              :options="paymentMethodOptions"
+              placeholder="Todos os métodos"
+              :searchable="false"
+              aria-label="Filtrar por método de pagamento"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="enrollment-filter-status">
+            <SingleSelect
+              id="enrollment-filter-status"
+              v-model="statusFilter"
+              :options="statusOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar por status"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Link" id="enrollment-filter-token" hint="Token público">
+            <input
+              id="enrollment-filter-token"
+              v-model="publicTokenFilter"
+              type="text"
+              class="form-control"
+              placeholder="Token do link..."
+              @keyup.enter="handleFilter"
+            />
+          </FilterField>
+        </div>
+      </div>
+    </FilterPanel>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h4 class="card-title mb-0">Lista de matrículas ({{ total }})</h4>
-
-            <div class="d-flex gap-2">
-              <select
-                v-model="statusFilter"
-                class="form-select form-select-sm"
-                @change="handleFilter"
-              >
-                <option value="">Todos os status</option>
-                <option value="pending">Pendente</option>
-                <option value="submitted">Preenchida</option>
-                <option value="confirmed">Confirmada</option>
-                <option value="cancelled">Cancelada</option>
-              </select>
-            </div>
           </div>
 
           <div class="card-body">
@@ -219,7 +347,7 @@ onMounted(loadEnrollments);
                       <RouterLink
                         v-if="canViewEnrollments"
                         :to="`/enrollments/${enrollment.id}`"
-                        class="btn btn-xs sharp btn-info me-1"
+                        class="btn btn-xs sharp btn-primary me-1"
                         title="Visualizar"
                       >
                         <i class="fa fa-eye"></i>
@@ -246,28 +374,12 @@ onMounted(loadEnrollments);
               </table>
             </div>
 
-            <div
-              v-if="lastPage > 1"
-              class="d-flex justify-content-between align-items-center mt-3"
-            >
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page <= 1"
-                @click="goToPage(page - 1)"
-              >
-                Anterior
-              </button>
-              <span>Página {{ page }} de {{ lastPage }}</span>
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                :disabled="page >= lastPage"
-                @click="goToPage(page + 1)"
-              >
-                Próxima
-              </button>
-            </div>
+            <ListPagination
+              :page="page"
+              :last-page="lastPage"
+              :total="total"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </div>

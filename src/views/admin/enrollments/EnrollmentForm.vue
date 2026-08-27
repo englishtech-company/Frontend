@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notify, notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import {
@@ -126,12 +127,14 @@ async function submit() {
   try {
     if (isEdit.value) {
       await updateEnrollment(enrollmentId.value, payload);
+      notifySaved("Matrícula", true);
       await router.push("/enrollments");
       return;
     }
 
     const enrollment = await createEnrollment(payload);
     publicUrl.value = getEnrollmentPublicUrl(enrollment);
+    notifySaved("Matrícula", false);
     await router.push(`/enrollments/${enrollment.id}/edit`);
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao salvar matrícula";
@@ -145,6 +148,7 @@ async function copyLink() {
 
   try {
     await navigator.clipboard.writeText(publicUrl.value);
+    notify.success("Link copiado!");
     linkCopied.value = true;
     window.setTimeout(() => {
       linkCopied.value = false;

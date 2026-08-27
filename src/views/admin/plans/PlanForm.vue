@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
@@ -135,6 +136,7 @@ async function submit() {
       await createPlan(payload);
     }
 
+    notifySaved("Plano", isEdit.value);
     await router.push("/plans");
   } catch (e) {
     error.value =

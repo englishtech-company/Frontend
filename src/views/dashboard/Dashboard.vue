@@ -3,7 +3,17 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
 import { listExperimentalClasses } from "@/lib/experimentalClasses";
+import { listCharges } from "@/lib/charges";
 import { listEnrollments } from "@/lib/enrollments";
+import { formatCurrency } from "@/lib/finance/format";
+import {
+  formatChargeStatus,
+  formatDateTime as formatFinanceDateTime,
+  getChargeStudent,
+  getPaymentCharge,
+} from "@/lib/finance/format";
+import { buildFinanceSnapshot, type FinanceSnapshot } from "@/lib/dashboard/finance";
+import { listPayments, type PaymentWithReceipt } from "@/lib/payments";
 import {
   ENROLLMENT_STATUS_CLASSES,
   ENROLLMENT_STATUS_LABELS,
@@ -24,7 +34,7 @@ import {
   isDateWithinPeriod,
   type DashboardPeriod,
 } from "@/lib/dashboard/period";
-import type { Enrollment, ExperimentalClass } from "@/lib/types";
+import type { Charge, Enrollment, ExperimentalClass } from "@/lib/types";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
@@ -37,6 +47,8 @@ const {
   canViewLeads,
   canViewExperimentalClasses,
   canViewEnrollments,
+  canViewCharges,
+  canViewPayments,
 } = usePermissions();
 
 type CountStat = {
@@ -58,6 +70,9 @@ const enrollmentsPending = ref<number | null>(null);
 const enrollmentsConfirmed = ref<number | null>(null);
 const upcomingClasses = ref<ExperimentalClass[]>([]);
 const pendingEnrollments = ref<Enrollment[]>([]);
+const financeStats = ref<FinanceSnapshot | null>(null);
+const recentPayments = ref<PaymentWithReceipt[]>([]);
+const pendingCharges = ref<Charge[]>([]);
 const selectedPeriod = ref<DashboardPeriod>("30d");
 
 const periodRange = computed(() => getDashboardPeriodRange(selectedPeriod.value));
@@ -128,6 +143,71 @@ function buildPlansSubtitle(stat: CountStat): string {
 
   return `${stat.active} ativo${stat.active === 1 ? "" : "s"} · ${stat.total - stat.active} inativo${stat.total - stat.active === 1 ? "" : "s"}`;
 }
+
+function formatMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return formatCurrency(value);
+}
+
+const financeStatCards = computed(() => {
+  const stats = financeStats.value;
+  const scope = periodScopeLabel.value;
+
+  return [
+    {
+      key: "payments-received",
+      label: "Recebimentos",
+      value: loading.value ? "..." : formatMoney(stats?.receivedTotal),
+      subtitle: stats
+        ? scope
+          ? `${stats.receivedCount} pagamento${stats.receivedCount === 1 ? "" : "s"} ${scope}`
+          : `${stats.receivedCount} pagamento${stats.receivedCount === 1 ? "" : "s"} registrado${stats.receivedCount === 1 ? "" : "s"}`
+        : "—",
+      icon: "la la-money-bill-wave",
+      tone: "success",
+      to: "/payments",
+      visible: canViewPayments.value,
+    },
+    {
+      key: "charges-open",
+      label: "Cobranças pendentes",
+      value: loading.value ? "..." : formatMoney(stats?.openTotal),
+      subtitle: stats
+        ? `${stats.openCount} aberta${stats.openCount === 1 ? "" : "s"} · situação atual`
+        : "—",
+      icon: "la la-file-invoice",
+      tone: "info",
+      to: "/charges",
+      visible: canViewCharges.value,
+    },
+    {
+      key: "charges-overdue",
+      label: "Inadimplentes",
+      value: loading.value ? "..." : formatMoney(stats?.overdueTotal),
+      subtitle: stats
+        ? `${stats.overdueCount} cobrança${stats.overdueCount === 1 ? "" : "s"} atrasada${stats.overdueCount === 1 ? "" : "s"}`
+        : "—",
+      icon: "la la-exclamation-triangle",
+      tone: "danger",
+      to: "/charges",
+      visible: canViewCharges.value,
+    },
+    {
+      key: "charges-outstanding",
+      label: "Total a receber",
+      value: loading.value ? "..." : formatMoney(stats?.totalOutstanding),
+      subtitle: stats
+        ? stats.partialCount > 0
+          ? `Inclui ${stats.partialCount} parcial${stats.partialCount === 1 ? "" : "es"} · situação atual`
+          : "Abertas, atrasadas e saldos parciais"
+        : "—",
+      icon: "la la-hand-holding-usd",
+      tone: "warning",
+      to: "/charges",
+      visible: canViewCharges.value,
+    },
+  ].filter((card) => card.visible);
+});
 
 const statCards = computed(() =>
   [
@@ -326,6 +406,50 @@ const showActivitySection = computed(
   () => showUpcomingClasses.value || showPendingEnrollments.value || loading.value
 );
 
+const showFinanceActivity = computed(
+  () =>
+    loading.value ||
+    (canViewPayments.value && recentPayments.value.length > 0) ||
+    (canViewCharges.value && pendingCharges.value.length > 0)
+);
+
+function getPaymentStudentName(payment: PaymentWithReceipt): string {
+  const charge = getPaymentCharge(payment);
+  const student = charge ? getChargeStudent(charge) : null;
+
+  return student?.name ?? "—";
+}
+
+function pickRecentPayments(
+  payments: PaymentWithReceipt[],
+  range = periodRange.value
+): PaymentWithReceipt[] {
+  const filtered = range.start
+    ? payments.filter((payment) => isDateWithinPeriod(payment.paid_at, range))
+    : payments;
+
+  return [...filtered]
+    .sort(
+      (a, b) =>
+        new Date(b.paid_at ?? 0).getTime() - new Date(a.paid_at ?? 0).getTime()
+    )
+    .slice(0, 5);
+}
+
+function pickPendingCharges(charges: Charge[]): Charge[] {
+  return charges
+    .filter((charge) => charge.status === "open" || charge.status === "overdue")
+    .sort((a, b) => {
+      const priority = (status: string) => (status === "overdue" ? 0 : 1);
+      const byPriority = priority(a.status) - priority(b.status);
+
+      if (byPriority !== 0) return byPriority;
+
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    })
+    .slice(0, 5);
+}
+
 function countInPeriod<T extends { created_at?: string | null }>(
   items: T[],
   apiTotal: number,
@@ -480,6 +604,41 @@ async function loadStats() {
     );
   }
 
+  if (canViewCharges.value || canViewPayments.value) {
+    requests.push(
+      Promise.all([
+        canViewCharges.value
+          ? listCharges({ page: 1, limit: 500 })
+          : Promise.resolve({ data: [], total: 0 }),
+        canViewPayments.value
+          ? listPayments({ page: 1, limit: 500 })
+          : Promise.resolve({ data: [], total: 0 }),
+      ])
+        .then(([chargesResult, paymentsResult]) => {
+          financeStats.value = buildFinanceSnapshot(
+            chargesResult.data,
+            paymentsResult.data,
+            range
+          );
+          recentPayments.value = canViewPayments.value
+            ? pickRecentPayments(paymentsResult.data, range)
+            : [];
+          pendingCharges.value = canViewCharges.value
+            ? pickPendingCharges(chargesResult.data)
+            : [];
+        })
+        .catch(() => {
+          financeStats.value = null;
+          recentPayments.value = [];
+          pendingCharges.value = [];
+        })
+    );
+  } else {
+    financeStats.value = null;
+    recentPayments.value = [];
+    pendingCharges.value = [];
+  }
+
   await Promise.all(requests);
   loading.value = false;
 }
@@ -545,6 +704,170 @@ onMounted(loadStats);
             </div>
           </div>
         </RouterLink>
+      </div>
+    </div>
+
+    <div
+      v-if="canViewCharges || canViewPayments"
+      class="dashboard-finance-section"
+    >
+      <div class="dashboard-section-heading">
+        <h5 class="dashboard-section-heading__title">Financeiro</h5>
+        <p class="dashboard-section-heading__subtitle mb-0">
+          Recebimentos no período selecionado e situação atual das cobranças
+        </p>
+      </div>
+      <div v-if="financeStatCards.length" class="row dashboard-stats">
+        <div
+          v-for="stat in financeStatCards"
+          :key="stat.key"
+          class="col-xl-3 col-lg-4 col-sm-6"
+        >
+          <RouterLink :to="stat.to" class="dashboard-stat-link">
+            <div class="dashboard-stat-card" :class="`dashboard-stat-card--${stat.tone}`">
+              <span class="dashboard-stat-card__icon">
+                <i :class="stat.icon"></i>
+              </span>
+              <div class="dashboard-stat-card__content">
+                <p class="dashboard-stat-card__label">{{ stat.label }}</p>
+                <p class="dashboard-stat-card__value dashboard-stat-card__value--money">
+                  {{ stat.value }}
+                </p>
+                <p class="dashboard-stat-card__subtitle">{{ stat.subtitle }}</p>
+              </div>
+            </div>
+          </RouterLink>
+        </div>
+      </div>
+
+      <div v-if="showFinanceActivity" class="row g-3 dashboard-finance-activity">
+        <div
+          v-if="canViewPayments"
+          :class="canViewCharges ? 'col-xl-6' : 'col-12'"
+        >
+          <div class="card dashboard-panel h-100">
+            <div
+              class="card-header border-0 pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2"
+            >
+              <div>
+                <h4 class="card-title mb-1">Últimos recebimentos</h4>
+                <p class="text-muted mb-0 small">
+                  Pagamentos registrados{{ periodScopeLabel ? ` ${periodScopeLabel}` : "" }}
+                </p>
+              </div>
+              <RouterLink to="/payments" class="btn btn-sm btn-outline-primary">
+                Ver pagamentos
+              </RouterLink>
+            </div>
+            <div class="card-body">
+              <div v-if="loading" class="text-center py-4 text-muted">Carregando...</div>
+              <div
+                v-else-if="recentPayments.length === 0"
+                class="text-center py-4 text-muted"
+              >
+                Nenhum recebimento no período selecionado.
+              </div>
+              <div v-else class="table-responsive">
+                <table class="table table-sm dashboard-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Pagamento</th>
+                      <th>Aluno</th>
+                      <th>Cobrança</th>
+                      <th>Valor</th>
+                      <th>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="payment in recentPayments" :key="payment.id">
+                      <td>
+                        <strong>#{{ payment.id }}</strong>
+                      </td>
+                      <td>{{ getPaymentStudentName(payment) }}</td>
+                      <td>
+                        <RouterLink
+                          v-if="canViewCharges && payment.charge_id"
+                          :to="`/charges/${payment.charge_id}/edit`"
+                          class="dashboard-table__link"
+                        >
+                          #{{ payment.charge_id }}
+                        </RouterLink>
+                        <span v-else>#{{ payment.charge_id }}</span>
+                      </td>
+                      <td class="text-nowrap">{{ formatMoney(Number(payment.amount)) }}</td>
+                      <td class="text-nowrap">
+                        {{ formatFinanceDateTime(payment.paid_at) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="canViewCharges" :class="canViewPayments ? 'col-xl-6' : 'col-12'">
+          <div class="card dashboard-panel h-100">
+            <div
+              class="card-header border-0 pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2"
+            >
+              <div>
+                <h4 class="card-title mb-1">Cobranças pendentes</h4>
+                <p class="text-muted mb-0 small">Abertas e inadimplentes · situação atual</p>
+              </div>
+              <RouterLink to="/charges" class="btn btn-sm btn-outline-primary">
+                Ver cobranças
+              </RouterLink>
+            </div>
+            <div class="card-body">
+              <div v-if="loading" class="text-center py-4 text-muted">Carregando...</div>
+              <div
+                v-else-if="pendingCharges.length === 0"
+                class="text-center py-4 text-muted"
+              >
+                Nenhuma cobrança pendente no momento.
+              </div>
+              <div v-else class="table-responsive">
+                <table class="table table-sm dashboard-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Cobrança</th>
+                      <th>Aluno</th>
+                      <th>Vencimento</th>
+                      <th>Valor</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="charge in pendingCharges" :key="charge.id">
+                      <td>
+                        <RouterLink
+                          :to="`/charges/${charge.id}/edit`"
+                          class="dashboard-table__link"
+                        >
+                          #{{ charge.id }}
+                        </RouterLink>
+                      </td>
+                      <td>{{ getChargeStudent(charge)?.name ?? "—" }}</td>
+                      <td class="text-nowrap">{{ formatDate(charge.due_date) }}</td>
+                      <td class="text-nowrap">
+                        {{ formatMoney(Number(charge.expected_amount)) }}
+                      </td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="formatChargeStatus(charge.status).class"
+                        >
+                          {{ formatChargeStatus(charge.status).label }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -811,6 +1134,34 @@ onMounted(loadStats);
   font-weight: 700;
   line-height: 1.1;
   color: var(--text-dark, #212529);
+}
+
+.dashboard-stat-card__value--money {
+  font-size: 1.65rem;
+}
+
+.dashboard-finance-section {
+  margin-bottom: 1rem;
+}
+
+.dashboard-finance-activity {
+  margin-top: 0.25rem;
+}
+
+.dashboard-section-heading {
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-section-heading__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-dark, #212529);
+}
+
+.dashboard-section-heading__subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-gray, #6c757d);
 }
 
 .dashboard-stat-card__subtitle {

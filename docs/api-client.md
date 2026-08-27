@@ -96,6 +96,24 @@ export async function deleteUser(id: number): Promise<void> {
 
 Defaults: `page=1`, `limit=20`.
 
+## Filtros na listagem
+
+Alinhado com `HasFilter` no backend — chaves na **raiz** da query, não `filter[campo]`:
+
+```typescript
+const query = new URLSearchParams({
+  "pagination[page]": String(page),
+  "pagination[limit]": String(limit),
+});
+
+if (search) query.set("name", `%${search}%`);
+if (status) query.set("status", status);
+
+await api(`/users?${query.toString()}`);
+```
+
+Ver [backend/docs/api-contract.md](../../backend/docs/api-contract.md) e [ui-patterns.md](./ui-patterns.md).
+
 ## Relacionamentos
 
 Backend envia em `relationships`. Preferir:
@@ -104,17 +122,21 @@ Backend envia em `relationships`. Preferir:
 entity.relationships?.roles ?? entity.roles ?? []
 ```
 
-## Tratamento de erros nas views
+## Tratamento de erros e feedback nas views
 
 ```typescript
 try {
   await createUser(form);
+  notifySaved("Usuário", isEdit.value);
+  router.push("/users");
 } catch (e) {
   error.value = e instanceof Error ? e.message : "Erro ao salvar";
 }
 ```
 
-Mensagens de validação vêm em `errors` (array) no payload 422.
+- Erros de carga/save: `alert alert-danger` na página
+- Sucesso de create/update/delete: `notifySaved` / `notifyRemoved` ([ui-patterns.md](./ui-patterns.md))
+- Mensagens de validação vêm em `errors` (array) no payload 422
 
 ## Auth
 

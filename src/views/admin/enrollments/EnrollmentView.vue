@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
+import { notify } from "@/lib/actionNotification";
 import { getEnrollment } from "@/lib/enrollments";
 import {
   ENROLLMENT_QUESTION_TYPE_LABELS,
@@ -88,6 +89,7 @@ async function copyLink() {
 
   try {
     await navigator.clipboard.writeText(url);
+    notify.success("Link copiado!");
     copiedLink.value = true;
     window.setTimeout(() => {
       copiedLink.value = false;
@@ -164,22 +166,35 @@ onMounted(loadEnrollment);
                 </li>
               </ul>
               <div class="card-footer text-center border-0 mt-0">
-                <RouterLink
-                  v-if="canUpdateEnrollments"
-                  :to="`/enrollments/${enrollment.id}/edit`"
-                  class="btn btn-primary px-4 me-1"
-                >
-                  Editar
-                </RouterLink>
-                <RouterLink to="/enrollments" class="btn btn-warning px-4">Voltar</RouterLink>
-                <button
-                  v-if="canCopyEnrollmentLink(enrollment)"
-                  type="button"
-                  class="btn btn-outline-primary btn-sm d-block w-100 mt-2"
-                  @click="copyLink"
-                >
-                  {{ copiedLink ? "Link copiado!" : "Copiar link público" }}
-                </button>
+                <div class="profile-actions">
+                  <RouterLink
+                    to="/enrollments"
+                    class="btn btn-warning"
+                    data-tooltip="Voltar"
+                    aria-label="Voltar"
+                  >
+                    <i class="fa fa-arrow-left"></i>
+                  </RouterLink>
+                  <RouterLink
+                    v-if="canUpdateEnrollments"
+                    :to="`/enrollments/${enrollment.id}/edit`"
+                    class="btn btn-primary"
+                    data-tooltip="Editar"
+                    aria-label="Editar"
+                  >
+                    <i class="fa fa-pencil"></i>
+                  </RouterLink>
+                  <button
+                    v-if="canCopyEnrollmentLink(enrollment)"
+                    type="button"
+                    class="btn btn-success"
+                    :data-tooltip="copiedLink ? 'Link copiado!' : 'Copiar link público'"
+                    :aria-label="copiedLink ? 'Link copiado!' : 'Copiar link público'"
+                    @click="copyLink"
+                  >
+                    <i class="fa" :class="copiedLink ? 'fa-check' : 'fa-link'"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -378,3 +393,46 @@ onMounted(loadEnrollment);
     </div>
   </div>
 </template>
+
+<style scoped>
+.profile-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-actions .btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-actions .btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 5;
+}
+
+.profile-actions .btn:hover::after,
+.profile-actions .btn:focus-visible::after {
+  opacity: 1;
+}
+</style>
