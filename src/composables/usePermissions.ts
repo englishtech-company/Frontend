@@ -260,6 +260,27 @@ export function usePermissions() {
       )
     ),
 
+    canViewGroupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.groupClasses.view
+      )
+    ),
+    canCreateGroupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.groupClasses.create
+      )
+    ),
+    canUpdateGroupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.groupClasses.update
+      )
+    ),
+    canDeleteGroupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.groupClasses.delete
+      )
+    ),
+
     canViewPermissions: computed(() =>
       auth.hasPermission(
         PERMISSIONS.permissions.view

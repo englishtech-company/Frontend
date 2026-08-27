@@ -2,7 +2,9 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import MultiSelect from "@/components/ui/MultiSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
+import { getGroupClassOptions } from "@/lib/groupClasses";
 import { listPlans } from "@/lib/plans";
 import { buildActivePlanVariantOptions } from "@/lib/plans/format";
 import { listTeachers } from "@/lib/teachers";
@@ -30,8 +32,10 @@ const startDate = ref("");
 const endDate = ref("");
 const teacherId = ref<string | null>(null);
 const planVariantId = ref<string | null>(null);
+const groupClassIds = ref<number[]>([]);
 const teacherOptions = ref<SelectOption[]>([]);
 const planVariantOptions = ref<SelectOption[]>([]);
+const groupClassOptions = ref<SelectOption[]>([]);
 
 const loading = ref(false);
 const saving = ref(false);
@@ -56,12 +60,20 @@ async function loadPlanVariantOptions() {
   planVariantOptions.value = buildActivePlanVariantOptions(result.data);
 }
 
+async function loadGroupClassOptions() {
+  const result = await getGroupClassOptions();
+  groupClassOptions.value = Object.entries(result).map(([value, label]) => ({
+    value: Number(value),
+    label,
+  }));
+}
+
 async function loadForm() {
   loading.value = true;
   error.value = "";
 
   try {
-    await Promise.all([loadTeacherOptions(), loadPlanVariantOptions()]);
+    await Promise.all([loadTeacherOptions(), loadPlanVariantOptions(), loadGroupClassOptions()]);
 
     if (!isEdit.value) return;
 
@@ -81,6 +93,11 @@ async function loadForm() {
 
     const currentPlanVariant = getStudentCurrentPlanVariant(student);
     planVariantId.value = currentPlanVariant?.id ? String(currentPlanVariant.id) : null;
+
+    groupClassIds.value =
+      student.relationships?.group_classes?.map((g: any) => g.id) ??
+      (student as any).group_classes?.map((g: any) => g.id) ??
+      [];
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao carregar dados do aluno";
   } finally {
@@ -105,6 +122,7 @@ async function submit() {
       end_date: endDate.value || undefined,
       teacher_id: teacherId.value ? Number(teacherId.value) : null,
       plan_variant_id: planVariantId.value ? Number(planVariantId.value) : null,
+      group_class_ids: groupClassIds.value,
     };
 
     if (isEdit.value) {
@@ -275,6 +293,18 @@ function onPhoneInput(event: Event) {
                     v-model="endDate"
                     type="date"
                     class="form-control"
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12 mb-3">
+                  <MultiSelect
+                    id="groupClassIds"
+                    v-model="groupClassIds"
+                    label="Turmas Matriculadas"
+                    :options="groupClassOptions"
+                    placeholder="Selecione as turmas em que o aluno está matriculado"
                   />
                 </div>
               </div>

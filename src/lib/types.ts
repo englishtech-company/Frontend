@@ -135,6 +135,7 @@ export type Student = {
     current_plan_variant?:
       | PlanVariant
       | null;
+    group_classes?: GroupClassStudent[];
   };
 };
 
@@ -458,6 +459,40 @@ export type Payment = {
   };
 };
 
+export type GroupClassStatus = "active" | "inactive";
+
+export type GroupClassStudent = Student & {
+  pivot?: {
+    status?: string;
+    joined_at?: string | null;
+    left_at?: string | null;
+    notes?: string | null;
+  };
+};
+
+export type GroupClass = {
+  id: number;
+  name: string;
+  description?: string | null;
+  teacher_id?: number | null;
+  plan_id?: number | null;
+  schedule?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  max_students?: number | null;
+  students_count?: number;
+  status: GroupClassStatus;
+  level?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  teacher?: Teacher | null;
+  plan?: Plan | null;
+  students?: GroupClassStudent[];
+  relationships?: {
+    teacher?: Teacher | null;
+    plan?: Plan | null;
+    students?: GroupClassStudent[];
 export type StudentDocumentCategory =
   | "payment_receipt"
   | "contract"

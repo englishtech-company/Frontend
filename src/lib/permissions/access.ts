@@ -77,6 +77,12 @@ export const PERMISSIONS = {
     update: "experimental-classes.update",
     delete: "experimental-classes.delete",
   },
+  groupClasses: {
+    view: "group-classes.view",
+    create: "group-classes.create",
+    update: "group-classes.update",
+    delete: "group-classes.delete",
+  },
 } as const;
 
 export type PermissionName =
@@ -93,7 +99,8 @@ export type PermissionName =
   | (typeof PERMISSIONS.studentDocuments)[keyof typeof PERMISSIONS.studentDocuments]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
-  | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses];
+  | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses]
+  | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses];
 
 export function canAccessPath(
   path: string,
@@ -311,6 +318,10 @@ export function canAccessPath(
   if (/^\/experimental-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.experimentalClasses.update);
   if (path.startsWith("/experimental-classes")) return hasPermission(PERMISSIONS.experimentalClasses.view);
 
+  if (path === "/group-classes/create") return hasPermission(PERMISSIONS.groupClasses.create);
+  if (/^\/group-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.groupClasses.update);
+  if (path.startsWith("/group-classes")) return hasPermission(PERMISSIONS.groupClasses.view);
+
   return true;
 }
 
@@ -468,6 +479,10 @@ export function resolveRoutePermission(
   if (path === "/experimental-classes/create") return PERMISSIONS.experimentalClasses.create;
   if (/^\/experimental-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.experimentalClasses.update;
   if (path.startsWith("/experimental-classes")) return PERMISSIONS.experimentalClasses.view;
+
+  if (path === "/group-classes/create") return PERMISSIONS.groupClasses.create;
+  if (/^\/group-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.groupClasses.update;
+  if (path.startsWith("/group-classes")) return PERMISSIONS.groupClasses.view;
 
   return null;
 }
