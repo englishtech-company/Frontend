@@ -139,6 +139,50 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.update },
     },
     {
+      path: "/lessons",
+      name: "Lessons",
+      component: () => import("../views/admin/lessons/LessonList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.view },
+    },
+    {
+      path: "/lessons/create",
+      name: "LessonCreate",
+      component: () => import("../views/admin/lessons/LessonForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
+    },
+    {
+      path: "/lessons/:id/edit",
+      name: "LessonEdit",
+      component: () => import("../views/admin/lessons/LessonForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
+    },
+    // Nested under GroupClass
+    {
+      path: "/group-classes/:groupClassId/lessons/create",
+      name: "GroupClassLessonCreate",
+      component: () => import("../views/admin/lessons/LessonForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
+    },
+    {
+      path: "/group-classes/:groupClassId/lessons/:id/edit",
+      name: "GroupClassLessonEdit",
+      component: () => import("../views/admin/lessons/LessonForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
+    },
+    // Nested under Student
+    {
+      path: "/students/:studentId/lessons/create",
+      name: "StudentLessonCreate",
+      component: () => import("../views/admin/lessons/LessonForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
+    },
+    {
+      path: "/students/:studentId/lessons/:id/edit",
+      name: "StudentLessonEdit",
+      component: () => import("../views/admin/lessons/LessonForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
+    },
+    {
       path: "/leads",
       name: "Leads",
       component: () => import("../views/admin/leads/LeadList.vue"),

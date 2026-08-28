@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
 import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
 import StudentPaymentsPanel from "@/components/admin/StudentPaymentsPanel.vue";
+import StudentLessonsPanel from "@/components/admin/StudentLessonsPanel.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
@@ -469,6 +470,10 @@ onMounted(loadStudent);
                         />
                         <StudentDocumentsPanel
                           v-else-if="moduleTab.id === 'documents'"
+                          :student-id="student.id"
+                        />
+                        <StudentLessonsPanel
+                          v-else-if="moduleTab.id === 'classes'"
                           :student-id="student.id"
                         />
                         <ProfileModulePlaceholder

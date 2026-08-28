@@ -281,6 +281,27 @@ export function usePermissions() {
       )
     ),
 
+    canViewLessons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.lessons.view
+      )
+    ),
+    canCreateLessons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.lessons.create
+      )
+    ),
+    canUpdateLessons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.lessons.update
+      )
+    ),
+    canDeleteLessons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.lessons.delete
+      )
+    ),
+
     canViewPermissions: computed(() =>
       auth.hasPermission(
         PERMISSIONS.permissions.view
