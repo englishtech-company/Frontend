@@ -430,7 +430,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div>
-              <span>Valor esperado</span>
+              <span>Valor original</span>
 
               <strong>
                 {{

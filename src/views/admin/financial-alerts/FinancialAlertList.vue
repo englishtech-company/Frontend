@@ -20,13 +20,16 @@ import {
   getFinancialAlertCharge,
   listFinancialAlerts,
 } from "@/lib/financialAlerts";
+import type {
+  FinancialAlertWithCurrentBalance,
+} from "@/lib/financialAlerts";
 import {
   PERMISSIONS,
 } from "@/lib/permissions/access";
 import type {
-  FinancialAlert,
   FinancialAlertStatus,
   FinancialAlertType,
+  ChargeStatus,
 } from "@/lib/types";
 import { useAuthStore } from "@/stores/auth";
 
@@ -38,7 +41,8 @@ const canViewFinancialAlerts = computed(() =>
   )
 );
 
-const financialAlerts = ref<FinancialAlert[]>([]);
+const financialAlerts =
+  ref<FinancialAlertWithCurrentBalance[]>([]);
 
 const loading = ref(true);
 const error = ref("");
@@ -48,6 +52,8 @@ const lastPage = ref(1);
 const total = ref(0);
 
 const statusFilter =
+  ref<string | number | null>(null);
+const chargeStatusFilter =
   ref<string | number | null>(null);
 const typeFilter =
   ref<string | number | null>(null);
@@ -60,6 +66,14 @@ const triggeredOnTo = ref("");
 const statusOptions: SelectOption[] = [
   { value: "open", label: "Em aberto" },
   { value: "resolved", label: "Resolvido" },
+];
+
+const chargeStatusOptions: SelectOption[] = [
+  { value: "overdue", label: "Atrasada" },
+  {
+    value: "partial_overdue",
+    label: "Parcial atrasada",
+  },
 ];
 
 const typeOptions: SelectOption[] = [
@@ -76,6 +90,7 @@ const typeOptions: SelectOption[] = [
 const activeFilterCount = computed(() =>
   countActiveFilters([
     statusFilter.value,
+    chargeStatusFilter.value,
     typeFilter.value,
     studentNameFilter.value,
     dueDateFrom.value,
@@ -122,7 +137,7 @@ function getAlertStatusClass(
 }
 
 function getAlertStudentName(
-  financialAlert: FinancialAlert
+  financialAlert: FinancialAlertWithCurrentBalance
 ): string {
   const charge = getFinancialAlertCharge(
     financialAlert
@@ -139,7 +154,7 @@ function getAlertStudentName(
 }
 
 function getAlertStudentEmail(
-  financialAlert: FinancialAlert
+  financialAlert: FinancialAlertWithCurrentBalance
 ): string {
   const charge = getFinancialAlertCharge(
     financialAlert
@@ -173,6 +188,14 @@ async function loadFinancialAlerts() {
         ? String(
             statusFilter.value
           ) as FinancialAlertStatus
+        : undefined,
+      chargeStatus: chargeStatusFilter.value
+        ? String(
+            chargeStatusFilter.value
+          ) as Extract<
+            ChargeStatus,
+            "overdue" | "partial_overdue"
+          >
         : undefined,
       type: typeFilter.value
         ? String(
@@ -209,6 +232,7 @@ function handleFilter() {
 
 function clearFilters() {
   statusFilter.value = null;
+  chargeStatusFilter.value = null;
   typeFilter.value = null;
   studentNameFilter.value = "";
   dueDateFrom.value = "";
@@ -290,6 +314,22 @@ onMounted(loadFinancialAlerts);
               placeholder="Todos os tipos"
               :searchable="false"
               aria-label="Filtrar pelo tipo do alerta"
+            />
+          </FilterField>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+          <FilterField
+            label="Status da cobrança"
+            id="financial-alert-filter-charge-status"
+          >
+            <SingleSelect
+              id="financial-alert-filter-charge-status"
+              v-model="chargeStatusFilter"
+              :options="chargeStatusOptions"
+              placeholder="Atrasada ou parcial"
+              :searchable="false"
+              aria-label="Filtrar pelo status da cobrança"
             />
           </FilterField>
         </div>
@@ -407,7 +447,11 @@ onMounted(loadFinancialAlerts);
                     </th>
 
                     <th class="text-nowrap">
-                      Valor esperado
+                      Valor original
+                    </th>
+
+                    <th class="text-nowrap">
+                      Saldo atual
                     </th>
 
                     <th class="text-nowrap">
@@ -429,7 +473,7 @@ onMounted(loadFinancialAlerts);
                     v-if="financialAlerts.length === 0"
                   >
                     <td
-                      colspan="9"
+                      colspan="10"
                       class="text-center text-muted"
                     >
                       Nenhum alerta financeiro encontrado
@@ -500,6 +544,46 @@ onMounted(loadFinancialAlerts);
                             )
                           : "—"
                       }}
+                    </td>
+
+                    <td class="text-nowrap">
+                      <template
+                        v-if="
+                          getFinancialAlertCharge(
+                            financialAlert
+                          )?.current_balance
+                        "
+                      >
+                        <strong>
+                          {{
+                            formatCurrency(
+                              getFinancialAlertCharge(
+                                financialAlert
+                              )!.current_balance!
+                                .total_due_amount
+                            )
+                          }}
+                        </strong>
+
+                        <div class="small text-muted">
+                          Calculado em
+                          {{
+                            formatDate(
+                              getFinancialAlertCharge(
+                                financialAlert
+                              )!.current_balance!
+                                .reference_date
+                            )
+                          }}
+                        </div>
+                      </template>
+
+                      <span
+                        v-else
+                        class="text-muted"
+                      >
+                        —
+                      </span>
                     </td>
 
                     <td class="text-nowrap">

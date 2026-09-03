@@ -9,16 +9,38 @@ import type {
   ApiItemResponse,
   ApiListResponse,
   Charge,
+  ChargeStatus,
   FinancialAlert,
   FinancialAlertStatus,
   FinancialAlertType,
   Paginated,
 } from "@/lib/types";
 
+export type CurrentChargeBalance = {
+  reference_date: string;
+  total_due_amount: string;
+};
+
+export type ChargeWithCurrentBalance = Charge & {
+  current_balance?: CurrentChargeBalance;
+};
+
+export type FinancialAlertWithCurrentBalance =
+  FinancialAlert & {
+    charge?: ChargeWithCurrentBalance | null;
+    relationships?: FinancialAlert["relationships"] & {
+      charge?: ChargeWithCurrentBalance | null;
+    };
+  };
+
 export type ListFinancialAlertsParams = {
   page?: number;
   limit?: number;
   status?: FinancialAlertStatus;
+  chargeStatus?: Extract<
+    ChargeStatus,
+    "overdue" | "partial_overdue"
+  >;
   type?: FinancialAlertType;
   studentName?: string;
   dueDateFrom?: string;
@@ -28,8 +50,8 @@ export type ListFinancialAlertsParams = {
 };
 
 export function getFinancialAlertCharge(
-  financialAlert: FinancialAlert
-): Charge | null {
+  financialAlert: FinancialAlertWithCurrentBalance
+): ChargeWithCurrentBalance | null {
   return (
     financialAlert.relationships?.charge ??
     financialAlert.charge ??
@@ -39,13 +61,20 @@ export function getFinancialAlertCharge(
 
 export async function listFinancialAlerts(
   params: ListFinancialAlertsParams = {}
-): Promise<Paginated<FinancialAlert>> {
+): Promise<
+  Paginated<FinancialAlertWithCurrentBalance>
+> {
   const query = createListQuery(
     params.page,
     params.limit ?? 20
   );
 
   appendExact(query, "status", params.status);
+  appendExact(
+    query,
+    "charge_status",
+    params.chargeStatus
+  );
   appendExact(query, "type", params.type);
   appendLike(
     query,
@@ -68,7 +97,7 @@ export async function listFinancialAlerts(
   const response = await api<
     ApiListResponse<
       "financial_alerts",
-      FinancialAlert
+      FinancialAlertWithCurrentBalance
     >
   >(`/financial-alerts?${query.toString()}`);
 
@@ -77,11 +106,11 @@ export async function listFinancialAlerts(
 
 export async function getFinancialAlert(
   id: number
-): Promise<FinancialAlert> {
+): Promise<FinancialAlertWithCurrentBalance> {
   const response = await api<
     ApiItemResponse<
       "financial_alert",
-      FinancialAlert
+      FinancialAlertWithCurrentBalance
     >
   >(`/financial-alerts/${id}`);
 
