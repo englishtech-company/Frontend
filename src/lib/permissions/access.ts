@@ -59,6 +59,9 @@ export const PERMISSIONS = {
     update: "payments.update",
     delete: "payments.delete",
   },
+  financialAlerts: {
+    view: "financial-alerts.view",
+  },
   studentDocuments: {
     view: "student-documents.view",
     create: "student-documents.create",
@@ -96,6 +99,7 @@ export type PermissionName =
   | (typeof PERMISSIONS.enrollmentQuestions)[keyof typeof PERMISSIONS.enrollmentQuestions]
   | (typeof PERMISSIONS.charges)[keyof typeof PERMISSIONS.charges]
   | (typeof PERMISSIONS.payments)[keyof typeof PERMISSIONS.payments]
+  | (typeof PERMISSIONS.financialAlerts)[keyof typeof PERMISSIONS.financialAlerts]
   | (typeof PERMISSIONS.studentDocuments)[keyof typeof PERMISSIONS.studentDocuments]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
@@ -302,6 +306,12 @@ export function canAccessPath(
     );
   }
 
+  if (path.startsWith("/financial-alerts")) {
+    return hasPermission(
+      PERMISSIONS.financialAlerts.view
+    );
+  }
+
   if (path.startsWith("/permissions")) {
     return hasPermission(
       PERMISSIONS.permissions.view
@@ -466,6 +476,10 @@ export function resolveRoutePermission(
 
   if (path.startsWith("/payments")) {
     return PERMISSIONS.payments.view;
+  }
+
+  if (path.startsWith("/financial-alerts")) {
+    return PERMISSIONS.financialAlerts.view;
   }
 
   if (path.startsWith("/permissions")) {
