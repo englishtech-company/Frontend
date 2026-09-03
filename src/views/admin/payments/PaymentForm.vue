@@ -3,6 +3,7 @@ import {
   computed,
   onMounted,
   ref,
+  watch,
 } from "vue";
 import {
   RouterLink,
@@ -10,13 +11,18 @@ import {
   useRouter,
 } from "vue-router";
 import { notify, notifySaved } from "@/lib/actionNotification";
+import ChargeFinancialSummary from "@/components/admin/ChargeFinancialSummary.vue";
 import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   getCharge,
+  getChargeFinancialSummary,
   getChargeOptions,
+} from "@/lib/charges";
+import type {
+  ChargeFinancialSummary as ChargeFinancialSummaryData,
 } from "@/lib/charges";
 import { confirmDeleteWithReason } from "@/lib/confirm";
 import {
@@ -97,16 +103,27 @@ const receiptInput =
 const selectedCharge = ref<Charge | null>(null);
 const chargeOptions = ref<SelectOption[]>([]);
 
+const financialSummary =
+  ref<ChargeFinancialSummaryData | null>(null);
+
 const loading = ref(false);
 const loadingCharge = ref(false);
+const loadingFinancialSummary = ref(false);
 const saving = ref(false);
 const deletingReceipt = ref(false);
 const error = ref("");
 const success = ref("");
+const financialSummaryError = ref("");
 
 const selectedStudent = computed(() =>
   selectedCharge.value
     ? getChargeStudent(selectedCharge.value)
+    : null
+);
+
+const financialSummaryReferenceDate = computed(
+  () => paidAt.value
+    ? paidAt.value.slice(0, 10)
     : null
 );
 
@@ -140,7 +157,12 @@ const canSubmit = computed(
     !saving.value &&
     !deletingReceipt.value &&
     !loadingCharge.value &&
-    chargeAcceptsNewPayment.value
+    !loadingFinancialSummary.value &&
+    chargeAcceptsNewPayment.value &&
+    (
+      isEdit.value ||
+      financialSummary.value !== null
+    )
 );
 
 function padDatePart(value: number): string {
@@ -320,10 +342,43 @@ async function loadChargeOptions() {
   }));
 }
 
+async function loadFinancialSummary() {
+  financialSummary.value = null;
+  financialSummaryError.value = "";
+
+  if (
+    isEdit.value ||
+    !selectedCharge.value ||
+    !chargeAcceptsNewPayment.value ||
+    !financialSummaryReferenceDate.value
+  ) {
+    return;
+  }
+
+  loadingFinancialSummary.value = true;
+
+  try {
+    financialSummary.value =
+      await getChargeFinancialSummary(
+        selectedCharge.value.id,
+        financialSummaryReferenceDate.value
+      );
+  } catch (exception) {
+    financialSummaryError.value =
+      exception instanceof Error
+        ? exception.message
+        : "Erro ao carregar o resumo financeiro.";
+  } finally {
+    loadingFinancialSummary.value = false;
+  }
+}
+
 async function handleChargeChange(
   value: string | number | null
 ) {
   selectedCharge.value = null;
+  financialSummary.value = null;
+  financialSummaryError.value = "";
   success.value = "";
 
   if (value === null || value === "") {
@@ -337,6 +392,7 @@ async function handleChargeChange(
     selectedCharge.value = await getCharge(
       Number(value)
     );
+    await loadFinancialSummary();
   } catch (exception) {
     error.value =
       exception instanceof Error
@@ -529,6 +585,18 @@ async function submit() {
     return;
   }
 
+  if (
+    !isEdit.value &&
+    (
+      loadingFinancialSummary.value ||
+      !financialSummary.value
+    )
+  ) {
+    error.value =
+      "Aguarde o carregamento do resumo financeiro antes de salvar.";
+    return;
+  }
+
   const parsedAmount = parsePriceInput(
     amount.value
   );
@@ -611,6 +679,10 @@ async function submit() {
     saving.value = false;
   }
 }
+
+watch(paidAt, () => {
+  void loadFinancialSummary();
+});
 
 onMounted(loadForm);
 </script>
@@ -947,7 +1019,7 @@ onMounted(loadForm);
                 </div>
 
                 <div>
-                  <span>Valor esperado</span>
+                  <span>Valor original</span>
 
                   <strong>
                     {{
@@ -982,6 +1054,37 @@ onMounted(loadForm);
                   </strong>
                 </div>
               </div>
+
+              <div
+                v-if="
+                  selectedCharge &&
+                  !isEdit &&
+                  loadingFinancialSummary
+                "
+                class="text-muted mb-4"
+              >
+                Carregando resumo financeiro...
+              </div>
+
+              <div
+                v-else-if="
+                  selectedCharge &&
+                  !isEdit &&
+                  financialSummaryError
+                "
+                class="alert alert-warning"
+              >
+                {{ financialSummaryError }}
+              </div>
+
+              <ChargeFinancialSummary
+                v-else-if="
+                  selectedCharge &&
+                  !isEdit &&
+                  financialSummary
+                "
+                :summary="financialSummary"
+              />
 
               <div
                 v-if="

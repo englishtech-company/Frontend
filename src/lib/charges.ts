@@ -41,6 +41,40 @@ export type UpdateChargePayload = {
   cancel_recurrence?: boolean;
 };
 
+export type ChargeFinancialSummaryPayment = {
+  id: number;
+  amount: string;
+  principal_amount: string;
+  late_fee_amount: string;
+  interest_amount: string;
+  paid_at?: string | null;
+};
+
+export type ChargeFinancialSummaryComponent = {
+  paid_amount: string;
+  remaining_amount: string;
+};
+
+export type ChargeFinancialSummary = {
+  charge_id: number;
+  reference_date: string;
+  expected_amount: string;
+  principal: ChargeFinancialSummaryComponent;
+  late_fee: ChargeFinancialSummaryComponent;
+  interest: ChargeFinancialSummaryComponent;
+  total_due_amount: string;
+  payments: ChargeFinancialSummaryPayment[];
+};
+
+export type CurrentChargeBalance = {
+  reference_date: string;
+  total_due_amount: string;
+};
+
+export type ChargeWithCurrentBalance = Charge & {
+  current_balance?: CurrentChargeBalance;
+};
+
 type ChargePlucksResponse = {
   action: string;
   status: number;
@@ -53,7 +87,7 @@ type ChargePlucksResponse = {
 
 export async function listCharges(
   params: ListChargesParams = {}
-): Promise<Paginated<Charge>> {
+): Promise<Paginated<ChargeWithCurrentBalance>> {
   const query = createListQuery(params.page, params.limit ?? 20);
 
   appendExact(query, "id", params.id);
@@ -65,7 +99,7 @@ export async function listCharges(
   appendExact(query, "status", params.status);
 
   const response = await api<
-    ApiListResponse<"charges", Charge>
+    ApiListResponse<"charges", ChargeWithCurrentBalance>
   >(`/charges?${query.toString()}`);
 
   return response.charges;
@@ -79,6 +113,26 @@ export async function getCharge(
   >(`/charges/${id}`);
 
   return response.charge;
+}
+
+export async function getChargeFinancialSummary(
+  id: number,
+  referenceDate: string
+): Promise<ChargeFinancialSummary> {
+  const query = new URLSearchParams({
+    reference_date: referenceDate,
+  });
+
+  const response = await api<
+    ApiItemResponse<
+      "financial_summary",
+      ChargeFinancialSummary
+    >
+  >(
+    `/charges/${id}/financial-summary?${query.toString()}`
+  );
+
+  return response.financial_summary;
 }
 
 export async function createCharge(
