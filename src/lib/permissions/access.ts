@@ -83,6 +83,12 @@ export const PERMISSIONS = {
     update: "group-classes.update",
     delete: "group-classes.delete",
   },
+  lessons: {
+    view: "lessons.view",
+    create: "lessons.create",
+    update: "lessons.update",
+    delete: "lessons.delete",
+  },
 } as const;
 
 export type PermissionName =
@@ -100,7 +106,8 @@ export type PermissionName =
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
   | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses]
-  | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses];
+  | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses]
+  | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons];
 
 export function canAccessPath(
   path: string,
@@ -322,6 +329,14 @@ export function canAccessPath(
   if (/^\/group-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.groupClasses.update);
   if (path.startsWith("/group-classes")) return hasPermission(PERMISSIONS.groupClasses.view);
 
+  if (path === "/lessons/create") return hasPermission(PERMISSIONS.lessons.create);
+  if (/^\/lessons\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.lessons.update);
+  if (/^\/group-classes\/\d+\/lessons\/create$/.test(path)) return hasPermission(PERMISSIONS.lessons.create);
+  if (/^\/group-classes\/\d+\/lessons\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.lessons.update);
+  if (/^\/students\/\d+\/lessons\/create$/.test(path)) return hasPermission(PERMISSIONS.lessons.create);
+  if (/^\/students\/\d+\/lessons\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.lessons.update);
+  if (path.startsWith("/lessons")) return hasPermission(PERMISSIONS.lessons.view);
+
   return true;
 }
 
@@ -483,6 +498,14 @@ export function resolveRoutePermission(
   if (path === "/group-classes/create") return PERMISSIONS.groupClasses.create;
   if (/^\/group-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.groupClasses.update;
   if (path.startsWith("/group-classes")) return PERMISSIONS.groupClasses.view;
+
+  if (path === "/lessons/create") return PERMISSIONS.lessons.create;
+  if (/^\/lessons\/\d+\/edit$/.test(path)) return PERMISSIONS.lessons.update;
+  if (/^\/group-classes\/\d+\/lessons\/create$/.test(path)) return PERMISSIONS.lessons.create;
+  if (/^\/group-classes\/\d+\/lessons\/\d+\/edit$/.test(path)) return PERMISSIONS.lessons.update;
+  if (/^\/students\/\d+\/lessons\/create$/.test(path)) return PERMISSIONS.lessons.create;
+  if (/^\/students\/\d+\/lessons\/\d+\/edit$/.test(path)) return PERMISSIONS.lessons.update;
+  if (path.startsWith("/lessons")) return PERMISSIONS.lessons.view;
 
   return null;
 }

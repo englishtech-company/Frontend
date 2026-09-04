@@ -136,6 +136,7 @@ export type Student = {
       | PlanVariant
       | null;
     group_classes?: EnrolledGroupClass[];
+    lessons?: Lesson[];
   };
 };
 
@@ -493,6 +494,7 @@ export type GroupClass = {
     teacher?: Teacher | null;
     plan?: Plan | null;
     students?: GroupClassStudent[];
+    lessons?: Lesson[];
   };
 };
 
@@ -537,5 +539,34 @@ export type StudentDocument = {
     payment?: Payment | null;
     uploaded_by?: User | null;
     deleted_by?: User | null;
+  };
+};
+
+export type LessonStatus =
+  | "scheduled"
+  | "completed"
+  | "cancelled"
+  | "postponed"
+  | "makeup";
+
+export type Lesson = {
+  id: number;
+  group_class_id?: number | null;
+  student_id?: number | null;
+  teacher_id?: number | null;
+  class_datetime: string;
+  topic: string;
+  status: LessonStatus;
+  observation?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  group_class?: GroupClass | null;
+  teacher?: Teacher | null;
+  student?: Student | null;
+  relationships?: {
+    group_class?: GroupClass | null;
+    teacher?: Teacher | null;
+    student?: Student | null;
   };
 };

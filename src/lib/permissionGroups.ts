@@ -36,6 +36,7 @@ const MODULE_LABELS: Record<string, string> = {
   enrollments: "Matrículas",
   "enrollment-questions": "Perguntas de matrícula",
   "group-classes": "Turmas",
+  lessons: "Aulas",
 };
 
 const MODULE_GROUP_MAP: Record<string, string> = {
