@@ -333,6 +333,18 @@ const router = createRouter({
       },
     },
     {
+      path: "/financial-alerts",
+      name: "FinancialAlerts",
+      component: () =>
+        import(
+          "../views/admin/financial-alerts/FinancialAlertList.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.financialAlerts.view,
+      },
+    },
+    {
       path: "/plans",
       name: "Plans",
       component: () => import("../views/admin/plans/PlanList.vue"),

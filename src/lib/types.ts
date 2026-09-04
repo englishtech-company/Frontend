@@ -395,6 +395,7 @@ export type ChargeStatus =
   | "open"
   | "paid"
   | "partial"
+  | "partial_overdue"
   | "overdue"
   | "cancelled";
 
@@ -457,6 +458,33 @@ export type Payment = {
   charge?: Charge | null;
   relationships?: {
     charge?: Charge | null;
+  };
+};
+
+export type FinancialAlertType =
+  | "overdue_day_8"
+  | "overdue_day_16";
+
+export type FinancialAlertStatus =
+  | "open"
+  | "resolved";
+
+export type FinancialAlert = {
+  id: number;
+  charge_id: number;
+  type: FinancialAlertType;
+  status: FinancialAlertStatus;
+  triggered_on: string;
+  resolved_at?: string | null;
+  resolved_by?: number | null;
+  resolution?: string | null;
+  resolution_note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  charge?: Charge | null;
+  relationships?: {
+    charge?: Charge | null;
+    resolved_by?: User | null;
   };
 };
 

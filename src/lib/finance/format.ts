@@ -125,6 +125,10 @@ export function formatChargeStatus(
       label: "Parcial",
       class: "badge-warning",
     },
+    partial_overdue: {
+      label: "Parcial atrasada",
+      class: "badge-danger",
+    },
     overdue: {
       label: "Atrasada",
       class: "badge-danger",
