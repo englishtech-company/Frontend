@@ -253,6 +253,18 @@ const router = createRouter({
       },
     },
     {
+      path: "/charges/:id",
+      name: "ChargeView",
+      component: () =>
+        import(
+          "../views/admin/charges/ChargeView.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.charges.view,
+      },
+    },
+    {
       path: "/payments",
       name: "Payments",
       component: () =>
