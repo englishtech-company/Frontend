@@ -9,6 +9,7 @@ import {
   createExperimentalClass,
   getExperimentalClass,
   getExperimentalClassPlucks,
+  toDateTimeLocalValue,
   updateExperimentalClass,
 } from "@/lib/experimentalClasses";
 import type { ExperimentalClassPayload } from "@/lib/experimentalClasses";
@@ -95,8 +96,7 @@ async function loadForm() {
 
     interestedId.value = String(item.interested_id);
     teacherId.value = item.teacher_id != null ? String(item.teacher_id) : null;
-    // date_class comes as ISO from backend; slice to YYYY-MM-DD for <input type="date">
-    dateClass.value = item.date_class ? item.date_class.slice(0, 10) : "";
+    dateClass.value = toDateTimeLocalValue(item.date_class);
     statusClass.value = item.status_class;
     conversao.value = item.conversao;
     selfDeclaredLevel.value = item.self_declared_level ?? "";
@@ -243,12 +243,12 @@ onMounted(async () => {
                 <div class="col-sm-4">
                   <div class="form-group">
                     <label class="form-label" for="exp-date">
-                      Data da aula *
+                      Data e horário da aula *
                     </label>
                     <input
                       id="exp-date"
                       v-model="dateClass"
-                      type="date"
+                      type="datetime-local"
                       class="form-control"
                       required
                     />

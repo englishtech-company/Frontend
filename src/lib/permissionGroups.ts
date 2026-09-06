@@ -37,15 +37,20 @@ const MODULE_LABELS: Record<string, string> = {
   "enrollment-questions": "Perguntas de matrícula",
   "group-classes": "Turmas",
   lessons: "Aulas",
+  "library-categories": "Categorias da biblioteca",
+  "library-materials": "Materiais da biblioteca",
 };
 
 const MODULE_GROUP_MAP: Record<string, string> = {
   enrollments: "enrollments",
   "enrollment-questions": "enrollments",
+  "library-categories": "library",
+  "library-materials": "library",
 };
 
 const GROUP_LABELS: Record<string, string> = {
   enrollments: "Matrículas",
+  library: "Biblioteca",
 };
 
 const GROUP_SUBMODULE_ORDER: Record<
@@ -55,6 +60,10 @@ const GROUP_SUBMODULE_ORDER: Record<
   enrollments: [
     "enrollments",
     "enrollment-questions",
+  ],
+  library: [
+    "library-categories",
+    "library-materials",
   ],
 };
 

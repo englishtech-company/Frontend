@@ -10,8 +10,9 @@ import { usePermissions } from "@/composables/usePermissions";
 import {
   listExperimentalClasses,
   deleteExperimentalClass,
+  getExperimentalClassWhatsAppUrl,
 } from "@/lib/experimentalClasses";
-import { notifyRemoved } from "@/lib/actionNotification";
+import { notify, notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import type { ExperimentalClass } from "@/lib/types";
 
@@ -60,7 +61,7 @@ const activeFilterCount = computed(() =>
   ])
 );
 
-const showActions = computed(
+const showEditDelete = computed(
   () => canUpdateExperimentalClasses.value || canDeleteExperimentalClasses.value
 );
 
@@ -144,9 +145,31 @@ function goToPage(nextPage: number) {
   loadList();
 }
 
-function formatDate(value: string | undefined): string {
+function formatDateTime(value: string | undefined): string {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR");
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function reminderUrl(item: ExperimentalClass): string | null {
+  return getExperimentalClassWhatsAppUrl(item, "reminder");
+}
+
+function followUpUrl(item: ExperimentalClass): string | null {
+  return getExperimentalClassWhatsAppUrl(item, "follow-up");
+}
+
+function notifyMissingWhatsApp() {
+  notify.warning(
+    "Este interessado não tem WhatsApp cadastrado. Atualize o cadastro do lead para enviar a mensagem."
+  );
 }
 
 function formatStatus(status: string): { label: string; cls: string } {
@@ -288,7 +311,7 @@ onMounted(loadList);
               Lista de aulas experimentais ({{ total }})
             </h4>
 
-            <span v-if="!showActions" class="badge bg-light text-dark">
+            <span v-if="!showEditDelete" class="badge bg-light text-dark">
               Somente leitura
             </span>
           </div>
@@ -303,19 +326,16 @@ onMounted(loadList);
                     <th>#</th>
                     <th class="text-nowrap">Interessado</th>
                     <th class="text-nowrap">Professor</th>
-                    <th class="text-nowrap">Data</th>
+                    <th class="text-nowrap">Data e horário</th>
                     <th class="text-nowrap">Status</th>
                     <th class="text-nowrap">Conversão</th>
-                    <th v-if="showActions" class="text-end text-nowrap">Ações</th>
+                    <th class="text-end text-nowrap">Ações</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   <tr v-if="experimentalClasses.length === 0">
-                    <td
-                      :colspan="showActions ? 7 : 6"
-                      class="text-center text-muted"
-                    >
+                    <td colspan="7" class="text-center text-muted">
                       Nenhuma aula experimental encontrada
                     </td>
                   </tr>
@@ -341,7 +361,7 @@ onMounted(loadList);
                       }}
                     </td>
 
-                    <td class="text-nowrap">{{ formatDate(item.date_class) }}</td>
+                    <td class="text-nowrap">{{ formatDateTime(item.date_class) }}</td>
 
                     <td class="text-nowrap">
                       <span
@@ -363,7 +383,51 @@ onMounted(loadList);
                       ></i>
                     </td>
 
-                    <td v-if="showActions" class="text-end text-nowrap">
+                    <td class="text-end text-nowrap">
+                      <a
+                        v-if="reminderUrl(item)"
+                        :href="reminderUrl(item)!"
+                        class="btn btn-xs sharp btn-success me-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Enviar lembrete no WhatsApp"
+                        :aria-label="`Enviar lembrete no WhatsApp para aula experimental #${item.id}`"
+                      >
+                        <i class="fab fa-whatsapp"></i>
+                      </a>
+                      <button
+                        v-else
+                        type="button"
+                        class="btn btn-xs sharp btn-success me-1 exp-wa-missing"
+                        title="Interessado sem WhatsApp cadastrado"
+                        :aria-label="`Lembrete indisponível: interessado da aula #${item.id} sem WhatsApp`"
+                        @click="notifyMissingWhatsApp"
+                      >
+                        <i class="fab fa-whatsapp"></i>
+                      </button>
+
+                      <a
+                        v-if="followUpUrl(item)"
+                        :href="followUpUrl(item)!"
+                        class="btn btn-xs sharp btn-info me-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Enviar follow-up no WhatsApp"
+                        :aria-label="`Enviar follow-up no WhatsApp para aula experimental #${item.id}`"
+                      >
+                        <i class="fab fa-whatsapp"></i>
+                      </a>
+                      <button
+                        v-else
+                        type="button"
+                        class="btn btn-xs sharp btn-info me-1 exp-wa-missing"
+                        title="Interessado sem WhatsApp cadastrado"
+                        :aria-label="`Follow-up indisponível: interessado da aula #${item.id} sem WhatsApp`"
+                        @click="notifyMissingWhatsApp"
+                      >
+                        <i class="fab fa-whatsapp"></i>
+                      </button>
+
                       <RouterLink
                         v-if="canUpdateExperimentalClasses"
                         :to="`/experimental-classes/${item.id}/edit`"
@@ -417,7 +481,12 @@ onMounted(loadList);
   font-size: 0.9rem;
 }
 
-.exp-table .badge {
-  font-size: 0.72rem;
+.exp-table .btn-success,
+.exp-table .btn-info {
+  color: #fff;
+}
+
+.exp-table .exp-wa-missing {
+  opacity: 0.45;
 }
 </style>

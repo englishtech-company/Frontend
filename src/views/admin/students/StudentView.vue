@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
 import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
 import StudentPaymentsPanel from "@/components/admin/StudentPaymentsPanel.vue";
-import StudentLessonsPanel from "@/components/admin/StudentLessonsPanel.vue";
+import StudentLibraryPanel from "@/components/admin/StudentLibraryPanel.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
@@ -37,8 +37,24 @@ const student = ref<Student | null>(null);
 const loading = ref(true);
 const error = ref("");
 const activeTab = ref<
-  "overview" | "classes" | "payments" | "documents" | "history" | "turmas"
+  "overview" | "classes" | "payments" | "documents" | "library" | "history" | "turmas"
 >("overview");
+const tabsScrollRef = ref<HTMLElement | null>(null);
+
+function scrollActiveTabIntoView() {
+  nextTick(() => {
+    const container = tabsScrollRef.value;
+    const activeButton = container?.querySelector<HTMLElement>(".nav-link.active");
+
+    activeButton?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  });
+}
+
+watch(activeTab, scrollActiveTabIntoView);
 
 // --- Modal state ---
 const showEnrollModal = ref(false);
@@ -311,7 +327,14 @@ onMounted(loadStudent);
               <div class="card-body">
                 <div class="profile-tab">
                   <div class="custom-tab-1">
-                    <ul class="nav nav-tabs" role="tablist">
+                    <div
+                      ref="tabsScrollRef"
+                      class="student-profile-tabs-scroll"
+                    >
+                      <ul
+                        class="nav nav-tabs student-profile-tabs"
+                        role="tablist"
+                      >
                       <li class="nav-item" role="presentation">
                         <button
                           type="button"
@@ -357,7 +380,8 @@ onMounted(loadStudent);
                           Turmas
                         </button>
                       </li>
-                    </ul>
+                      </ul>
+                    </div>
 
                     <div class="tab-content">
                       <div
@@ -474,6 +498,10 @@ onMounted(loadStudent);
                         />
                         <StudentLessonsPanel
                           v-else-if="moduleTab.id === 'classes'"
+                          :student-id="student.id"
+                        />
+                        <StudentLibraryPanel
+                          v-else-if="moduleTab.id === 'library'"
                           :student-id="student.id"
                         />
                         <ProfileModulePlaceholder
@@ -738,6 +766,40 @@ onMounted(loadStudent);
 </template>
 
 <style scoped>
+.student-profile-tabs-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.student-profile-tabs-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+
+.student-profile-tabs-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.student-profile-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  min-width: 100%;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border, #dee2e6);
+}
+
+.student-profile-tabs .nav-item {
+  flex: 0 0 auto;
+}
+
+.student-profile-tabs .nav-link {
+  white-space: nowrap;
+}
+
 .nav-link {
   border: none;
   background: transparent;

@@ -302,6 +302,48 @@ export function usePermissions() {
       )
     ),
 
+    canViewLibraryCategories: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryCategories.view
+      )
+    ),
+    canCreateLibraryCategories: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryCategories.create
+      )
+    ),
+    canUpdateLibraryCategories: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryCategories.update
+      )
+    ),
+    canDeleteLibraryCategories: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryCategories.delete
+      )
+    ),
+
+    canViewLibraryMaterials: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryMaterials.view
+      )
+    ),
+    canCreateLibraryMaterials: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryMaterials.create
+      )
+    ),
+    canUpdateLibraryMaterials: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryMaterials.update
+      )
+    ),
+    canDeleteLibraryMaterials: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.libraryMaterials.delete
+      )
+    ),
+
     canViewPermissions: computed(() =>
       auth.hasPermission(
         PERMISSIONS.permissions.view

@@ -92,6 +92,18 @@ export const PERMISSIONS = {
     update: "lessons.update",
     delete: "lessons.delete",
   },
+  libraryCategories: {
+    view: "library-categories.view",
+    create: "library-categories.create",
+    update: "library-categories.update",
+    delete: "library-categories.delete",
+  },
+  libraryMaterials: {
+    view: "library-materials.view",
+    create: "library-materials.create",
+    update: "library-materials.update",
+    delete: "library-materials.delete",
+  },
 } as const;
 
 export type PermissionName =
@@ -111,7 +123,9 @@ export type PermissionName =
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
   | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses]
   | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses]
-  | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons];
+  | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons]
+  | (typeof PERMISSIONS.libraryCategories)[keyof typeof PERMISSIONS.libraryCategories]
+  | (typeof PERMISSIONS.libraryMaterials)[keyof typeof PERMISSIONS.libraryMaterials];
 
 export function canAccessPath(
   path: string,
@@ -347,6 +361,20 @@ export function canAccessPath(
   if (/^\/students\/\d+\/lessons\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.lessons.update);
   if (path.startsWith("/lessons")) return hasPermission(PERMISSIONS.lessons.view);
 
+  if (path === "/library/categories/create") return hasPermission(PERMISSIONS.libraryCategories.create);
+  if (/^\/library\/categories\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.libraryCategories.update);
+  if (/^\/library\/categories\/\d+$/.test(path)) return hasPermission(PERMISSIONS.libraryCategories.view);
+  if (path.startsWith("/library/categories")) return hasPermission(PERMISSIONS.libraryCategories.view);
+  if (path === "/library/materials/create") return hasPermission(PERMISSIONS.libraryMaterials.create);
+  if (/^\/library\/materials\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.libraryMaterials.update);
+  if (path.startsWith("/library/materials")) return hasPermission(PERMISSIONS.libraryMaterials.view);
+  if (path.startsWith("/library")) {
+    return (
+      hasPermission(PERMISSIONS.libraryCategories.view) ||
+      hasPermission(PERMISSIONS.libraryMaterials.view)
+    );
+  }
+
   return true;
 }
 
@@ -520,6 +548,15 @@ export function resolveRoutePermission(
   if (/^\/students\/\d+\/lessons\/create$/.test(path)) return PERMISSIONS.lessons.create;
   if (/^\/students\/\d+\/lessons\/\d+\/edit$/.test(path)) return PERMISSIONS.lessons.update;
   if (path.startsWith("/lessons")) return PERMISSIONS.lessons.view;
+
+  if (path === "/library/categories/create") return PERMISSIONS.libraryCategories.create;
+  if (/^\/library\/categories\/\d+\/edit$/.test(path)) return PERMISSIONS.libraryCategories.update;
+  if (/^\/library\/categories\/\d+$/.test(path)) return PERMISSIONS.libraryCategories.view;
+  if (path.startsWith("/library/categories")) return PERMISSIONS.libraryCategories.view;
+  if (path === "/library/materials/create") return PERMISSIONS.libraryMaterials.create;
+  if (/^\/library\/materials\/\d+\/edit$/.test(path)) return PERMISSIONS.libraryMaterials.update;
+  if (path.startsWith("/library/materials")) return PERMISSIONS.libraryMaterials.view;
+  if (path.startsWith("/library")) return PERMISSIONS.libraryCategories.view;
 
   return null;
 }

@@ -70,6 +70,23 @@ const MenuItems = reactive<menuType[]>([
     permission: PERMISSIONS.experimentalClasses.view,
   },
   {
+    icons: "la la-book",
+    title: "Biblioteca",
+    className: "sub-menu",
+    subMenuItems: [
+      {
+        menu: "Categorias",
+        to: "/library/categories",
+        permission: PERMISSIONS.libraryCategories.view,
+      },
+      {
+        menu: "Materiais",
+        to: "/library/materials",
+        permission: PERMISSIONS.libraryMaterials.view,
+      },
+    ],
+  },
+  {
     icons: "la la-file-alt",
     title: "Matrículas",
     className: "sub-menu",

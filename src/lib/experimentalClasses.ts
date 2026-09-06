@@ -6,7 +6,14 @@ import {
   createListQuery,
 } from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
-import type { ApiItemResponse, ApiListResponse, ExperimentalClass, Paginated } from "@/lib/types";
+import type {
+  ApiItemResponse,
+  ApiListResponse,
+  ExperimentalClass,
+  Lead,
+  Paginated,
+} from "@/lib/types";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 const MODULE = "experimental-classes";
 
@@ -110,4 +117,122 @@ export async function updateExperimentalClass(
 
 export async function deleteExperimentalClass(id: number): Promise<void> {
   await api(`/${MODULE}/${id}`, { method: "DELETE" });
+}
+
+export function getExperimentalClassInterested(
+  item: ExperimentalClass
+): Lead | null {
+  return item.relationships?.interested ?? item.interested ?? null;
+}
+
+export function getExperimentalClassWhatsAppPhone(
+  item: ExperimentalClass
+): string | null {
+  const phone = getExperimentalClassInterested(item)?.whatsapp_phone?.trim();
+
+  return phone || null;
+}
+
+export function toDateTimeLocalValue(value: string | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  return value.replace(" ", "T").slice(0, 16);
+}
+
+function parseClassDate(value: string): Date | null {
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function firstName(name: string): string {
+  const trimmed = name.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  return trimmed.split(/\s+/)[0] ?? trimmed;
+}
+
+function formatWhatsAppDate(value: string): string {
+  const date = parseClassDate(value);
+
+  if (!date) {
+    return "—";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${day}/${month}`;
+}
+
+function formatWhatsAppTime(value: string): string {
+  const date = parseClassDate(value);
+
+  if (!date) {
+    return "—";
+  }
+
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${hours}h${minutes}`;
+}
+
+function greetingName(name: string): string {
+  return name ? `Olá, ${name}!` : "Olá!";
+}
+
+export function buildExperimentalClassReminderMessage(
+  item: ExperimentalClass
+): string {
+  const interested = getExperimentalClassInterested(item);
+  const name = interested?.name?.trim() ?? "";
+  const date = formatWhatsAppDate(item.date_class);
+  const time = formatWhatsAppTime(item.date_class);
+
+  return [
+    `${greetingName(name)} Tudo bem? Passando aqui rapidinho para lembrar da nossa aula experimental que está agendada!`,
+    "",
+    `📅 Data: ${date}`,
+    `⏰ Horário: ${time}`,
+    "",
+    "Se acontecer algum imprevisto e precisar reagendar, é só me dar um toque por aqui, tá bom? Até lá!",
+  ].join("\n");
+}
+
+export function buildExperimentalClassFollowUpMessage(
+  item: ExperimentalClass
+): string {
+  const interested = getExperimentalClassInterested(item);
+  const name = firstName(interested?.name ?? "");
+
+  return [
+    `${greetingName(name)} Tudo bem?`,
+    "E aí, como foi sua experiência na aula? 😊",
+    "Conseguiu se imaginar nesse formato de aula?",
+    "Qualquer dúvida, estou por aqui!",
+  ].join("\n");
+}
+
+export function getExperimentalClassWhatsAppUrl(
+  item: ExperimentalClass,
+  kind: "reminder" | "follow-up"
+): string | null {
+  const phone = getExperimentalClassWhatsAppPhone(item);
+
+  if (!phone) {
+    return null;
+  }
+
+  const message =
+    kind === "reminder"
+      ? buildExperimentalClassReminderMessage(item)
+      : buildExperimentalClassFollowUpMessage(item);
+
+  return buildWhatsAppUrl(phone, message);
 }

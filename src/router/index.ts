@@ -397,6 +397,48 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.update },
     },
     {
+      path: "/library/categories",
+      name: "LibraryCategories",
+      component: () => import("../views/admin/library/LibraryCategoryList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.view },
+    },
+    {
+      path: "/library/categories/create",
+      name: "LibraryCategoryCreate",
+      component: () => import("../views/admin/library/LibraryCategoryForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.create },
+    },
+    {
+      path: "/library/categories/:id",
+      name: "LibraryCategoryView",
+      component: () => import("../views/admin/library/LibraryCategoryView.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.view },
+    },
+    {
+      path: "/library/categories/:id/edit",
+      name: "LibraryCategoryEdit",
+      component: () => import("../views/admin/library/LibraryCategoryForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.update },
+    },
+    {
+      path: "/library/materials",
+      name: "LibraryMaterials",
+      component: () => import("../views/admin/library/LibraryMaterialList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryMaterials.view },
+    },
+    {
+      path: "/library/materials/create",
+      name: "LibraryMaterialCreate",
+      component: () => import("../views/admin/library/LibraryMaterialForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryMaterials.create },
+    },
+    {
+      path: "/library/materials/:id/edit",
+      name: "LibraryMaterialEdit",
+      component: () => import("../views/admin/library/LibraryMaterialForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.libraryMaterials.update },
+    },
+    {
       path: "/enrollment/:token",
       name: "PublicEnrollment",
       component: () => import("../views/pages/PublicEnrollmentForm.vue"),

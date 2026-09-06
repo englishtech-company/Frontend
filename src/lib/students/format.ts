@@ -279,6 +279,28 @@ export const STUDENT_MODULE_TABS: StudentModuleTab[] = [
       },
     ],
   },
+  {
+    id: "library",
+    label: "Biblioteca",
+    title: "Biblioteca didática",
+    description:
+      "Categorias e materiais didáticos atribuídos ao aluno — pasta completa ou arquivo avulso.",
+    icon: "la la-book",
+    examples: [
+      {
+        title: "Gramática A1",
+        subtitle: "Categoria completa · 8 arquivos",
+        badge: "Categoria",
+        badgeClass: "badge-success",
+      },
+      {
+        title: "Lista de vocabulário.pdf",
+        subtitle: "Material avulso",
+        badge: "Arquivo",
+        badgeClass: "badge-info",
+      },
+    ],
+  },
 ];
 
 export const STUDENT_FUTURE_SECTIONS: StudentFutureSection[] = STUDENT_MODULE_TABS.map(

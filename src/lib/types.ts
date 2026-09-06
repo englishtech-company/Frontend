@@ -570,6 +570,46 @@ export type StudentDocument = {
   };
 };
 
+export type LibraryCategory = {
+  id: number;
+  name: string;
+  description?: string | null;
+  sort_order: number;
+  materials_count?: number;
+  students_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  materials?: LibraryMaterial[];
+  students?: Student[];
+  relationships?: {
+    materials?: LibraryMaterial[];
+    students?: Student[];
+  };
+};
+
+export type LibraryMaterial = {
+  id: number;
+  category_id: number;
+  title: string;
+  description?: string | null;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  uploaded_by?: number | null;
+  students_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  category?: LibraryCategory | null;
+  students?: Student[];
+  relationships?: {
+    category?: LibraryCategory | null;
+    students?: Student[];
+    uploaded_by?: User | null;
+  };
+};
+
 export type LessonStatus =
   | "scheduled"
   | "completed"
