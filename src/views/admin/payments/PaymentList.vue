@@ -1,19 +1,19 @@
 <script lang="ts" setup>
 import {
   computed,
+  nextTick,
   onMounted,
   ref,
 } from "vue";
 import { RouterLink } from "vue-router";
 import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
+import StudentPaymentDetailsModal from "@/components/admin/StudentPaymentDetailsModal.vue";
 import FilterField from "@/components/ui/FilterField.vue";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
-import { confirmDelete } from "@/lib/confirm";
-import { notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import {
   formatChargeStatus,
@@ -23,7 +23,6 @@ import {
   getPaymentCharge,
 } from "@/lib/finance/format";
 import {
-  deletePayment,
   getPaymentReceipt,
   listPayments,
 } from "@/lib/payments";
@@ -33,11 +32,11 @@ import type { StudentDocument } from "@/lib/types";
 const {
   canViewPayments,
   canCreatePayments,
-  canUpdatePayments,
-  canDeletePayments,
 } = usePermissions();
 
 const payments = ref<PaymentWithReceipt[]>([]);
+const selectedPayment =
+  ref<PaymentWithReceipt | null>(null);
 
 const loading = ref(true);
 const error = ref("");
@@ -85,9 +84,7 @@ const activeFilterCount = computed(() =>
 );
 
 const showActions = computed(
-  () =>
-    canUpdatePayments.value ||
-    canDeletePayments.value
+  () => canViewPayments.value
 );
 
 function getPaymentStudentName(
@@ -120,9 +117,90 @@ function getPaymentStudentEmail(
   );
 }
 
-function openReceiptPreview(
+function openPaymentDetails(
+  payment: PaymentWithReceipt
+) {
+  selectedPayment.value = payment;
+}
+
+function attachReceipt(
+  payment: PaymentWithReceipt,
+  receipt: StudentDocument
+): PaymentWithReceipt {
+  return {
+    ...payment,
+    receipt_document: receipt,
+    relationships: {
+      ...(payment.relationships ?? {}),
+      receipt_document: receipt,
+    },
+  };
+}
+
+function detachReceipt(
+  payment: PaymentWithReceipt
+): PaymentWithReceipt {
+  return {
+    ...payment,
+    receipt_document: null,
+    relationships: {
+      ...(payment.relationships ?? {}),
+      receipt_document: null,
+    },
+  };
+}
+
+function handleReceiptUpdated(
   receipt: StudentDocument
 ) {
+  if (!receipt.payment_id) {
+    return;
+  }
+
+  payments.value = payments.value.map(
+    (payment) =>
+      payment.id === receipt.payment_id
+        ? attachReceipt(payment, receipt)
+        : payment
+  );
+
+  if (
+    selectedPayment.value?.id ===
+    receipt.payment_id
+  ) {
+    selectedPayment.value = attachReceipt(
+      selectedPayment.value,
+      receipt
+    );
+  }
+}
+
+function handleReceiptDeleted(
+  paymentId: number
+) {
+  payments.value = payments.value.map(
+    (payment) =>
+      payment.id === paymentId
+        ? detachReceipt(payment)
+        : payment
+  );
+
+  if (
+    selectedPayment.value?.id === paymentId
+  ) {
+    selectedPayment.value = detachReceipt(
+      selectedPayment.value
+    );
+  }
+}
+
+async function openReceiptPreview(
+  receipt: StudentDocument
+) {
+  selectedPayment.value = null;
+
+  await nextTick();
+
   previewedReceipt.value = receipt;
 }
 
@@ -200,40 +278,6 @@ function goToPage(nextPage: number) {
 
   page.value = nextPage;
   loadPayments();
-}
-
-async function removePayment(
-  payment: PaymentWithReceipt
-) {
-  if (!canDeletePayments.value) {
-    error.value =
-      "Você não tem permissão para excluir pagamentos.";
-    return;
-  }
-
-  const confirmed = await confirmDelete({
-    entityLabel: "pagamento",
-    itemName: `#${payment.id} - ${getPaymentStudentName(
-      payment
-    )}`,
-    message:
-      "Deseja remover este pagamento? O status da cobrança será recalculado automaticamente.",
-  });
-
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    await deletePayment(payment.id);
-    notifyRemoved("Pagamento");
-    await loadPayments();
-  } catch (exception) {
-    error.value =
-      exception instanceof Error
-        ? exception.message
-        : "Erro ao remover o pagamento.";
-  }
 }
 
 onMounted(loadPayments);
@@ -399,25 +443,36 @@ onMounted(loadPayments);
               class="table-responsive"
             >
               <table
-                class="table table-striped table-responsive-sm"
+                class="table table-striped table-responsive-sm payment-list__table"
               >
+                <colgroup>
+                  <col class="payment-list__payment-column" />
+                  <col class="payment-list__student-column" />
+                  <col class="payment-list__charge-column" />
+                  <col class="payment-list__amount-column" />
+                  <col class="payment-list__date-column" />
+                  <col class="payment-list__status-column" />
+                  <col class="payment-list__receipt-column" />
+                  <col class="payment-list__actions-column" />
+                </colgroup>
+
                 <thead>
                   <tr>
-                    <th class="text-nowrap">
+                    <th>
                       Pagamento
                     </th>
 
                     <th>Aluno</th>
 
-                    <th class="text-nowrap">
+                    <th>
                       Cobrança
                     </th>
 
-                    <th class="text-nowrap">
+                    <th>
                       Valor pago
                     </th>
 
-                    <th class="text-nowrap">
+                    <th>
                       Data do pagamento
                     </th>
 
@@ -427,7 +482,7 @@ onMounted(loadPayments);
 
                     <th
                       v-if="showActions"
-                      class="text-end text-nowrap"
+                      class="text-end"
                     >
                       Ações
                     </th>
@@ -454,7 +509,7 @@ onMounted(loadPayments);
                       </strong>
                     </td>
 
-                    <td>
+                    <td class="payment-list__student-cell">
                       <strong>
                         {{
                           getPaymentStudentName(
@@ -566,23 +621,13 @@ onMounted(loadPayments);
                       v-if="showActions"
                       class="text-end text-nowrap"
                     >
-                      <RouterLink
-                        v-if="canUpdatePayments"
-                        :to="`/payments/${payment.id}/edit`"
-                        class="btn btn-xs sharp btn-primary me-1"
-                        :aria-label="`Editar pagamento ${payment.id}`"
-                      >
-                        <i class="fa fa-pencil"></i>
-                      </RouterLink>
-
                       <button
-                        v-if="canDeletePayments"
                         type="button"
-                        class="btn btn-xs sharp btn-danger"
-                        :aria-label="`Excluir pagamento ${payment.id}`"
-                        @click="removePayment(payment)"
+                        class="btn btn-xs sharp btn-outline-primary"
+                        :aria-label="`Ver detalhes e gerenciar comprovante do pagamento ${payment.id}`"
+                        @click="openPaymentDetails(payment)"
                       >
-                        <i class="fa fa-trash"></i>
+                        <i class="fa fa-eye"></i>
                       </button>
                     </td>
                   </tr>
@@ -601,6 +646,14 @@ onMounted(loadPayments);
       </div>
     </div>
 
+    <StudentPaymentDetailsModal
+      :payment="selectedPayment"
+      @close="selectedPayment = null"
+      @receipt-updated="handleReceiptUpdated"
+      @receipt-deleted="handleReceiptDeleted"
+      @preview-receipt="openReceiptPreview"
+    />
+
     <StudentDocumentPreviewModal
       :document="previewedReceipt"
       @close="previewedReceipt = null"
@@ -615,5 +668,60 @@ onMounted(loadPayments);
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+@media (min-width: 1200px) {
+  .payment-list__table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .payment-list__payment-column {
+    width: 10%;
+  }
+
+  .payment-list__student-column {
+    width: 18%;
+  }
+
+  .payment-list__charge-column {
+    width: 9%;
+  }
+
+  .payment-list__amount-column {
+    width: 11%;
+  }
+
+  .payment-list__date-column {
+    width: 15%;
+  }
+
+  .payment-list__status-column {
+    width: 14%;
+  }
+
+  .payment-list__receipt-column {
+    width: 15%;
+  }
+
+  .payment-list__actions-column {
+    width: 8%;
+  }
+
+  .payment-list__table th,
+  .payment-list__table td {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .payment-list__table th {
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .payment-list__student-cell {
+    overflow-wrap: anywhere;
+  }
 }
 </style>
