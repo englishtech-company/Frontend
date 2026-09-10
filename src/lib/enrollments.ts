@@ -18,6 +18,7 @@ export type ListEnrollmentsParams = {
   page?: number;
   limit?: number;
   id?: number;
+  student_id?: number;
   studentName?: string;
   planName?: string;
   paymentMethod?: EnrollmentPaymentMethod;
@@ -56,6 +57,7 @@ export async function listEnrollments(
   const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
   appendExact(query, "id", params.id);
+  appendExact(query, "student_id", params.student_id);
   appendLike(query, "student_name", params.studentName);
   appendLike(query, "plan_name", params.planName);
   appendExact(query, "payment_method", params.paymentMethod);

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute, useRouter, RouterLink } from "vue-router";
 import {
   getMakeupClass,
   createMakeupClass,
   updateMakeupClass,
-  getMakeupClassPlucks,
 } from "@/lib/makeupClasses";
 import { listEnrollments } from "@/lib/enrollments";
 import { listTeachers } from "@/lib/teachers";
 import { listGroupClasses } from "@/lib/groupClasses";
 import type { MakeupClassStatus, Enrollment, Teacher, GroupClass } from "@/lib/types";
-import { notifySaved, notify } from "@/lib/actionNotification";
+import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 
 const route = useRoute();
 const router = useRouter();
@@ -36,28 +36,28 @@ const enrollmentsList = ref<Enrollment[]>([]);
 const teachersList = ref<Teacher[]>([]);
 const groupClassesList = ref<GroupClass[]>([]);
 
-const enrollmentOptions = computed(() =>
+const enrollmentOptions = computed<SelectOption[]>(() =>
   enrollmentsList.value.map((e) => ({
     value: e.id,
-    label: `#${e.id} - ${e.student?.name || 'Sem nome'}`,
+    label: `Matrícula #${e.id} - ${e.student?.name || 'Aluno sem nome'}`,
   }))
 );
 
-const teacherOptions = computed(() =>
+const teacherOptions = computed<SelectOption[]>(() =>
   teachersList.value.map((t) => ({
     value: t.id,
     label: t.name,
   }))
 );
 
-const groupClassOptions = computed(() =>
+const groupClassOptions = computed<SelectOption[]>(() =>
   groupClassesList.value.map((g) => ({
     value: g.id,
     label: g.name,
   }))
 );
 
-const statusOptions = [
+const statusOptions: SelectOption[] = [
   { value: "available", label: "Disponível" },
   { value: "scheduled", label: "Agendada" },
   { value: "concluded", label: "Concluída" },
@@ -75,7 +75,7 @@ const loadSelectOptions = async () => {
     teachersList.value = teachRes.data;
     groupClassesList.value = grpRes.data;
   } catch (err) {
-    console.error(err);
+    console.error("Erro ao carregar opções para o formulário:", err);
   }
 };
 
@@ -155,7 +155,7 @@ onMounted(() => {
       <div class="card-body">
         <div v-if="loading" class="text-center py-4">
           <div class="spinner-border text-primary" role="status">
-            <span class="sr-only">Carregando...</span>
+            <span class="visually-hidden">Carregando...</span>
           </div>
         </div>
 
@@ -164,46 +164,61 @@ onMounted(() => {
             {{ errorMessage }}
           </div>
 
-          <div class="row">
-            <div class="col-md-6 form-group">
-              <label>Matrícula / Aluno</label>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="makeup-enrollment">
+                Matrícula / Aluno <span class="text-danger">*</span>
+              </label>
               <SingleSelect
+                id="makeup-enrollment"
                 v-model="form.enrollment_id"
                 :options="enrollmentOptions"
                 placeholder="Selecione a matrícula"
+                :searchable="true"
               />
             </div>
 
-            <div class="col-md-6 form-group">
-              <label>Turma (opcional)</label>
+            <div class="col-md-6">
+              <label class="form-label" for="makeup-group-class">Turma (opcional)</label>
               <SingleSelect
+                id="makeup-group-class"
                 v-model="form.group_class_id"
                 :options="groupClassOptions"
                 placeholder="Selecione a turma"
+                :searchable="true"
               />
             </div>
 
-            <div class="col-md-6 form-group">
-              <label>Professor Responsável</label>
+            <div class="col-md-6">
+              <label class="form-label" for="makeup-teacher">Professor Responsável</label>
               <SingleSelect
+                id="makeup-teacher"
                 v-model="form.teacher_id"
                 :options="teacherOptions"
                 placeholder="Selecione o professor"
+                :searchable="true"
               />
             </div>
 
-            <div class="col-md-6 form-group">
-              <label>Status da Reposição</label>
+            <div class="col-md-6">
+              <label class="form-label" for="makeup-status">
+                Status da Reposição <span class="text-danger">*</span>
+              </label>
               <SingleSelect
+                id="makeup-status"
                 v-model="form.status"
                 :options="statusOptions"
                 placeholder="Selecione o status"
+                :searchable="false"
               />
             </div>
 
-            <div class="col-md-4 form-group">
-              <label>Data Original da Falta *</label>
+            <div class="col-md-4">
+              <label class="form-label" for="makeup-original-date">
+                Data Original da Falta <span class="text-danger">*</span>
+              </label>
               <input
+                id="makeup-original-date"
                 v-model="form.original_date"
                 type="datetime-local"
                 class="form-control"
@@ -211,9 +226,12 @@ onMounted(() => {
               />
             </div>
 
-            <div class="col-md-4 form-group">
-              <label>Data Limite Expiração *</label>
+            <div class="col-md-4">
+              <label class="form-label" for="makeup-expired-date">
+                Data Limite Expiração <span class="text-danger">*</span>
+              </label>
               <input
+                id="makeup-expired-date"
                 v-model="form.expired_date"
                 type="datetime-local"
                 class="form-control"
@@ -221,9 +239,10 @@ onMounted(() => {
               />
             </div>
 
-            <div class="col-md-4 form-group">
-              <label>Nova Data Agendada</label>
+            <div class="col-md-4">
+              <label class="form-label" for="makeup-new-date">Nova Data Agendada</label>
               <input
+                id="makeup-new-date"
                 v-model="form.new_date"
                 type="datetime-local"
                 class="form-control"
@@ -231,13 +250,13 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="mt-4 text-right">
-            <RouterLink to="/makeup-classes" class="btn btn-secondary mr-2">
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary" :disabled="submitting">
+              {{ submitting ? "Salvando..." : "Salvar" }}
+            </button>
+            <RouterLink to="/makeup-classes" class="btn btn-light ms-2">
               Cancelar
             </RouterLink>
-            <button type="submit" class="btn btn-primary" :disabled="submitting">
-              {{ submitting ? "Salvando..." : isEdit ? "Atualizar" : "Cadastrar" }}
-            </button>
           </div>
         </form>
       </div>
