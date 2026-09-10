@@ -58,6 +58,7 @@ export const PERMISSIONS = {
     create: "payments.create",
     update: "payments.update",
     delete: "payments.delete",
+    reverse: "payments.reverse",
   },
   financialAlerts: {
     view: "financial-alerts.view",

@@ -8,7 +8,10 @@ import {
 } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
-import { confirmDeleteWithReason } from "@/lib/confirm";
+import {
+  confirmActionWithReason,
+  confirmDeleteWithReason,
+} from "@/lib/confirm";
 import {
   formatChargeStatus,
   formatCurrency,
@@ -18,6 +21,7 @@ import {
 } from "@/lib/finance/format";
 import {
   getPaymentReceipt,
+  reversePayment,
 } from "@/lib/payments";
 import type {
   PaymentWithReceipt,
@@ -40,10 +44,12 @@ const emit = defineEmits<{
   receiptUpdated: [receipt: StudentDocument];
   receiptDeleted: [paymentId: number];
   previewReceipt: [receipt: StudentDocument];
+  paymentReversed: [payment: PaymentWithReceipt];
 }>();
 
 const {
   canUpdatePayments,
+  canReversePayments,
   canViewStudentDocuments,
   canCreateStudentDocuments,
   canUpdateStudentDocuments,
@@ -61,6 +67,22 @@ const receiptInput = ref<HTMLInputElement | null>(
 const receiptActionLoading = ref(false);
 const receiptError = ref("");
 const receiptSuccess = ref("");
+const reversalLoading = ref(false);
+const reversalError = ref("");
+const reversalSuccess = ref("");
+
+const isReversed = computed(
+  () => Boolean(props.payment?.reversed_at)
+);
+
+const reversedByUser = computed(() =>
+  props.payment
+    ? props.payment.reversed_by_user ??
+      props.payment.relationships
+        ?.reversed_by_user ??
+      null
+    : null
+);
 
 const charge = computed(() =>
   props.payment
@@ -322,6 +344,56 @@ async function removeReceipt() {
   }
 }
 
+async function handleReversePayment() {
+  if (
+    !props.payment ||
+    isReversed.value ||
+    !canReversePayments.value
+  ) {
+    return;
+  }
+
+  reversalError.value = "";
+  reversalSuccess.value = "";
+
+  const reason = await confirmActionWithReason({
+    title: `Estornar pagamento #${props.payment.id}?`,
+    message:
+      "O pagamento permanecerá no histórico e o saldo da cobrança será recalculado. Esta operação não representa uma devolução financeira.",
+    reasonLabel: "Motivo do estorno",
+    reasonPlaceholder:
+      "Exemplo: pagamento registrado em duplicidade.",
+    confirmButtonText: "Confirmar estorno",
+  });
+
+  keepPageScrollLocked();
+
+  if (!reason) {
+    return;
+  }
+
+  reversalLoading.value = true;
+
+  try {
+    const reversedPayment = await reversePayment(
+      props.payment.id,
+      { reason }
+    );
+
+    emit("paymentReversed", reversedPayment);
+
+    reversalSuccess.value =
+      "Pagamento estornado e saldo da cobrança recalculado.";
+  } catch (exception) {
+    reversalError.value =
+      exception instanceof Error
+        ? exception.message
+        : "Erro ao estornar o pagamento.";
+  } finally {
+    reversalLoading.value = false;
+  }
+}
+
 watch(
   () => props.payment,
   (payment) => {
@@ -331,6 +403,8 @@ watch(
 
     receiptError.value = "";
     receiptSuccess.value = "";
+    reversalError.value = "";
+    reversalSuccess.value = "";
 
     if (payment) {
       keepPageScrollLocked();
@@ -412,6 +486,41 @@ onBeforeUnmount(() => {
               Registrado em
               {{ formatDateTime(payment.paid_at) }}
             </small>
+          </div>
+
+          <div
+            v-if="isReversed"
+            class="alert alert-warning"
+          >
+            <strong class="d-block mb-1">
+              Pagamento estornado
+            </strong>
+
+            <span class="d-block">
+              Estornado em
+              {{ formatDateTime(payment.reversed_at) }}
+              <template v-if="reversedByUser">
+                por {{ reversedByUser.name }}
+              </template>
+            </span>
+
+            <span class="d-block mt-1">
+              Motivo: {{ payment.reversal_reason || "Não informado" }}
+            </span>
+          </div>
+
+          <div
+            v-if="reversalError"
+            class="alert alert-danger"
+          >
+            {{ reversalError }}
+          </div>
+
+          <div
+            v-if="reversalSuccess"
+            class="alert alert-success"
+          >
+            {{ reversalSuccess }}
           </div>
 
           <div
@@ -673,13 +782,34 @@ onBeforeUnmount(() => {
           </button>
 
           <RouterLink
-            v-if="canUpdatePayments"
+            v-if="canUpdatePayments && !isReversed"
             :to="`/payments/${payment.id}/edit`"
             class="btn btn-primary"
           >
             <i class="la la-edit me-1"></i>
             Editar pagamento
           </RouterLink>
+
+          <button
+            v-if="canReversePayments && !isReversed"
+            type="button"
+            class="btn btn-danger"
+            :disabled="reversalLoading"
+            @click="handleReversePayment"
+          >
+            <span
+              v-if="reversalLoading"
+              class="spinner-border spinner-border-sm me-1"
+              aria-hidden="true"
+            ></span>
+
+            <i
+              v-else
+              class="la la-undo me-1"
+            ></i>
+
+            Estornar pagamento
+          </button>
         </footer>
       </section>
     </div>
