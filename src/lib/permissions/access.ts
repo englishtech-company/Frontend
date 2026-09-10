@@ -316,12 +316,6 @@ export function canAccessPath(
     );
   }
 
-  if (/^\/payments\/\d+\/edit$/.test(path)) {
-    return hasPermission(
-      PERMISSIONS.payments.update
-    );
-  }
-
   if (path.startsWith("/payments")) {
     return hasPermission(
       PERMISSIONS.payments.view
@@ -510,12 +504,6 @@ export function resolveRoutePermission(
 
   if (path === "/payments/create") {
     return PERMISSIONS.payments.create;
-  }
-
-  if (
-    /^\/payments\/\d+\/edit$/.test(path)
-  ) {
-    return PERMISSIONS.payments.update;
   }
 
   if (path.startsWith("/payments")) {

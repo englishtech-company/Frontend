@@ -6,7 +6,6 @@ import {
   ref,
   watch,
 } from "vue";
-import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   confirmActionWithReason,
@@ -48,7 +47,6 @@ const emit = defineEmits<{
 }>();
 
 const {
-  canUpdatePayments,
   canReversePayments,
   canViewStudentDocuments,
   canCreateStudentDocuments,
@@ -780,15 +778,6 @@ onBeforeUnmount(() => {
           >
             Fechar
           </button>
-
-          <RouterLink
-            v-if="canUpdatePayments && !isReversed"
-            :to="`/payments/${payment.id}/edit`"
-            class="btn btn-primary"
-          >
-            <i class="la la-edit me-1"></i>
-            Editar pagamento
-          </RouterLink>
 
           <button
             v-if="canReversePayments && !isReversed"

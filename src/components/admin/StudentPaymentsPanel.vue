@@ -34,7 +34,6 @@ const props = defineProps<{
 const {
   canViewPayments,
   canCreatePayments,
-  canUpdatePayments,
 } = usePermissions();
 
 const payments = ref<PaymentWithReceipt[]>([]);
@@ -52,9 +51,7 @@ const lastPage = ref(1);
 const total = ref(0);
 
 const showActions = computed(
-  () =>
-    canViewPayments.value ||
-    canUpdatePayments.value
+  () => canViewPayments.value
 );
 
 const latestActivePayment = computed(() =>
@@ -500,15 +497,6 @@ onMounted(loadPayments);
                       <i class="la la-eye"></i>
                     </button>
 
-                    <RouterLink
-                      v-if="canUpdatePayments && !payment.reversed_at"
-                      :to="`/payments/${payment.id}/edit`"
-                      class="btn btn-sm btn-outline-secondary"
-                      title="Editar pagamento"
-                      :aria-label="`Editar pagamento ${payment.id}`"
-                    >
-                      <i class="la la-edit"></i>
-                    </RouterLink>
                   </div>
                 </td>
               </tr>
