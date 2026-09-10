@@ -27,10 +27,16 @@ export type ListEnrollmentsParams = {
 
 export type EnrollmentPayload = {
   student_id?: number | null;
-  plan_variant_id: number;
+  teacher_id?: number | null;
+  group_class_id?: number | null;
+  plan_variant_id?: number | null;
   discount_percent?: number | null;
   payment_method: EnrollmentPaymentMethod;
   status?: EnrollmentStatus;
+  is_group_class?: boolean;
+  auto_renewal?: boolean;
+  makeup_limit?: number;
+  makeup_used?: number;
 };
 
 type EnrollmentPlucksResponse = {

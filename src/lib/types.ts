@@ -328,31 +328,68 @@ export type StudentExtra = {
   >;
 };
 
+export type MakeupClassStatus =
+  | "available"
+  | "scheduled"
+  | "concluded"
+  | "expired";
+
+export type MakeupClass = {
+  id: number;
+  enrollment_id?: number | null;
+  group_class_id?: number | null;
+  teacher_id?: number | null;
+  original_date: string;
+  expired_date: string;
+  new_date?: string | null;
+  status: MakeupClassStatus;
+  public_token: string;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  enrollment?: Enrollment | null;
+  group_class?: GroupClass | null;
+  teacher?: Teacher | null;
+  relationships?: {
+    enrollment?: Enrollment | null;
+    group_class?: GroupClass | null;
+    teacher?: Teacher | null;
+  };
+};
+
 export type Enrollment = {
   id: number;
   student_id?: number | null;
-  plan_variant_id: number;
-  discount_percent?:
-    | string
-    | number
-    | null;
-  payment_method:
-    EnrollmentPaymentMethod;
+  teacher_id?: number | null;
+  group_class_id?: number | null;
+  plan_variant_id?: number | null;
+  discount_percent?: string | number | null;
+  payment_method: EnrollmentPaymentMethod;
   status: EnrollmentStatus;
+  is_group_class?: boolean;
+  auto_renewal?: boolean;
+  makeup_limit?: number;
+  makeup_used?: number;
   public_token: string;
   submitted_at?: string | null;
   confirmed_at?: string | null;
+  contract_accepted_at?: string | null;
+  contract_text?: string | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
   student?: Student | null;
+  teacher?: Teacher | null;
+  group_class?: GroupClass | null;
   plan_variant?: PlanVariant | null;
   relationships?: {
     student?: Student | null;
+    teacher?: Teacher | null;
+    group_class?: GroupClass | null;
     plan_variant?: PlanVariant | null;
-    form_questions?:
-      EnrollmentFormQuestion[];
+    form_questions?: EnrollmentFormQuestion[];
     student_extra?: StudentExtra | null;
+    makeup_classes?: MakeupClass[];
     public_url?: string;
   };
 };
