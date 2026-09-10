@@ -119,7 +119,7 @@ const MenuItems = reactive<menuType[]>([
         permission: PERMISSIONS.payments.view,
       },
       {
-        menu: "Alertas",
+        menu: "Inadimplentes",
         to: "/financial-alerts",
         permission: PERMISSIONS.financialAlerts.view,
       },
