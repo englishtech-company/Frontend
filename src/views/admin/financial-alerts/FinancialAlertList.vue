@@ -158,7 +158,7 @@ function getAlertStudentEmail(
 async function loadFinancialAlerts() {
   if (!canViewFinancialAlerts.value) {
     error.value =
-      "Você não tem permissão para listar alertas financeiros.";
+      "Você não tem permissão para listar inadimplentes.";
     loading.value = false;
     return;
   }
@@ -196,7 +196,7 @@ async function loadFinancialAlerts() {
     error.value =
       exception instanceof Error
         ? exception.message
-        : "Erro ao carregar alertas financeiros.";
+        : "Erro ao carregar inadimplentes.";
   } finally {
     loading.value = false;
   }
@@ -239,10 +239,10 @@ onMounted(loadFinancialAlerts);
     <div class="row page-titles mx-0">
       <div class="col-sm-6 p-md-0">
         <div class="welcome-text">
-          <h4>Alertas financeiros</h4>
+          <h4>Inadimplentes</h4>
 
           <p class="mb-0">
-            Acompanhe cobranças que exigem atenção
+            Acompanhe cobranças em atraso que exigem atenção
             administrativa
           </p>
         </div>
@@ -264,7 +264,7 @@ onMounted(loadFinancialAlerts);
       <div class="row g-3">
         <div class="col-md-6 col-lg-3">
           <FilterField
-            label="Status do alerta"
+            label="Status do acompanhamento"
             id="financial-alert-filter-status"
           >
             <SingleSelect
@@ -273,23 +273,23 @@ onMounted(loadFinancialAlerts);
               :options="statusOptions"
               placeholder="Todos os status"
               :searchable="false"
-              aria-label="Filtrar pelo status do alerta"
+              aria-label="Filtrar pelo status do acompanhamento"
             />
           </FilterField>
         </div>
 
         <div class="col-md-6 col-lg-3">
           <FilterField
-            label="Tipo do alerta"
+            label="Marco de atraso"
             id="financial-alert-filter-type"
           >
             <SingleSelect
               id="financial-alert-filter-type"
               v-model="typeFilter"
               :options="typeOptions"
-              placeholder="Todos os tipos"
+              placeholder="Todos os marcos"
               :searchable="false"
-              aria-label="Filtrar pelo tipo do alerta"
+              aria-label="Filtrar pelo marco de atraso"
             />
           </FilterField>
         </div>
@@ -340,7 +340,7 @@ onMounted(loadFinancialAlerts);
 
         <div class="col-md-6 col-lg-3">
           <FilterField
-            label="Alerta gerado desde"
+            label="Registro gerado desde"
             id="financial-alert-filter-triggered-from"
           >
             <input
@@ -354,7 +354,7 @@ onMounted(loadFinancialAlerts);
 
         <div class="col-md-6 col-lg-3">
           <FilterField
-            label="Alerta gerado até"
+            label="Registro gerado até"
             id="financial-alert-filter-triggered-to"
           >
             <input
@@ -373,7 +373,7 @@ onMounted(loadFinancialAlerts);
         <div class="card">
           <div class="card-header">
             <h4 class="card-title mb-0">
-              Lista de alertas financeiros ({{ total }})
+              Lista de inadimplentes ({{ total }})
             </h4>
           </div>
 
@@ -395,10 +395,10 @@ onMounted(loadFinancialAlerts);
                 <thead>
                   <tr>
                     <th class="text-nowrap">
-                      Alerta
+                      Registro
                     </th>
 
-                    <th>Tipo</th>
+                    <th>Marco de atraso</th>
 
                     <th>Aluno</th>
 
@@ -420,7 +420,7 @@ onMounted(loadFinancialAlerts);
                       Gerado em
                     </th>
 
-                    <th>Status do alerta</th>
+                    <th>Status do acompanhamento</th>
                   </tr>
                 </thead>
 
@@ -432,7 +432,7 @@ onMounted(loadFinancialAlerts);
                       colspan="9"
                       class="text-center text-muted"
                     >
-                      Nenhum alerta financeiro encontrado
+                      Nenhum registro de inadimplência encontrado
                     </td>
                   </tr>
 
