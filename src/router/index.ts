@@ -335,14 +335,7 @@ const router = createRouter({
     {
       path: "/payments/:id/edit",
       name: "PaymentEdit",
-      component: () =>
-        import(
-          "../views/admin/payments/PaymentForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.payments.update,
-      },
+      redirect: "/payments",
     },
     {
       path: "/financial-alerts",

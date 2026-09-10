@@ -34,7 +34,6 @@ const props = defineProps<{
 const {
   canViewPayments,
   canCreatePayments,
-  canUpdatePayments,
 } = usePermissions();
 
 const payments = ref<PaymentWithReceipt[]>([]);
@@ -52,9 +51,13 @@ const lastPage = ref(1);
 const total = ref(0);
 
 const showActions = computed(
-  () =>
-    canViewPayments.value ||
-    canUpdatePayments.value
+  () => canViewPayments.value
+);
+
+const latestActivePayment = computed(() =>
+  payments.value.find(
+    (payment) => !payment.reversed_at
+  )
 );
 
 function getChargeStatus(
@@ -142,6 +145,30 @@ function handleReceiptDeleted(
       selectedPayment.value
     );
   }
+}
+
+function handlePaymentReversed(
+  reversedPayment: PaymentWithReceipt
+) {
+  payments.value = payments.value.map(
+    (payment) =>
+      payment.id === reversedPayment.id
+        ? {
+            ...payment,
+            ...reversedPayment,
+            relationships: {
+              ...(payment.relationships ?? {}),
+              ...(reversedPayment.relationships ?? {}),
+            },
+          }
+        : payment
+  );
+
+  selectedPayment.value =
+    payments.value.find(
+      (payment) =>
+        payment.id === reversedPayment.id
+    ) ?? reversedPayment;
 }
 
 async function openReceiptPreview(
@@ -269,9 +296,11 @@ onMounted(loadPayments);
 
             <strong>
               {{
-                formatDateTime(
-                  payments[0]?.paid_at
-                )
+                latestActivePayment
+                  ? formatDateTime(
+                      latestActivePayment.paid_at
+                    )
+                  : "Nenhum pagamento ativo"
               }}
             </strong>
           </div>
@@ -336,6 +365,13 @@ onMounted(loadPayments);
                       )
                     }}
                   </div>
+
+                  <span
+                    v-if="payment.reversed_at"
+                    class="badge badge-warning mt-1"
+                  >
+                    Estornado
+                  </span>
                 </td>
 
                 <td class="text-nowrap">
@@ -461,15 +497,6 @@ onMounted(loadPayments);
                       <i class="la la-eye"></i>
                     </button>
 
-                    <RouterLink
-                      v-if="canUpdatePayments"
-                      :to="`/payments/${payment.id}/edit`"
-                      class="btn btn-sm btn-outline-secondary"
-                      title="Editar pagamento"
-                      :aria-label="`Editar pagamento ${payment.id}`"
-                    >
-                      <i class="la la-edit"></i>
-                    </RouterLink>
                   </div>
                 </td>
               </tr>
@@ -521,6 +548,7 @@ onMounted(loadPayments);
       @close="selectedPayment = null"
       @receipt-updated="handleReceiptUpdated"
       @receipt-deleted="handleReceiptDeleted"
+      @payment-reversed="handlePaymentReversed"
       @preview-receipt="openReceiptPreview"
     />
 

@@ -48,6 +48,13 @@ export type ChargeFinancialSummaryPayment = {
   late_fee_amount: string;
   interest_amount: string;
   paid_at?: string | null;
+  reversed_at?: string | null;
+  reversed_by?: number | null;
+  reversal_reason?: string | null;
+  reversed_by_user?: {
+    id: number;
+    name: string;
+  } | null;
 };
 
 export type ChargeFinancialSummaryComponent = {

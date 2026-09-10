@@ -650,9 +650,7 @@ async function submit() {
       await saveReceipt(savedPayment);
     } catch (receiptException) {
       if (!isEdit.value) {
-        await router.replace(
-          `/payments/${savedPayment.id}/edit`
-        );
+        await router.replace("/payments");
       }
 
       notify.warning(

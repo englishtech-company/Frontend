@@ -424,9 +424,14 @@ function pickRecentPayments(
   payments: PaymentWithReceipt[],
   range = periodRange.value
 ): PaymentWithReceipt[] {
+  const activePayments = payments.filter(
+    (payment) => !payment.reversed_at
+  );
   const filtered = range.start
-    ? payments.filter((payment) => isDateWithinPeriod(payment.paid_at, range))
-    : payments;
+    ? activePayments.filter((payment) =>
+        isDateWithinPeriod(payment.paid_at, range)
+      )
+    : activePayments;
 
   return [...filtered]
     .sort(

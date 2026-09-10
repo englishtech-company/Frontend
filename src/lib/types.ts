@@ -452,12 +452,17 @@ export type Payment = {
   amount: string;
   paid_at: string;
   receipt_url?: string | null;
+  reversed_at?: string | null;
+  reversed_by?: number | null;
+  reversal_reason?: string | null;
+  reversed_by_user?: Pick<User, "id" | "name"> | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
   charge?: Charge | null;
   relationships?: {
     charge?: Charge | null;
+    reversed_by_user?: Pick<User, "id" | "name"> | null;
   };
 };
 
