@@ -39,6 +39,7 @@ const MODULE_LABELS: Record<string, string> = {
   lessons: "Aulas",
   "library-categories": "Categorias da biblioteca",
   "library-materials": "Materiais da biblioteca",
+  "makeup-classes": "Aulas de Reposição",
 };
 
 const MODULE_GROUP_MAP: Record<string, string> = {

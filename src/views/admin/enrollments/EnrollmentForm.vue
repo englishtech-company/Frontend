@@ -18,7 +18,9 @@ import {
 } from "@/lib/enrollments/format";
 import { listPlans } from "@/lib/plans";
 import { buildActivePlanVariantOptions } from "@/lib/plans/format";
-import type { EnrollmentPaymentMethod, EnrollmentStatus } from "@/lib/types";
+import { listTeachers } from "@/lib/teachers";
+import { listGroupClasses } from "@/lib/groupClasses";
+import type { EnrollmentPaymentMethod, EnrollmentStatus, Teacher, GroupClass } from "@/lib/types";
 
 const route = useRoute();
 const router = useRouter();
@@ -27,12 +29,19 @@ const isEdit = computed(() => Boolean(route.params.id));
 const enrollmentId = computed(() => Number(route.params.id));
 
 const studentId = ref<string | null>(null);
+const teacherId = ref<string | null>(null);
+const groupClassId = ref<string | null>(null);
+const isGroupClass = ref(false);
+const autoRenewal = ref(true);
+const makeupLimit = ref<number>(0);
 const planVariantId = ref<string | null>(null);
 const discountPercent = ref("");
 const paymentMethod = ref<EnrollmentPaymentMethod>("pix");
 const status = ref<EnrollmentStatus>("pending");
 
 const studentOptions = ref<SelectOption[]>([]);
+const teacherOptions = ref<SelectOption[]>([]);
+const groupClassOptions = ref<SelectOption[]>([]);
 const planVariantOptions = ref<SelectOption[]>([]);
 const publicUrl = ref("");
 const linkCopied = ref(false);
@@ -67,14 +76,26 @@ const canRegenerateLink = computed(
 const canShowPublicLink = computed(() => canRegenerateLink.value);
 
 async function loadOptions() {
-  const [plucks, plansResult] = await Promise.all([
+  const [plucks, plansResult, teachersResult, groupClassesResult] = await Promise.all([
     getEnrollmentPlucks(),
     listPlans({ active: true, limit: 100 }),
+    listTeachers({ limit: 100 }),
+    listGroupClasses({ limit: 100 }),
   ]);
 
   studentOptions.value = Object.entries(plucks.students).map(([value, label]) => ({
     value,
     label,
+  }));
+
+  teacherOptions.value = teachersResult.data.map((t) => ({
+    value: String(t.id),
+    label: t.name,
+  }));
+
+  groupClassOptions.value = groupClassesResult.data.map((g) => ({
+    value: String(g.id),
+    label: g.name,
   }));
 
   planVariantOptions.value = buildActivePlanVariantOptions(plansResult.data);
@@ -91,8 +112,13 @@ async function loadForm() {
 
     const enrollment = await getEnrollment(enrollmentId.value);
     studentId.value = enrollment.student_id ? String(enrollment.student_id) : null;
+    teacherId.value = enrollment.teacher_id ? String(enrollment.teacher_id) : null;
+    groupClassId.value = enrollment.group_class_id ? String(enrollment.group_class_id) : null;
+    isGroupClass.value = Boolean(enrollment.is_group_class);
+    autoRenewal.value = enrollment.auto_renewal ?? true;
+    makeupLimit.value = enrollment.makeup_limit ?? 0;
     savedStudentId.value = enrollment.student_id ?? null;
-    planVariantId.value = String(enrollment.plan_variant_id);
+    planVariantId.value = enrollment.plan_variant_id ? String(enrollment.plan_variant_id) : null;
     discountPercent.value = enrollment.discount_percent
       ? String(enrollment.discount_percent)
       : "";
@@ -108,20 +134,20 @@ async function loadForm() {
 }
 
 async function submit() {
-  if (!planVariantId.value) {
-    error.value = "Selecione um plano.";
-    return;
-  }
-
   saving.value = true;
   error.value = "";
 
   const payload = {
     student_id: studentId.value ? Number(studentId.value) : null,
-    plan_variant_id: Number(planVariantId.value),
+    teacher_id: teacherId.value ? Number(teacherId.value) : null,
+    group_class_id: groupClassId.value ? Number(groupClassId.value) : null,
+    plan_variant_id: planVariantId.value ? Number(planVariantId.value) : null,
     discount_percent: discountPercent.value ? Number(discountPercent.value) : null,
     payment_method: paymentMethod.value,
     status: status.value,
+    is_group_class: isGroupClass.value,
+    auto_renewal: autoRenewal.value,
+    makeup_limit: Number(makeupLimit.value || 0),
   };
 
   try {
@@ -184,7 +210,7 @@ onMounted(loadForm);
       <div class="col-sm-6 p-md-0">
         <div class="welcome-text">
           <h4>{{ isEdit ? "Editar matrícula" : "Nova matrícula" }}</h4>
-          <p class="mb-0">Escolha o plano e gere o link para o aluno preencher</p>
+          <p class="mb-0">Escolha o plano e gerencie as configurações da matrícula</p>
         </div>
       </div>
       <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
@@ -201,6 +227,39 @@ onMounted(loadForm);
             <div v-if="loading" class="text-center py-4">Carregando...</div>
 
             <form v-else @submit.prevent="submit">
+              <!-- Modalidade de Matrícula -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <label class="form-label font-weight-bold">Modalidade da Matrícula</label>
+                  <div class="d-flex gap-4">
+                    <div class="form-check">
+                      <input
+                        id="modalidadeIndividual"
+                        v-model="isGroupClass"
+                        :value="false"
+                        type="radio"
+                        class="form-check-input"
+                      />
+                      <label class="form-check-label" for="modalidadeIndividual">
+                        Aula Individual (VIP)
+                      </label>
+                    </div>
+                    <div class="form-check ml-4">
+                      <input
+                        id="modalidadeTurma"
+                        v-model="isGroupClass"
+                        :value="true"
+                        type="radio"
+                        class="form-check-input"
+                      />
+                      <label class="form-check-label" for="modalidadeTurma">
+                        Turma de Alunos (Group Class)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="row">
                 <div class="col-lg-6 mb-3">
                   <SingleSelect
@@ -212,14 +271,46 @@ onMounted(loadForm);
                     hint="Deixe vazio para o aluno preencher pelo link."
                   />
                 </div>
+
+                <div v-if="isGroupClass" class="col-lg-6 mb-3">
+                  <SingleSelect
+                    id="groupClassId"
+                    v-model="groupClassId"
+                    label="Turma de Alunos *"
+                    :options="groupClassOptions"
+                    placeholder="Selecione a turma"
+                  />
+                </div>
+                <div v-else class="col-lg-6 mb-3">
+                  <SingleSelect
+                    id="teacherId"
+                    v-model="teacherId"
+                    label="Professor Responsável (Individual)"
+                    :options="teacherOptions"
+                    placeholder="Selecione o professor"
+                  />
+                </div>
+
                 <div class="col-lg-6 mb-3">
                   <SingleSelect
                     id="planVariantId"
                     v-model="planVariantId"
-                    label="Plano *"
+                    label="Plano / Variante"
                     :options="planVariantOptions"
                     placeholder="Selecione um plano"
-                    required
+                  />
+                </div>
+
+                <div class="col-lg-6 mb-3">
+                  <label class="form-label" for="makeupLimit">Limite de Reposições de Aula</label>
+                  <input
+                    id="makeupLimit"
+                    v-model="makeupLimit"
+                    type="number"
+                    min="0"
+                    max="50"
+                    class="form-control"
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -254,6 +345,22 @@ onMounted(loadForm);
                     label="Status"
                     :options="statusOptions"
                   />
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-12">
+                  <div class="form-check">
+                    <input
+                      id="autoRenewal"
+                      v-model="autoRenewal"
+                      type="checkbox"
+                      class="form-check-input"
+                    />
+                    <label class="form-check-label" for="autoRenewal">
+                      Renovação automática do contrato ao término do período
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -296,3 +403,4 @@ onMounted(loadForm);
     </div>
   </div>
 </template>
+

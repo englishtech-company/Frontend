@@ -104,6 +104,12 @@ export const PERMISSIONS = {
     update: "library-materials.update",
     delete: "library-materials.delete",
   },
+  makeupClasses: {
+    view: "makeup-classes.view",
+    create: "makeup-classes.create",
+    update: "makeup-classes.update",
+    delete: "makeup-classes.delete",
+  },
 } as const;
 
 export type PermissionName =
@@ -125,7 +131,8 @@ export type PermissionName =
   | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses]
   | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons]
   | (typeof PERMISSIONS.libraryCategories)[keyof typeof PERMISSIONS.libraryCategories]
-  | (typeof PERMISSIONS.libraryMaterials)[keyof typeof PERMISSIONS.libraryMaterials];
+  | (typeof PERMISSIONS.libraryMaterials)[keyof typeof PERMISSIONS.libraryMaterials]
+  | (typeof PERMISSIONS.makeupClasses)[keyof typeof PERMISSIONS.makeupClasses];
 
 export function canAccessPath(
   path: string,
@@ -557,6 +564,10 @@ export function resolveRoutePermission(
   if (/^\/library\/materials\/\d+\/edit$/.test(path)) return PERMISSIONS.libraryMaterials.update;
   if (path.startsWith("/library/materials")) return PERMISSIONS.libraryMaterials.view;
   if (path.startsWith("/library")) return PERMISSIONS.libraryCategories.view;
+
+  if (path === "/makeup-classes/create") return PERMISSIONS.makeupClasses.create;
+  if (/^\/makeup-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.makeupClasses.update;
+  if (path.startsWith("/makeup-classes")) return PERMISSIONS.makeupClasses.view;
 
   return null;
 }

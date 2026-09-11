@@ -183,6 +183,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
     },
     {
+      path: "/makeup-classes",
+      name: "MakeupClasses",
+      component: () => import("../views/admin/makeup-classes/MakeupClassList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.view },
+    },
+    {
+      path: "/makeup-classes/create",
+      name: "MakeupClassCreate",
+      component: () => import("../views/admin/makeup-classes/MakeupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.create },
+    },
+    {
+      path: "/makeup-classes/:id/edit",
+      name: "MakeupClassEdit",
+      component: () => import("../views/admin/makeup-classes/MakeupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.update },
+    },
+    {
       path: "/leads",
       name: "Leads",
       component: () => import("../views/admin/leads/LeadList.vue"),

@@ -344,6 +344,27 @@ export function usePermissions() {
       )
     ),
 
+    canViewMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.view
+      )
+    ),
+    canCreateMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.create
+      )
+    ),
+    canUpdateMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.update
+      )
+    ),
+    canDeleteMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.delete
+      )
+    ),
+
     canViewPermissions: computed(() =>
       auth.hasPermission(
         PERMISSIONS.permissions.view
