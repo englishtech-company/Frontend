@@ -47,6 +47,10 @@ export type UpdatePaymentPayload = {
   receipt_url?: string | null;
 };
 
+export type ReversePaymentPayload = {
+  reason: string;
+};
+
 type PaymentPlucksResponse = {
   action: string;
   status: number;
@@ -145,6 +149,23 @@ export async function deletePayment(
   await api(`/payments/${id}`, {
     method: "DELETE",
   });
+}
+
+export async function reversePayment(
+  id: number,
+  data: ReversePaymentPayload
+): Promise<PaymentWithReceipt> {
+  const response = await api<
+    ApiItemResponse<
+      "payment",
+      PaymentWithReceipt
+    >
+  >(`/payments/${id}/reverse`, {
+    method: "POST",
+    body: data,
+  });
+
+  return response.payment;
 }
 
 export async function getPaymentOptions(): Promise<

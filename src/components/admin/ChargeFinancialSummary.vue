@@ -95,13 +95,14 @@ const hasPayments = computed(
       v-if="hasPayments"
       class="charge-financial-summary__history"
     >
-      <h6>Alocação dos pagamentos confirmados</h6>
+      <h6>Histórico de alocação dos pagamentos</h6>
 
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
             <tr>
               <th>Pagamento</th>
+              <th>Status</th>
               <th>Data</th>
               <th class="text-end">Total</th>
               <th class="text-end">Principal</th>
@@ -116,6 +117,38 @@ const hasPayments = computed(
               :key="payment.id"
             >
               <td>#{{ payment.id }}</td>
+
+              <td>
+                <span
+                  v-if="payment.reversed_at"
+                  class="badge badge-warning"
+                >
+                  Estornado
+                </span>
+
+                <span
+                  v-else
+                  class="badge badge-success"
+                >
+                  Confirmado
+                </span>
+
+                <div
+                  v-if="payment.reversed_at"
+                  class="small text-muted mt-1 charge-financial-summary__reversal"
+                >
+                  <span>
+                    {{ formatDateTime(payment.reversed_at) }}
+                    <template v-if="payment.reversed_by_user">
+                      · {{ payment.reversed_by_user.name }}
+                    </template>
+                  </span>
+
+                  <span v-if="payment.reversal_reason">
+                    {{ payment.reversal_reason }}
+                  </span>
+                </div>
+              </td>
 
               <td>
                 {{
@@ -224,6 +257,15 @@ const hasPayments = computed(
 .charge-financial-summary__history td {
   vertical-align: middle;
   white-space: nowrap;
+}
+
+.charge-financial-summary__reversal {
+  max-width: 240px;
+  white-space: normal;
+}
+
+.charge-financial-summary__reversal span {
+  display: block;
 }
 
 @media (max-width: 1199.98px) {

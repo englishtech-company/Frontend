@@ -30,6 +30,14 @@ type ConfirmActionOptions = {
   confirmButtonColor?: string;
 };
 
+type ConfirmActionWithReasonOptions =
+  ConfirmActionOptions & {
+    reasonLabel: string;
+    reasonPlaceholder: string;
+    minLength?: number;
+    maxLength?: number;
+  };
+
 export async function confirmDelete(
   options: ConfirmDeleteOptions
 ): Promise<boolean> {
@@ -129,4 +137,53 @@ export async function confirmAction(
   });
 
   return result.isConfirmed;
+}
+
+export async function confirmActionWithReason(
+  options: ConfirmActionWithReasonOptions
+): Promise<string | null> {
+  const minLength = options.minLength ?? 5;
+  const maxLength = options.maxLength ?? 1000;
+
+  const result = await Swal.fire({
+    icon: "warning",
+    title: options.title,
+    text: options.message,
+    input: "textarea",
+    inputLabel: options.reasonLabel,
+    inputPlaceholder: options.reasonPlaceholder,
+    inputAttributes: {
+      minlength: String(minLength),
+      maxlength: String(maxLength),
+      autocapitalize: "sentences",
+    },
+    inputValidator: (value) => {
+      const reason = value.trim();
+
+      if (reason.length < minLength) {
+        return `Informe um motivo com pelo menos ${minLength} caracteres.`;
+      }
+
+      return null;
+    },
+    showCancelButton: true,
+    confirmButtonText: options.confirmButtonText,
+    cancelButtonText:
+      options.cancelButtonText ?? "Cancelar",
+    confirmButtonColor:
+      options.confirmButtonColor ?? "#600022",
+    cancelButtonColor: "#6c757d",
+    reverseButtons: true,
+    focusCancel: true,
+    didOpen: raiseConfirmationAboveModals,
+  });
+
+  if (
+    !result.isConfirmed ||
+    typeof result.value !== "string"
+  ) {
+    return null;
+  }
+
+  return result.value.trim() || null;
 }

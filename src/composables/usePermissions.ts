@@ -217,6 +217,11 @@ export function usePermissions() {
         PERMISSIONS.payments.delete
       )
     ),
+    canReversePayments: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.payments.reverse
+      )
+    ),
 
     canViewStudentDocuments: computed(() =>
       auth.hasPermission(

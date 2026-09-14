@@ -194,6 +194,30 @@ function handleReceiptDeleted(
   }
 }
 
+function handlePaymentReversed(
+  reversedPayment: PaymentWithReceipt
+) {
+  payments.value = payments.value.map(
+    (payment) =>
+      payment.id === reversedPayment.id
+        ? {
+            ...payment,
+            ...reversedPayment,
+            relationships: {
+              ...(payment.relationships ?? {}),
+              ...(reversedPayment.relationships ?? {}),
+            },
+          }
+        : payment
+  );
+
+  selectedPayment.value =
+    payments.value.find(
+      (payment) =>
+        payment.id === reversedPayment.id
+    ) ?? reversedPayment;
+}
+
 async function openReceiptPreview(
   receipt: StudentDocument
 ) {
@@ -502,11 +526,23 @@ onMounted(loadPayments);
                   <tr
                     v-for="payment in payments"
                     :key="payment.id"
+                    :class="{
+                      'payment-list__row--reversed': payment.reversed_at,
+                    }"
                   >
                     <td class="text-nowrap">
                       <strong>
                         #{{ payment.id }}
                       </strong>
+
+                      <div
+                        v-if="payment.reversed_at"
+                        class="mt-1"
+                      >
+                        <span class="badge badge-warning">
+                          Estornado
+                        </span>
+                      </div>
                     </td>
 
                     <td class="payment-list__student-cell">
@@ -651,6 +687,7 @@ onMounted(loadPayments);
       @close="selectedPayment = null"
       @receipt-updated="handleReceiptUpdated"
       @receipt-deleted="handleReceiptDeleted"
+      @payment-reversed="handlePaymentReversed"
       @preview-receipt="openReceiptPreview"
     />
 
@@ -668,6 +705,10 @@ onMounted(loadPayments);
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.payment-list__row--reversed td {
+  color: #6c757d;
 }
 
 @media (min-width: 1200px) {
