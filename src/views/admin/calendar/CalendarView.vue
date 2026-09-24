@@ -1,5 +1,13 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, shallowRef, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  watch,
+} from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -13,6 +21,7 @@ import type {
   DateSelectArg,
   DatesSetArg,
   EventClickArg,
+  EventHoveringArg,
   EventInput,
 } from "@fullcalendar/core";
 import CalendarCreateModal from "@/components/admin/calendar/CalendarCreateModal.vue";
@@ -23,10 +32,12 @@ import { notify } from "@/lib/actionNotification";
 import { loadCalendarEvents } from "@/lib/calendar/events";
 import {
   CALENDAR_EVENT_LEGEND,
+  CALENDAR_EVENT_LEGEND_DARK,
   getCalendarEventBackground,
   getCalendarEventColor,
   getCalendarLegendItem,
 } from "@/lib/calendar/mockEvents";
+import { useBodyThemeVersion } from "@/composables/useBodyThemeVersion";
 import type { CalendarEventKind, CalendarMockEvent } from "@/lib/calendar/types";
 import { confirmAction } from "@/lib/confirm";
 import {
@@ -35,12 +46,19 @@ import {
   getGoogleCalendarStatus,
   type GoogleCalendarStatus,
 } from "@/lib/googleCalendar";
+import { getStudentOptions } from "@/lib/students";
 import { listTeachers } from "@/lib/teachers";
 
 type CalendarViewMode = "timeGridWeek" | "dayGridMonth" | "timeGridDay";
 
-const { canCreateLessons, canCreateExperimentalClasses, canViewGoogleCalendar, canUpdateGoogleCalendar } =
-  usePermissions();
+const {
+  canCreateLessons,
+  canCreateExperimentalClasses,
+  canViewGoogleCalendar,
+  canUpdateGoogleCalendar,
+  canViewStudents,
+} = usePermissions();
+const { isDark: isDarkTheme } = useBodyThemeVersion();
 
 const route = useRoute();
 const router = useRouter();
@@ -57,10 +75,18 @@ const currentView = ref<CalendarViewMode>("timeGridWeek");
 const sidebarOpen = ref(true);
 const currentRange = shallowRef<{ start: Date; end: Date } | null>(null);
 const selectedTeacherId = ref<string | number | null>(null);
+const selectedStudentId = ref<string | number | null>(null);
 const teacherOptions = ref<SelectOption[]>([]);
+const studentOptions = ref<SelectOption[]>([]);
 const googleStatus = ref<GoogleCalendarStatus | null>(null);
 const googleBusy = ref(false);
 let refreshToken = 0;
+
+const HOVER_PREVIEW_DELAY_MS = 2000;
+const quickPreviewEvent = ref<CalendarMockEvent | null>(null);
+const quickPreviewPos = ref({ x: 0, y: 0 });
+let hoverPreviewTimer: ReturnType<typeof setTimeout> | null = null;
+let hideQuickPreviewTimer: ReturnType<typeof setTimeout> | null = null;
 
 const canCreateEvents = computed(
   () => canCreateLessons.value || canCreateExperimentalClasses.value
@@ -78,6 +104,10 @@ const filteredEvents = computed(() =>
   allEvents.value.filter((event) => visibleKinds.value[event.kind])
 );
 
+const eventLegend = computed(() =>
+  isDarkTheme.value ? CALENDAR_EVENT_LEGEND_DARK : CALENDAR_EVENT_LEGEND
+);
+
 const upcomingEvents = computed(() => {
   const now = Date.now();
 
@@ -92,7 +122,7 @@ const upcomingEvents = computed(() => {
 
 const calendarEvents = computed<EventInput[]>(() =>
   filteredEvents.value.map((event) => {
-    const legend = getCalendarLegendItem(event.kind);
+    const legend = getCalendarLegendItem(event.kind, isDarkTheme.value);
 
     return {
       id: event.id,
@@ -147,6 +177,8 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   },
   datesSet: handleDatesSet,
   eventClick: handleEventClick,
+  eventMouseEnter: handleEventMouseEnter,
+  eventMouseLeave: handleEventMouseLeave,
   select: handleDateSelect,
   dateClick: handleDateClick,
 }));
@@ -184,6 +216,7 @@ async function refreshEvents(start: Date, end: Date) {
   try {
     const events = await loadCalendarEvents(start, end, {
       teacherId: selectedTeacherId.value,
+      studentId: selectedStudentId.value,
     });
 
     if (token !== refreshToken) {
@@ -221,6 +254,23 @@ async function loadTeacherOptions() {
   }
 }
 
+async function loadStudentOptionsList() {
+  if (!canViewStudents.value) {
+    studentOptions.value = [];
+    return;
+  }
+
+  try {
+    const options = await getStudentOptions();
+    studentOptions.value = Object.entries(options).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  } catch {
+    studentOptions.value = [];
+  }
+}
+
 watch(selectedTeacherId, async () => {
   if (!currentRange.value) {
     return;
@@ -228,6 +278,24 @@ watch(selectedTeacherId, async () => {
 
   await refreshEvents(currentRange.value.start, currentRange.value.end);
 });
+
+watch(selectedStudentId, async () => {
+  if (!currentRange.value) {
+    return;
+  }
+
+  await refreshEvents(currentRange.value.start, currentRange.value.end);
+});
+
+function reflowCalendar() {
+  nextTick(() => {
+    getApi()?.updateSize();
+  });
+}
+
+watch(sidebarOpen, reflowCalendar);
+watch(selectedEvent, reflowCalendar);
+watch(isDarkTheme, reflowCalendar);
 
 async function loadGoogleStatus() {
   if (!canViewGoogleCalendar.value) {
@@ -346,6 +414,7 @@ async function disconnectGoogleAccount() {
 
 onMounted(() => {
   void loadTeacherOptions();
+  void loadStudentOptionsList();
   void loadGoogleStatus();
   void handleGoogleCallbackQuery();
 });
@@ -397,7 +466,79 @@ function handleDateClick(clickInfo: DateClickArg) {
 }
 
 function handleEventClick(clickInfo: EventClickArg) {
+  clearHoverPreviewTimers();
+  quickPreviewEvent.value = null;
   selectedEvent.value = clickInfo.event.extendedProps as CalendarMockEvent;
+}
+
+function clearHoverPreviewTimers() {
+  if (hoverPreviewTimer) {
+    clearTimeout(hoverPreviewTimer);
+    hoverPreviewTimer = null;
+  }
+  if (hideQuickPreviewTimer) {
+    clearTimeout(hideQuickPreviewTimer);
+    hideQuickPreviewTimer = null;
+  }
+}
+
+function updateQuickPreviewPosition(jsEvent: MouseEvent) {
+  const margin = 12;
+  const maxWidth = 320;
+  const maxHeight = 280;
+  let x = jsEvent.clientX + margin;
+  let y = jsEvent.clientY + margin;
+
+  if (x + maxWidth > window.innerWidth) {
+    x = jsEvent.clientX - maxWidth - margin;
+  }
+  if (y + maxHeight > window.innerHeight) {
+    y = jsEvent.clientY - maxHeight - margin;
+  }
+
+  quickPreviewPos.value = { x: Math.max(margin, x), y: Math.max(margin, y) };
+}
+
+function handleEventMouseEnter(info: EventHoveringArg) {
+  clearHoverPreviewTimers();
+  quickPreviewEvent.value = null;
+
+  const eventData = info.event.extendedProps as CalendarMockEvent;
+  const jsEvent = info.jsEvent;
+
+  hoverPreviewTimer = setTimeout(() => {
+    quickPreviewEvent.value = eventData;
+    updateQuickPreviewPosition(jsEvent);
+  }, HOVER_PREVIEW_DELAY_MS);
+}
+
+function handleEventMouseLeave() {
+  if (hoverPreviewTimer) {
+    clearTimeout(hoverPreviewTimer);
+    hoverPreviewTimer = null;
+  }
+
+  hideQuickPreviewTimer = setTimeout(() => {
+    quickPreviewEvent.value = null;
+  }, 180);
+}
+
+function keepQuickPreviewOpen() {
+  if (hideQuickPreviewTimer) {
+    clearTimeout(hideQuickPreviewTimer);
+    hideQuickPreviewTimer = null;
+  }
+}
+
+function closeQuickPreview() {
+  clearHoverPreviewTimers();
+  quickPreviewEvent.value = null;
+}
+
+function openQuickPreviewInPanel() {
+  if (!quickPreviewEvent.value) return;
+  selectedEvent.value = quickPreviewEvent.value;
+  closeQuickPreview();
 }
 
 function closeEventPanel() {
@@ -447,7 +588,7 @@ function formatEventRange(event: CalendarMockEvent): string {
 }
 
 function getKindLabel(kind: CalendarEventKind): string {
-  return getCalendarLegendItem(kind).label;
+  return getCalendarLegendItem(kind, isDarkTheme.value).label;
 }
 
 function eventHref(event: CalendarMockEvent): string | null {
@@ -469,10 +610,16 @@ function eventHref(event: CalendarMockEvent): string | null {
 const selectedEventHref = computed(() =>
   selectedEvent.value ? eventHref(selectedEvent.value) : null
 );
+
+const quickPreviewHref = computed(() =>
+  quickPreviewEvent.value ? eventHref(quickPreviewEvent.value) : null
+);
+
+onUnmounted(clearHoverPreviewTimers);
 </script>
 
 <template>
-  <div class="gcal-app">
+  <div class="gcal-app" :class="{ 'gcal-app--dark': isDarkTheme }">
     <header class="gcal-toolbar">
       <div class="gcal-toolbar__left">
         <button
@@ -576,13 +723,28 @@ const selectedEventHref = computed(() =>
             v-model="selectedTeacherId"
             :options="teacherOptions"
             placeholder="Todos os professores"
+            :searchable="true"
           />
+        </section>
+
+        <section v-if="canViewStudents" class="gcal-sidebar__section">
+          <h2>Aluno</h2>
+          <SingleSelect
+            v-model="selectedStudentId"
+            :options="studentOptions"
+            placeholder="Todos os alunos"
+            :searchable="true"
+          />
+          <p v-if="selectedStudentId" class="gcal-sidebar__filter-hint">
+            Mostrando aulas individuais e de turma deste aluno. Experimentais e
+            Google ficam ocultos neste filtro.
+          </p>
         </section>
 
         <section class="gcal-sidebar__section">
           <h2>Meus calendários</h2>
           <ul class="gcal-calendars list-unstyled mb-0">
-            <li v-for="item in CALENDAR_EVENT_LEGEND" :key="item.kind">
+            <li v-for="item in eventLegend" :key="item.kind">
               <label class="gcal-calendars__item">
                 <input
                   v-model="visibleKinds[item.kind]"
@@ -611,7 +773,7 @@ const selectedEventHref = computed(() =>
             >
               <span
                 class="gcal-upcoming__bar"
-                :style="{ backgroundColor: getCalendarEventColor(event.kind) }"
+                :style="{ backgroundColor: getCalendarEventColor(event.kind, isDarkTheme) }"
               ></span>
               <span class="gcal-upcoming__content">
                 <strong>{{ event.title }}</strong>
@@ -645,7 +807,7 @@ const selectedEventHref = computed(() =>
       <aside v-if="selectedEvent" class="gcal-event-panel">
         <div
           class="gcal-event-panel__stripe"
-          :style="{ backgroundColor: getCalendarEventColor(selectedEvent.kind) }"
+          :style="{ backgroundColor: getCalendarEventColor(selectedEvent.kind, isDarkTheme) }"
         ></div>
 
         <div class="gcal-event-panel__header">
@@ -682,8 +844,11 @@ const selectedEventHref = computed(() =>
                 <span
                   class="gcal-event-panel__status"
                   :style="{
-                    color: getCalendarEventColor(selectedEvent.kind),
-                    backgroundColor: getCalendarEventBackground(selectedEvent.kind),
+                    color: getCalendarEventColor(selectedEvent.kind, isDarkTheme),
+                    backgroundColor: getCalendarEventBackground(
+                      selectedEvent.kind,
+                      isDarkTheme
+                    ),
                   }"
                 >
                   {{ selectedEvent.statusLabel }}
@@ -733,19 +898,135 @@ const selectedEventHref = computed(() =>
       @close="closeCreateModal"
       @created="handleEventCreated"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="quickPreviewEvent"
+        class="gcal-quick-preview"
+        :class="{ 'gcal-quick-preview--dark': isDarkTheme }"
+        :style="{
+          left: `${quickPreviewPos.x}px`,
+          top: `${quickPreviewPos.y}px`,
+        }"
+        role="tooltip"
+        @mouseenter="keepQuickPreviewOpen"
+        @mouseleave="closeQuickPreview"
+      >
+        <div
+          class="gcal-quick-preview__stripe"
+          :style="{
+            backgroundColor: getCalendarEventColor(
+              quickPreviewEvent.kind,
+              isDarkTheme
+            ),
+          }"
+        ></div>
+        <div class="gcal-quick-preview__body">
+          <h3 class="gcal-quick-preview__title">{{ quickPreviewEvent.title }}</h3>
+          <p class="gcal-quick-preview__time">
+            {{ formatEventRange(quickPreviewEvent) }}
+          </p>
+          <dl class="gcal-quick-preview__meta">
+            <div>
+              <dt>Tipo</dt>
+              <dd>{{ getKindLabel(quickPreviewEvent.kind) }}</dd>
+            </div>
+            <div>
+              <dt>Professor</dt>
+              <dd>{{ quickPreviewEvent.teacherName }}</dd>
+            </div>
+            <div>
+              <dt>Contexto</dt>
+              <dd>{{ quickPreviewEvent.contextLabel }}</dd>
+            </div>
+          </dl>
+          <div class="gcal-quick-preview__actions">
+            <button
+              type="button"
+              class="gcal-quick-preview__btn gcal-quick-preview__btn--ghost"
+              @click="openQuickPreviewInPanel"
+            >
+              Ver detalhes
+            </button>
+            <RouterLink
+              v-if="quickPreviewHref"
+              :to="quickPreviewHref"
+              class="gcal-quick-preview__btn"
+              @click="closeQuickPreview"
+            >
+              Abrir aula
+            </RouterLink>
+            <a
+              v-else-if="quickPreviewEvent.meetUrl"
+              :href="quickPreviewEvent.meetUrl"
+              class="gcal-quick-preview__btn"
+              target="_blank"
+              rel="noreferrer"
+              @click="closeQuickPreview"
+            >
+              Abrir Meet
+            </a>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .gcal-app {
+  --gcal-surface: #fff;
+  --gcal-surface-muted: #f8f9fa;
+  --gcal-surface-hover: #f1f3f4;
+  --gcal-border: #dadce0;
+  --gcal-text: #3c4043;
+  --gcal-text-secondary: #5f6368;
+  --gcal-text-muted: #70757a;
+  --gcal-text-faint: #9aa0a6;
+  --gcal-accent: #1a73e8;
+  --gcal-accent-soft: #e8f0fe;
+  --gcal-accent-hover: #d2e3fc;
+  --gcal-success-soft: #e6f4ea;
+  --gcal-success-text: #137333;
+  --gcal-shadow: rgba(60, 64, 67, 0.18);
+  --gcal-fc-border: #dadce0;
+  --gcal-fc-page-bg: #fff;
+  --gcal-fc-neutral-bg: #fff;
+  --gcal-fc-today-bg: rgba(26, 115, 232, 0.08);
+  --gcal-fc-more-link: #70757a;
+  --gcal-fc-non-business: transparent;
+
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 7.5rem);
   margin: -0.5rem -0.25rem 0;
-  background: #fff;
-  border: 1px solid #dadce0;
+  background: var(--gcal-surface);
+  border: 1px solid var(--gcal-border);
   border-radius: 16px;
   overflow: hidden;
+}
+
+.gcal-app--dark {
+  --gcal-surface: var(--card, #212130);
+  --gcal-surface-muted: #1a1a24;
+  --gcal-surface-hover: rgba(255, 255, 255, 0.06);
+  --gcal-border: var(--border, #3d3d4e);
+  --gcal-text: var(--text-dark, #fff);
+  --gcal-text-secondary: var(--text-gray, #b3b3b3);
+  --gcal-text-muted: #9aa0a6;
+  --gcal-text-faint: #828690;
+  --gcal-accent: var(--bs-primary, #9596f6);
+  --gcal-accent-soft: rgba(149, 150, 246, 0.2);
+  --gcal-accent-hover: rgba(149, 150, 246, 0.32);
+  --gcal-success-soft: rgba(129, 201, 149, 0.18);
+  --gcal-success-text: #81c995;
+  --gcal-shadow: rgba(0, 0, 0, 0.45);
+  --gcal-fc-border: var(--border, #3d3d4e);
+  --gcal-fc-page-bg: var(--body-bg, #17171e);
+  --gcal-fc-neutral-bg: var(--card, #212130);
+  --gcal-fc-today-bg: rgba(149, 150, 246, 0.14);
+  --gcal-fc-more-link: var(--text-gray, #b3b3b3);
+  --gcal-fc-non-business: rgba(0, 0, 0, 0.12);
 }
 
 .gcal-toolbar {
@@ -755,7 +1036,8 @@ const selectedEventHref = computed(() =>
   gap: 1rem;
   min-height: 64px;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #dadce0;
+  border-bottom: 1px solid var(--gcal-border);
+  background: var(--gcal-surface);
 }
 
 .gcal-toolbar__left,
@@ -776,12 +1058,12 @@ const selectedEventHref = computed(() =>
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #5f6368;
+  color: var(--gcal-text-secondary);
 }
 
 .gcal-toolbar__menu:hover,
 .gcal-toolbar__nav button:hover {
-  background: #f1f3f4;
+  background: var(--gcal-surface-hover);
 }
 
 .gcal-toolbar__brand {
@@ -789,7 +1071,7 @@ const selectedEventHref = computed(() =>
   align-items: center;
   gap: 0.55rem;
   margin-right: 0.25rem;
-  color: #5f6368;
+  color: var(--gcal-text-secondary);
   font-size: 1.35rem;
 }
 
@@ -799,21 +1081,21 @@ const selectedEventHref = computed(() =>
 
 .gcal-toolbar__today {
   padding: 0.45rem 1rem;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--gcal-border);
   border-radius: 999px;
-  background: #fff;
-  color: #3c4043;
+  background: var(--gcal-surface);
+  color: var(--gcal-text);
   font-size: 0.875rem;
   font-weight: 500;
 }
 
 .gcal-toolbar__today:hover {
-  background: #f8f9fa;
+  background: var(--gcal-surface-muted);
 }
 
 .gcal-toolbar__title {
   margin: 0;
-  color: #3c4043;
+  color: var(--gcal-text);
   font-size: 1.35rem;
   font-weight: 400;
   white-space: nowrap;
@@ -822,16 +1104,16 @@ const selectedEventHref = computed(() =>
 .gcal-view-switch {
   display: inline-flex;
   padding: 0.15rem;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--gcal-border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--gcal-surface);
 }
 
 .gcal-view-switch button {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #5f6368;
+  color: var(--gcal-text-secondary);
   font-size: 0.82rem;
   font-weight: 500;
   padding: 0.4rem 0.9rem;
@@ -842,10 +1124,10 @@ const selectedEventHref = computed(() =>
   align-items: center;
   max-width: 16rem;
   padding: 0.45rem 0.95rem;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--gcal-border);
   border-radius: 999px;
-  background: #fff;
-  color: #3c4043;
+  background: var(--gcal-surface);
+  color: var(--gcal-text);
   font-size: 0.82rem;
   font-weight: 600;
   white-space: nowrap;
@@ -854,7 +1136,7 @@ const selectedEventHref = computed(() =>
 }
 
 .gcal-toolbar__google-btn:hover:not(:disabled) {
-  background: #f8f9fa;
+  background: var(--gcal-surface-muted);
 }
 
 .gcal-toolbar__google-btn:disabled {
@@ -862,14 +1144,14 @@ const selectedEventHref = computed(() =>
 }
 
 .gcal-toolbar__google-btn--connected {
-  border-color: #ceead6;
-  background: #e6f4ea;
-  color: #137333;
+  border-color: rgba(129, 201, 149, 0.45);
+  background: var(--gcal-success-soft);
+  color: var(--gcal-success-text);
 }
 
 .gcal-view-switch button.is-active {
-  background: #e8f0fe;
-  color: #1a73e8;
+  background: var(--gcal-accent-soft);
+  color: var(--gcal-accent);
 }
 
 .gcal-body {
@@ -882,7 +1164,8 @@ const selectedEventHref = computed(() =>
   width: 256px;
   flex-shrink: 0;
   padding: 1rem 1rem 1.25rem;
-  border-right: 1px solid #dadce0;
+  border-right: 1px solid var(--gcal-border);
+  background: var(--gcal-surface);
   overflow: auto;
 }
 
@@ -895,10 +1178,15 @@ const selectedEventHref = computed(() =>
   padding: 0.8rem 1rem;
   border: 0;
   border-radius: 999px;
-  background: #fff;
+  background: var(--gcal-surface);
   box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
-  color: #3c4043;
+  color: var(--gcal-text);
   font-weight: 500;
+}
+
+.gcal-app--dark .gcal-create-btn {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--gcal-border);
 }
 
 .gcal-create-btn:disabled {
@@ -917,7 +1205,7 @@ const selectedEventHref = computed(() =>
 .gcal-sidebar__section h2 {
   margin: 0 0 0.75rem;
   padding-left: 0.35rem;
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -929,7 +1217,7 @@ const selectedEventHref = computed(() =>
   align-items: center;
   gap: 0.65rem;
   padding: 0.35rem 0.25rem;
-  color: #3c4043;
+  color: var(--gcal-text);
   font-size: 0.88rem;
   cursor: pointer;
 }
@@ -965,7 +1253,7 @@ const selectedEventHref = computed(() =>
 }
 
 .gcal-upcoming__item:hover {
-  background: #f1f3f4;
+  background: var(--gcal-surface-hover);
 }
 
 .gcal-upcoming__bar {
@@ -984,11 +1272,11 @@ const selectedEventHref = computed(() =>
 .gcal-upcoming__content strong {
   font-size: 0.82rem;
   line-height: 1.35;
-  color: #3c4043;
+  color: var(--gcal-text);
 }
 
 .gcal-upcoming__content small {
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.72rem;
   line-height: 1.35;
 }
@@ -996,16 +1284,24 @@ const selectedEventHref = computed(() =>
 .gcal-upcoming__empty {
   margin: 0;
   padding: 0.15rem 0.35rem 0;
-  color: #9aa0a6;
+  color: var(--gcal-text-faint);
   font-size: 0.78rem;
   line-height: 1.4;
 }
 
 .gcal-sidebar__note {
   margin: 1rem 0 0;
-  color: #9aa0a6;
+  color: var(--gcal-text-faint);
   font-size: 0.75rem;
   line-height: 1.45;
+}
+
+.gcal-sidebar__filter-hint {
+  margin: 0.55rem 0 0;
+  padding-left: 0.35rem;
+  color: var(--gcal-text-faint);
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 
 .gcal-main {
@@ -1013,26 +1309,32 @@ const selectedEventHref = computed(() =>
   min-width: 0;
   display: flex;
   flex-direction: column;
+  background: var(--gcal-fc-page-bg);
 }
 
 .gcal-main__loading,
 .gcal-main__empty {
   padding: 0.5rem 1rem;
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.82rem;
 }
 
 .gcal-main__canvas {
   flex: 1;
+  width: 100%;
   min-height: 640px;
   padding: 0.35rem 0.5rem 0.75rem;
+}
+
+.gcal-main__canvas :deep(.fc) {
+  width: 100%;
 }
 
 .gcal-event-panel {
   width: 360px;
   flex-shrink: 0;
-  border-left: 1px solid #dadce0;
-  background: #fff;
+  border-left: 1px solid var(--gcal-border);
+  background: var(--gcal-surface);
   overflow: auto;
 }
 
@@ -1052,7 +1354,7 @@ const selectedEventHref = computed(() =>
 
 .gcal-event-panel__body h2 {
   margin: 0 0 0.5rem;
-  color: #3c4043;
+  color: var(--gcal-text);
   font-size: 1.35rem;
   font-weight: 500;
   line-height: 1.35;
@@ -1060,7 +1362,7 @@ const selectedEventHref = computed(() =>
 
 .gcal-event-panel__datetime {
   margin-bottom: 1.25rem;
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.88rem;
 }
 
@@ -1074,7 +1376,7 @@ const selectedEventHref = computed(() =>
 
 .gcal-event-panel__details dt {
   margin-bottom: 0.2rem;
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -1083,7 +1385,7 @@ const selectedEventHref = computed(() =>
 
 .gcal-event-panel__details dd {
   margin: 0;
-  color: #3c4043;
+  color: var(--gcal-text);
   font-size: 0.92rem;
 }
 
@@ -1102,16 +1404,16 @@ const selectedEventHref = computed(() =>
   margin-top: 0.35rem;
   padding: 0.55rem 0.9rem;
   border-radius: 999px;
-  background: #e8f0fe;
-  color: #1a73e8;
+  background: var(--gcal-accent-soft);
+  color: var(--gcal-accent);
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
 }
 
 .gcal-event-panel__open:hover {
-  background: #d2e3fc;
-  color: #174ea6;
+  background: var(--gcal-accent-hover);
+  color: var(--gcal-accent);
 }
 
 .gcal-event-panel__links {
@@ -1121,20 +1423,26 @@ const selectedEventHref = computed(() =>
 }
 
 .gcal-event-panel__open--secondary {
-  background: #f1f3f4;
-  color: #3c4043;
+  background: var(--gcal-surface-hover);
+  color: var(--gcal-text);
 }
 
 .gcal-event-panel__open--secondary:hover {
-  background: #e8eaed;
-  color: #202124;
+  background: var(--gcal-surface-muted);
+  color: var(--gcal-text);
+}
+
+.gcal-app--dark .gcal-event-panel__header :deep(.btn-close) {
+  filter: invert(1) grayscale(1);
+  opacity: 0.75;
 }
 
 :deep(.fc) {
-  --fc-border-color: #dadce0;
-  --fc-today-bg-color: rgba(26, 115, 232, 0.08);
-  --fc-neutral-bg-color: #fff;
-  --fc-page-bg-color: #fff;
+  --fc-border-color: var(--gcal-fc-border);
+  --fc-today-bg-color: var(--gcal-fc-today-bg);
+  --fc-neutral-bg-color: var(--gcal-fc-neutral-bg);
+  --fc-page-bg-color: var(--gcal-fc-page-bg);
+  --fc-non-business-color: var(--gcal-fc-non-business);
   --fc-event-border-color: transparent;
   font-family: inherit;
 }
@@ -1142,10 +1450,25 @@ const selectedEventHref = computed(() =>
 :deep(.fc .fc-timegrid-slot-label),
 :deep(.fc .fc-col-header-cell-cushion),
 :deep(.fc .fc-daygrid-day-number) {
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.78rem;
   font-weight: 500;
   text-decoration: none;
+}
+
+:deep(.fc .fc-daygrid-more-link) {
+  color: var(--gcal-fc-more-link);
+  font-weight: 600;
+}
+
+:deep(.fc .fc-scrollgrid),
+:deep(.fc .fc-scrollgrid-section-body td),
+:deep(.fc .fc-col-header-cell) {
+  background: var(--gcal-fc-page-bg);
+}
+
+:deep(.fc .fc-daygrid-day-frame) {
+  background: var(--gcal-fc-neutral-bg);
 }
 
 :deep(.fc .fc-col-header-cell-cushion) {
@@ -1154,8 +1477,15 @@ const selectedEventHref = computed(() =>
 
 :deep(.fc .fc-timegrid-axis-cushion),
 :deep(.fc .fc-timegrid-slot-label-cushion) {
-  color: #70757a;
+  color: var(--gcal-text-muted);
   font-size: 0.72rem;
+}
+
+:deep(.fc .fc-event),
+:deep(.fc .fc-event *),
+:deep(.fc .fc-daygrid-event),
+:deep(.fc .fc-timegrid-event) {
+  cursor: pointer !important;
 }
 
 :deep(.fc .fc-event) {
@@ -1166,6 +1496,15 @@ const selectedEventHref = computed(() =>
   padding: 0.1rem 0.35rem !important;
   font-size: 0.75rem !important;
   font-weight: 600 !important;
+  transition: filter 0.12s ease;
+}
+
+:deep(.fc .fc-event:hover) {
+  filter: brightness(1.06);
+}
+
+.gcal-app--dark :deep(.fc .fc-event:hover) {
+  filter: brightness(1.12);
 }
 
 :deep(.fc .fc-daygrid-event) {
@@ -1207,6 +1546,112 @@ const selectedEventHref = computed(() =>
   }
 }
 
+.gcal-quick-preview {
+  position: fixed;
+  z-index: 1080;
+  width: min(320px, calc(100vw - 24px));
+  border: 1px solid var(--gcal-border, #dadce0);
+  border-radius: 12px;
+  background: var(--gcal-surface, #fff);
+  box-shadow: 0 8px 28px rgba(60, 64, 67, 0.22);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.gcal-quick-preview--dark {
+  --gcal-surface: var(--card, #212130);
+  --gcal-border: var(--border, #3d3d4e);
+  --gcal-text: var(--text-dark, #fff);
+  --gcal-text-muted: var(--text-gray, #b3b3b3);
+  --gcal-accent: var(--bs-primary, #9596f6);
+  --gcal-accent-soft: rgba(149, 150, 246, 0.22);
+  --gcal-surface-hover: rgba(255, 255, 255, 0.08);
+  background: var(--gcal-surface);
+  border-color: var(--gcal-border);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+}
+
+.gcal-quick-preview__stripe {
+  height: 4px;
+}
+
+.gcal-quick-preview__body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.gcal-quick-preview__title {
+  margin: 0 0 0.35rem;
+  color: var(--gcal-text, #3c4043);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.gcal-quick-preview__time {
+  margin: 0 0 0.75rem;
+  color: var(--gcal-text-muted, #70757a);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.gcal-quick-preview__meta {
+  margin: 0 0 0.85rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.gcal-quick-preview__meta div {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.35rem;
+  align-items: baseline;
+}
+
+.gcal-quick-preview__meta dt {
+  margin: 0;
+  color: var(--gcal-text-muted, #70757a);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gcal-quick-preview__meta dd {
+  margin: 0;
+  color: var(--gcal-text, #3c4043);
+  font-size: 0.82rem;
+}
+
+.gcal-quick-preview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.gcal-quick-preview__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gcal-accent-soft, #e8f0fe);
+  color: var(--gcal-accent, #1a73e8);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gcal-quick-preview__btn--ghost {
+  background: var(--gcal-surface-hover, #f1f3f4);
+  color: var(--gcal-text, #3c4043);
+}
+
+.gcal-quick-preview__btn:hover {
+  filter: brightness(1.05);
+}
+
 @media (max-width: 991.98px) {
   .gcal-sidebar {
     position: absolute;
@@ -1214,8 +1659,8 @@ const selectedEventHref = computed(() =>
     top: 64px;
     left: 0;
     bottom: 0;
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(60, 64, 67, 0.18);
+    background: var(--gcal-surface);
+    box-shadow: 0 8px 24px var(--gcal-shadow);
   }
 
   .gcal-body {
@@ -1232,7 +1677,7 @@ const selectedEventHref = computed(() =>
     top: 64px;
     right: 0;
     bottom: 0;
-    box-shadow: -8px 0 24px rgba(60, 64, 67, 0.18);
+    box-shadow: -8px 0 24px var(--gcal-shadow);
   }
 }
 </style>

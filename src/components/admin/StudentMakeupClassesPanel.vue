@@ -1,25 +1,29 @@
-<script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
-import { useRouter, RouterLink } from "vue-router";
-import {
-  listMakeupClasses,
-  deleteMakeupClass,
-  updateMakeupClass,
-} from "@/lib/makeupClasses";
-import { getTeacherOptions } from "@/lib/teachers";
-import type { MakeupClass, MakeupClassStatus } from "@/lib/types";
-import { usePermissions } from "@/composables/usePermissions";
-import { notifyRemoved, notify } from "@/lib/actionNotification";
-import { confirmDelete } from "@/lib/confirm";
-import { countActiveFilters } from "@/lib/filters/query";
-
+<script lang="ts" setup>
+import { computed, onMounted, ref } from "vue";
+import { RouterLink } from "vue-router";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import FilterField from "@/components/ui/FilterField.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import type { SelectOption } from "@/components/ui/select.types";
+import { usePermissions } from "@/composables/usePermissions";
+import { notify, notifyRemoved } from "@/lib/actionNotification";
+import { confirmDelete } from "@/lib/confirm";
+import { countActiveFilters } from "@/lib/filters/query";
+import {
+  deleteMakeupClass,
+  listMakeupClasses,
+  updateMakeupClass,
+} from "@/lib/makeupClasses";
+import { getStudentMakeupSummary } from "@/lib/students";
+import { getTeacherOptions } from "@/lib/teachers";
+import type { MakeupClass, MakeupClassStatus } from "@/lib/types";
+import type { StudentMakeupSummary } from "@/lib/makeupClasses";
 
-const router = useRouter();
+const props = defineProps<{
+  studentId: number;
+}>();
+
 const {
   canViewMakeupClasses,
   canCreateMakeupClasses,
@@ -27,23 +31,20 @@ const {
   canDeleteMakeupClasses,
 } = usePermissions();
 
-// ── State ──────────────────────────────────────────────────────────────────
-const loading = ref(false);
+const loading = ref(true);
 const error = ref("");
+const summary = ref<StudentMakeupSummary | null>(null);
 const makeupClasses = ref<MakeupClass[]>([]);
 const total = ref(0);
 const page = ref(1);
 const lastPage = ref(1);
 
-// Filter states
 const idFilter = ref("");
-const studentNameFilter = ref("");
-const teacherIdFilter = ref<string | number | null>(null);
 const statusFilter = ref<string | number | null>(null);
+const teacherIdFilter = ref<string | number | null>(null);
 const dateFromFilter = ref("");
 const dateToFilter = ref("");
 
-// Options
 const statusOptions: SelectOption[] = [
   { value: "available", label: "Disponível" },
   { value: "scheduled", label: "Agendada" },
@@ -53,14 +54,12 @@ const statusOptions: SelectOption[] = [
 
 const teacherOptions = ref<SelectOption[]>([]);
 
-// Scheduling Modal state
 const schedulingItem = ref<MakeupClass | null>(null);
 const modalNewDate = ref("");
 const modalTeacherId = ref<string | number | null>(null);
 const modalSaving = ref(false);
 const modalError = ref("");
 
-// ── Computed ───────────────────────────────────────────────────────────────
 const showActions = computed(
   () => canUpdateMakeupClasses.value || canDeleteMakeupClasses.value
 );
@@ -68,15 +67,17 @@ const showActions = computed(
 const activeFilterCount = computed(() =>
   countActiveFilters([
     idFilter.value,
-    studentNameFilter.value,
-    teacherIdFilter.value,
     statusFilter.value,
+    teacherIdFilter.value,
     dateFromFilter.value,
     dateToFilter.value,
   ])
 );
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+const createLink = computed(
+  () => `/makeup-classes/create?student_id=${props.studentId}`
+);
+
 function formatDate(dateString?: string | null, withTime = true) {
   if (!dateString) return "—";
   return new Date(dateString).toLocaleString("pt-BR", {
@@ -87,50 +88,46 @@ function formatDate(dateString?: string | null, withTime = true) {
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
-    case "available": return "badge-info";
-    case "scheduled": return "badge-primary";
-    case "concluded": return "badge-success";
-    case "expired":   return "badge-danger";
-    default:          return "badge-secondary";
+    case "available":
+      return "badge-info";
+    case "scheduled":
+      return "badge-primary";
+    case "concluded":
+      return "badge-success";
+    case "expired":
+      return "badge-danger";
+    default:
+      return "badge-secondary";
   }
 }
 
 function getStatusLabel(status: string) {
   switch (status) {
-    case "available": return "Disponível";
-    case "scheduled": return "Agendada";
-    case "concluded": return "Concluída";
-    case "expired":   return "Expirada";
-    default:          return status;
+    case "available":
+      return "Disponível";
+    case "scheduled":
+      return "Agendada";
+    case "concluded":
+      return "Concluída";
+    case "expired":
+      return "Expirada";
+    default:
+      return status;
   }
 }
 
-function getStudentName(item: MakeupClass): string {
-  return (
-    item.relationships?.enrollment?.student?.name ??
-    item.enrollment?.student?.name ??
-    item.group_class?.name ??
-    "—"
-  );
-}
-
-function getStudentId(item: MakeupClass): number | null {
-  return (
-    item.relationships?.enrollment?.student?.id ??
-    item.enrollment?.student?.id ??
-    null
-  );
-}
-
 function getTeacherName(item: MakeupClass): string {
-  return (
-    item.relationships?.teacher?.name ??
-    item.teacher?.name ??
-    "—"
-  );
+  return item.relationships?.teacher?.name ?? item.teacher?.name ?? "—";
 }
 
-// ── Data Fetching ──────────────────────────────────────────────────────────
+async function loadSummary() {
+  try {
+    summary.value = await getStudentMakeupSummary(props.studentId);
+  } catch {
+    summary.value = null;
+  }
+}
+
 async function loadMakeupClasses() {
   if (!canViewMakeupClasses.value) {
     error.value = "Você não tem permissão para visualizar reposições.";
@@ -144,9 +141,12 @@ async function loadMakeupClasses() {
   try {
     const result = await listMakeupClasses({
       page: page.value,
+      student_id: props.studentId,
       id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
       teacher_id: teacherIdFilter.value ? Number(teacherIdFilter.value) : undefined,
-      status: statusFilter.value ? (String(statusFilter.value) as MakeupClassStatus) : undefined,
+      status: statusFilter.value
+        ? (String(statusFilter.value) as MakeupClassStatus)
+        : undefined,
       original_date_from: dateFromFilter.value || undefined,
       original_date_to: dateToFilter.value || undefined,
     });
@@ -159,6 +159,10 @@ async function loadMakeupClasses() {
   } finally {
     loading.value = false;
   }
+}
+
+async function refresh() {
+  await Promise.all([loadSummary(), loadMakeupClasses()]);
 }
 
 async function loadOptions() {
@@ -180,9 +184,8 @@ function handleSearch() {
 
 function clearFilters() {
   idFilter.value = "";
-  studentNameFilter.value = "";
-  teacherIdFilter.value = null;
   statusFilter.value = null;
+  teacherIdFilter.value = null;
   dateFromFilter.value = "";
   dateToFilter.value = "";
   page.value = 1;
@@ -195,18 +198,17 @@ function goToPage(nextPage: number) {
   loadMakeupClasses();
 }
 
-// ── Actions ────────────────────────────────────────────────────────────────
 async function removeMakeupClass(item: MakeupClass) {
   const confirmed = await confirmDelete({
     entityLabel: "aula de reposição",
-    itemName: `#${item.id} (${getStudentName(item)})`,
+    itemName: `#${item.id}`,
   });
   if (!confirmed) return;
 
   try {
     await deleteMakeupClass(item.id);
     notifyRemoved("Aula de Reposição");
-    await loadMakeupClasses();
+    await refresh();
   } catch (e) {
     notify.error(e instanceof Error ? e.message : "Erro ao excluir reposição.");
   }
@@ -216,8 +218,8 @@ async function markAsConcluded(item: MakeupClass) {
   try {
     await updateMakeupClass(item.id, { status: "concluded" });
     notify.success(`Reposição #${item.id} marcada como concluída!`);
-    await loadMakeupClasses();
-  } catch (e) {
+    await refresh();
+  } catch {
     notify.error("Erro ao concluir reposição.");
   }
 }
@@ -265,7 +267,7 @@ async function saveScheduling() {
     });
     notify.success("Aula de reposição agendada com sucesso!");
     closeSchedulingModal();
-    await loadMakeupClasses();
+    await refresh();
   } catch (e) {
     modalError.value = e instanceof Error ? e.message : "Erro ao agendar reposição.";
   } finally {
@@ -273,36 +275,90 @@ async function saveScheduling() {
   }
 }
 
-onMounted(() => {
-  loadOptions();
-  loadMakeupClasses();
+onMounted(async () => {
+  await loadOptions();
+  await refresh();
 });
 </script>
 
 <template>
-  <div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row page-titles mx-0">
-      <div class="col-sm-6 p-md-0">
-        <div class="welcome-text">
-          <h4>Aulas de Reposição</h4>
-          <p class="mb-0">Gerencie os créditos e o agendamento de reposições de aula</p>
-        </div>
+  <div class="student-makeup pt-4 pb-3">
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+      <div>
+        <h4 class="text-primary mb-1">Reposições do aluno</h4>
+        <p class="text-muted mb-0">
+          Créditos de falta, prazos e agendamento vinculados a este aluno.
+        </p>
       </div>
-      <div
-        v-if="canCreateMakeupClasses"
-        class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex"
-      >
-        <RouterLink to="/makeup-classes/create" class="btn btn-primary">
-          <i class="la la-plus me-1"></i> Nova reposição
+
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <RouterLink to="/makeup-classes" class="btn btn-outline-secondary btn-sm">
+          Ver todas
+        </RouterLink>
+        <RouterLink
+          v-if="canCreateMakeupClasses"
+          :to="createLink"
+          class="btn btn-primary btn-sm"
+        >
+          <i class="la la-plus me-1"></i>
+          Nova reposição
         </RouterLink>
       </div>
     </div>
 
-    <!-- Error Alert -->
-    <div v-if="error" class="alert alert-danger">{{ error }}</div>
+    <div v-if="error" class="alert alert-danger mb-4">{{ error }}</div>
 
-    <!-- Filter Panel -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-xl-3">
+        <div class="card border mb-0 h-100">
+          <div class="card-body p-3">
+            <span class="text-muted small d-block fw-semibold text-uppercase">
+              Créditos disponíveis
+            </span>
+            <h3 class="mb-0 fw-bold text-success">
+              {{ loading && !summary ? "—" : (summary?.available_credits ?? 0) }}
+            </h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="card border mb-0 h-100">
+          <div class="card-body p-3">
+            <span class="text-muted small d-block fw-semibold text-uppercase">
+              Agendadas
+            </span>
+            <h3 class="mb-0 fw-bold text-primary">
+              {{ loading && !summary ? "—" : (summary?.scheduled_classes ?? 0) }}
+            </h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="card border mb-0 h-100">
+          <div class="card-body p-3">
+            <span class="text-muted small d-block fw-semibold text-uppercase">
+              Usadas no ciclo
+            </span>
+            <h3 class="mb-0 fw-bold text-dark">
+              {{ loading && !summary ? "—" : `${summary?.used ?? 0} / ${summary?.limit ?? 0}` }}
+            </h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="card border mb-0 h-100">
+          <div class="card-body p-3">
+            <span class="text-muted small d-block fw-semibold text-uppercase">
+              Expirando em breve
+            </span>
+            <h3 class="mb-0 fw-bold text-warning">
+              {{ loading && !summary ? "—" : (summary?.expiring_soon_count ?? 0) }}
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <FilterPanel
       :active-count="activeFilterCount"
       @filter="handleSearch"
@@ -310,9 +366,9 @@ onMounted(() => {
     >
       <div class="row g-3">
         <div class="col-md-6 col-lg-2">
-          <FilterField label="#" id="makeup-filter-id" hint="ID da reposição">
+          <FilterField label="#" id="student-makeup-filter-id" hint="ID da reposição">
             <input
-              id="makeup-filter-id"
+              id="student-makeup-filter-id"
               v-model="idFilter"
               type="number"
               min="1"
@@ -324,9 +380,9 @@ onMounted(() => {
         </div>
 
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Status" id="makeup-filter-status">
+          <FilterField label="Status" id="student-makeup-filter-status">
             <SingleSelect
-              id="makeup-filter-status"
+              id="student-makeup-filter-status"
               v-model="statusFilter"
               :options="statusOptions"
               placeholder="Todos os status"
@@ -336,9 +392,9 @@ onMounted(() => {
         </div>
 
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Professor" id="makeup-filter-teacher">
+          <FilterField label="Professor" id="student-makeup-filter-teacher">
             <SingleSelect
-              id="makeup-filter-teacher"
+              id="student-makeup-filter-teacher"
               v-model="teacherIdFilter"
               :options="teacherOptions"
               placeholder="Todos os professores"
@@ -348,9 +404,9 @@ onMounted(() => {
         </div>
 
         <div class="col-md-6 col-lg-2">
-          <FilterField label="Data Falta (De)" id="makeup-filter-date-from">
+          <FilterField label="Data falta (de)" id="student-makeup-filter-from">
             <input
-              id="makeup-filter-date-from"
+              id="student-makeup-filter-from"
               v-model="dateFromFilter"
               type="date"
               class="form-control"
@@ -360,9 +416,9 @@ onMounted(() => {
         </div>
 
         <div class="col-md-6 col-lg-2">
-          <FilterField label="Data Falta (Até)" id="makeup-filter-date-to">
+          <FilterField label="Data falta (até)" id="student-makeup-filter-to">
             <input
-              id="makeup-filter-date-to"
+              id="student-makeup-filter-to"
               v-model="dateToFilter"
               type="date"
               class="form-control"
@@ -373,18 +429,16 @@ onMounted(() => {
       </div>
     </FilterPanel>
 
-    <!-- Table Card -->
-    <div class="card">
-      <div class="card-header">
-        <h4 class="card-title">Lista de reposições ({{ total }})</h4>
+    <div class="card border mb-0">
+      <div class="card-header bg-transparent py-3">
+        <h5 class="card-title mb-0">Créditos de reposição ({{ total }})</h5>
       </div>
 
-      <div class="card-body">
+      <div class="card-body p-0">
         <div v-if="loading" class="text-center py-5">
           <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Carregando...</span>
           </div>
-          <p class="text-muted mt-2 mb-0">Carregando reposições...</p>
         </div>
 
         <div v-else class="table-responsive makeup-credits-table-wrap">
@@ -392,11 +446,11 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Aluno / Origem</th>
+                <th>Matrícula</th>
                 <th>Professor</th>
-                <th>Data da Falta</th>
-                <th>Data Limite</th>
-                <th>Data Agendada</th>
+                <th>Data da falta</th>
+                <th>Data limite</th>
+                <th>Data agendada</th>
                 <th>Status</th>
                 <th v-if="showActions" class="text-end">Ações</th>
               </tr>
@@ -404,24 +458,15 @@ onMounted(() => {
             <tbody>
               <tr v-if="makeupClasses.length === 0">
                 <td :colspan="showActions ? 8 : 7" class="text-center text-muted py-4">
-                  Nenhuma reposição encontrada.
+                  Nenhuma reposição registrada para este aluno.
                 </td>
               </tr>
 
               <tr v-for="item in makeupClasses" :key="item.id">
                 <td>{{ item.id }}</td>
                 <td>
-                  <RouterLink
-                    v-if="getStudentId(item)"
-                    :to="`/students/${getStudentId(item)}`"
-                    class="text-primary fw-semibold"
-                  >
-                    {{ getStudentName(item) }}
-                  </RouterLink>
-                  <span v-else class="fw-semibold">{{ getStudentName(item) }}</span>
-                  <div class="small text-muted" v-if="item.enrollment_id">
-                    Matrícula #{{ item.enrollment_id }}
-                  </div>
+                  <span v-if="item.enrollment_id">#{{ item.enrollment_id }}</span>
+                  <span v-else class="text-muted">—</span>
                 </td>
                 <td>{{ getTeacherName(item) }}</td>
                 <td>{{ formatDate(item.original_date) }}</td>
@@ -438,60 +483,55 @@ onMounted(() => {
                   </span>
                 </td>
                 <td v-if="showActions" class="text-end text-nowrap">
-                  <!-- Agendar / Reagendar modal -->
                   <button
-                    v-if="canUpdateMakeupClasses && (item.status === 'available' || item.status === 'scheduled')"
+                    v-if="
+                      canUpdateMakeupClasses &&
+                      (item.status === 'available' || item.status === 'scheduled')
+                    "
                     type="button"
                     class="btn btn-xs sharp btn-info me-1"
-                    :title="item.status === 'available' ? 'Agendar reposição' : 'Reagendar reposição'"
-                    :aria-label="item.status === 'available' ? 'Agendar reposição' : 'Reagendar reposição'"
+                    :title="
+                      item.status === 'available' ? 'Agendar reposição' : 'Reagendar reposição'
+                    "
                     @click="openSchedulingModal(item)"
                   >
                     <i class="fa fa-calendar-plus-o"></i>
                   </button>
 
-                  <!-- Marcar como Concluída (quando agendada) -->
                   <button
                     v-if="canUpdateMakeupClasses && item.status === 'scheduled'"
                     type="button"
                     class="btn btn-xs sharp btn-success me-1"
                     title="Marcar como concluída"
-                    aria-label="Marcar como concluída"
                     @click="markAsConcluded(item)"
                   >
                     <i class="fa fa-check"></i>
                   </button>
 
-                  <!-- Copiar Link Público -->
                   <button
                     v-if="item.public_token"
                     type="button"
                     class="btn btn-xs sharp btn-secondary me-1"
                     title="Copiar link público"
-                    aria-label="Copiar link público"
                     @click="copyPublicLink(item)"
                   >
                     <i class="fa fa-link"></i>
                   </button>
 
-                  <!-- Editar -->
                   <RouterLink
                     v-if="canUpdateMakeupClasses"
                     :to="`/makeup-classes/${item.id}/edit`"
                     class="btn btn-xs sharp btn-primary me-1"
                     title="Editar reposição"
-                    :aria-label="`Editar reposição ${item.id}`"
                   >
                     <i class="fa fa-pencil"></i>
                   </RouterLink>
 
-                  <!-- Excluir -->
                   <button
                     v-if="canDeleteMakeupClasses"
                     type="button"
                     class="btn btn-xs sharp btn-danger"
                     title="Excluir reposição"
-                    :aria-label="`Excluir reposição ${item.id}`"
                     @click="removeMakeupClass(item)"
                   >
                     <i class="fa fa-trash"></i>
@@ -503,7 +543,10 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="card-footer border-0 bg-transparent pt-3 d-flex justify-content-end">
+      <div
+        v-if="!loading && lastPage > 1"
+        class="card-footer border-0 bg-transparent pt-3 d-flex justify-content-end"
+      >
         <ListPagination
           :page="page"
           :last-page="lastPage"
@@ -513,9 +556,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════
-         Agendar Reposição Modal (Teleported)
-         ═══════════════════════════════════════════════ -->
     <Teleport to="body">
       <div
         v-if="schedulingItem"
@@ -527,7 +567,7 @@ onMounted(() => {
         <div class="modal-dialog modal-dialog-centered" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">Agendar Reposição #{{ schedulingItem.id }}</h5>
+              <h5 class="modal-title">Agendar reposição #{{ schedulingItem.id }}</h5>
               <button
                 type="button"
                 class="btn-close"
@@ -543,24 +583,17 @@ onMounted(() => {
               </div>
 
               <div class="mb-3">
-                <label class="form-label fw-semibold">Aluno / Origem</label>
-                <div class="form-control bg-light" readonly>
-                  {{ getStudentName(schedulingItem) }}
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Data e Horário do Agendamento *</label>
+                <label class="form-label fw-semibold">Data e horário do agendamento *</label>
                 <input
+                  v-model="modalNewDate"
                   type="datetime-local"
                   class="form-control"
-                  v-model="modalNewDate"
                   required
                 />
               </div>
 
               <div class="mb-3">
-                <label class="form-label fw-semibold">Professor Responsável</label>
+                <label class="form-label fw-semibold">Professor responsável</label>
                 <SingleSelect
                   v-model="modalTeacherId"
                   :options="teacherOptions"
@@ -590,7 +623,7 @@ onMounted(() => {
                   class="spinner-border spinner-border-sm me-1"
                   role="status"
                 ></span>
-                <span>{{ modalSaving ? 'Salvando...' : 'Salvar agendamento' }}</span>
+                {{ modalSaving ? "Salvando..." : "Salvar agendamento" }}
               </button>
             </div>
           </div>
@@ -617,12 +650,12 @@ onMounted(() => {
 
 .makeup-credits-table th:nth-child(2),
 .makeup-credits-table td:nth-child(2) {
-  width: 16%;
+  width: 6rem;
 }
 
 .makeup-credits-table th:nth-child(3),
 .makeup-credits-table td:nth-child(3) {
-  width: 14%;
+  width: 18%;
 }
 
 .makeup-credits-table th:nth-child(8),

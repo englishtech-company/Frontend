@@ -5,6 +5,7 @@ import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
 import ProfileTabListCard from "@/components/admin/ProfileTabListCard.vue";
 import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
 import StudentLessonsPanel from "@/components/admin/StudentLessonsPanel.vue";
+import StudentMakeupClassesPanel from "@/components/admin/StudentMakeupClassesPanel.vue";
 import StudentPaymentsPanel from "@/components/admin/StudentPaymentsPanel.vue";
 import StudentLibraryPanel from "@/components/admin/StudentLibraryPanel.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
@@ -38,9 +39,13 @@ const studentId = computed(() => Number(route.params.id));
 const student = ref<Student | null>(null);
 const loading = ref(true);
 const error = ref("");
-const activeTab = ref<
-  "overview" | "classes" | "payments" | "documents" | "library" | "history" | "turmas"
->("overview");
+type StudentProfileTab =
+  | "overview"
+  | "history"
+  | "turmas"
+  | (typeof STUDENT_MODULE_TABS)[number]["id"];
+
+const activeTab = ref<StudentProfileTab>("overview");
 const tabsScrollRef = ref<HTMLElement | null>(null);
 
 function scrollActiveTabIntoView() {
@@ -155,7 +160,26 @@ async function submitEnrollment() {
   }
 }
 
-onMounted(loadStudent);
+function applyTabFromQuery() {
+  const tab = route.query.tab;
+  if (typeof tab !== "string") return;
+
+  if (tab === "overview" || tab === "history" || tab === "turmas") {
+    activeTab.value = tab;
+    return;
+  }
+
+  if (STUDENT_MODULE_TABS.some((moduleTab) => moduleTab.id === tab)) {
+    activeTab.value = tab as StudentProfileTab;
+  }
+}
+
+watch(() => route.query.tab, applyTabFromQuery);
+
+onMounted(() => {
+  applyTabFromQuery();
+  loadStudent();
+});
 </script>
 
 <template>
@@ -542,6 +566,10 @@ onMounted(loadStudent);
                           v-else-if="moduleTab.id === 'classes'"
                           :student-id="student.id"
                           :student="student"
+                        />
+                        <StudentMakeupClassesPanel
+                          v-else-if="moduleTab.id === 'makeup'"
+                          :student-id="student.id"
                         />
                         <StudentLibraryPanel
                           v-else-if="moduleTab.id === 'library'"

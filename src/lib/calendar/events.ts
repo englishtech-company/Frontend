@@ -7,7 +7,11 @@ import {
   googleEventToCalendarEvent,
   listGoogleCalendarEvents,
 } from "@/lib/googleCalendar";
-import { listLessons, type ListLessonsParams } from "@/lib/lessons";
+import {
+  listLessons,
+  listLessonsForStudent,
+  type ListLessonsParams,
+} from "@/lib/lessons";
 import type { ExperimentalClass, Lesson, LessonStatus, Paginated } from "@/lib/types";
 
 const LESSON_STATUS_LABELS: Record<LessonStatus, string> = {
@@ -29,6 +33,7 @@ const CALENDAR_MAX_PAGES = 25;
 
 export type LoadCalendarEventsParams = {
   teacherId?: string | number | null;
+  studentId?: string | number | null;
 };
 
 function addMinutes(isoDate: string, minutes = 60): string {
@@ -44,14 +49,14 @@ function formatApiDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function normalizeTeacherId(
-  teacherId?: string | number | null
+function normalizeOptionalId(
+  value?: string | number | null
 ): number | undefined {
-  if (teacherId === null || teacherId === undefined || teacherId === "") {
+  if (value === null || value === undefined || value === "") {
     return undefined;
   }
 
-  const parsed = Number(teacherId);
+  const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
@@ -156,7 +161,8 @@ export async function loadCalendarEvents(
 ): Promise<CalendarMockEvent[]> {
   const from = formatApiDate(rangeStart);
   const to = formatApiDate(rangeEnd);
-  const teacherId = normalizeTeacherId(params.teacherId);
+  const teacherId = normalizeOptionalId(params.teacherId);
+  const studentId = normalizeOptionalId(params.studentId);
 
   const lessonParams: ListLessonsParams = {
     limit: CALENDAR_PAGE_SIZE,
@@ -172,12 +178,25 @@ export async function loadCalendarEvents(
     ...(teacherId !== undefined ? { teacher_id: teacherId } : {}),
   };
 
+  const lessonsPromise = studentId
+    ? fetchAllPages((page) =>
+        listLessonsForStudent(studentId, { ...lessonParams, page })
+      )
+    : fetchAllPages((page) => listLessons({ ...lessonParams, page }));
+
+  const includeExperimental = studentId === undefined;
+  const includeGoogle = studentId === undefined;
+
   const [lessons, experimentalClasses, googleEvents] = await Promise.all([
-    fetchAllPages((page) => listLessons({ ...lessonParams, page })),
-    fetchAllPages((page) =>
-      listExperimentalClasses({ ...experimentalParams, page })
-    ),
-    loadGoogleEvents(rangeStart, rangeEnd, teacherId),
+    lessonsPromise,
+    includeExperimental
+      ? fetchAllPages((page) =>
+          listExperimentalClasses({ ...experimentalParams, page })
+        )
+      : Promise.resolve([]),
+    includeGoogle
+      ? loadGoogleEvents(rangeStart, rangeEnd, teacherId)
+      : Promise.resolve([]),
   ]);
 
   return [
