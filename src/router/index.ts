@@ -139,6 +139,12 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.update },
     },
     {
+      path: "/calendar",
+      name: "Calendar",
+      component: () => import("../views/admin/calendar/CalendarView.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.view },
+    },
+    {
       path: "/lessons",
       name: "Lessons",
       component: () => import("../views/admin/lessons/LessonList.vue"),

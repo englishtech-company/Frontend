@@ -4,6 +4,7 @@ import {
   onMounted,
   ref,
 } from "vue";
+import ProfileTabListCard from "@/components/admin/ProfileTabListCard.vue";
 import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDeleteWithReason } from "@/lib/confirm";
@@ -485,64 +486,20 @@ onMounted(loadPanel);
 </script>
 
 <template>
-  <div class="student-documents pt-4 pb-3">
+  <div class="student-documents">
     <div
       v-if="!canViewStudentDocuments"
-      class="alert alert-warning mb-0"
+      class="alert alert-warning mt-3 mb-0"
     >
-      Você não tem permissão para visualizar os
-      documentos deste aluno.
+      Você não tem permissão para visualizar os documentos deste aluno.
     </div>
 
     <template v-else>
-      <div
-        class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4"
-      >
-        <div>
-          <h4 class="text-primary mb-1">
-            Documentos do aluno
-          </h4>
-          <p class="text-muted mb-0">
-            Arquivos privados vinculados ao perfil.
-          </p>
-        </div>
-
-        <button
-          v-if="canCreateStudentDocuments"
-          type="button"
-          class="btn btn-primary"
-          @click="
-            showUploadForm = !showUploadForm;
-            clearMessages();
-          "
-        >
-          <i
-            class="la me-1"
-            :class="
-              showUploadForm
-                ? 'la-times'
-                : 'la-upload'
-            "
-          ></i>
-          {{
-            showUploadForm
-              ? "Cancelar"
-              : "Enviar documento"
-          }}
-        </button>
-      </div>
-
-      <div
-        v-if="error"
-        class="alert alert-danger"
-      >
+      <div v-if="error" class="alert alert-danger mt-3 mb-0">
         {{ error }}
       </div>
 
-      <div
-        v-if="success"
-        class="alert alert-success"
-      >
+      <div v-if="success" class="alert alert-success mt-3 mb-0">
         {{ success }}
       </div>
 
@@ -551,7 +508,7 @@ onMounted(loadPanel);
           showUploadForm &&
           canCreateStudentDocuments
         "
-        class="card border mb-4"
+        class="card border mt-3 mb-3"
         @submit.prevent="submitUpload"
       >
         <div class="card-body">
@@ -664,210 +621,146 @@ onMounted(loadPanel);
         @change="handleReplacementFile"
       />
 
-      <div
-        v-if="loading"
-        class="text-center py-5"
+      <ProfileTabListCard
+        title="Lista de documentos"
+        :total="total"
+        :loading="loading"
+        :page="page"
+        :last-page="lastPage"
+        :read-only="!showActions"
+        @update:page="goToPage"
       >
-        Carregando documentos...
-      </div>
+        <template #actions>
+          <button
+            v-if="canCreateStudentDocuments"
+            type="button"
+            class="btn btn-primary btn-sm"
+            @click="
+              showUploadForm = !showUploadForm;
+              clearMessages();
+            "
+          >
+            <i
+              class="la me-1"
+              :class="showUploadForm ? 'la-times' : 'la-upload'"
+            ></i>
+            {{ showUploadForm ? "Cancelar" : "Enviar documento" }}
+          </button>
+        </template>
 
-      <div
-        v-else-if="documents.length === 0"
-        class="alert alert-light border mb-0"
-      >
-        Nenhum documento foi vinculado a este
-        aluno.
-      </div>
+        <thead>
+          <tr>
+            <th>Documento</th>
+            <th>Enviado por</th>
+            <th class="text-nowrap">Data</th>
+            <th v-if="showActions" class="text-end text-nowrap">Ações</th>
+          </tr>
+        </thead>
 
-      <div v-else class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th class="document-column">
-                Documento
-              </th>
-              <th class="uploader-column">
-                Enviado por
-              </th>
-              <th class="date-column">
-                Data
-              </th>
-              <th
-                v-if="showActions"
-                class="actions-column"
-              >
-                Ações
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr
-              v-for="document in documents"
-              :key="document.id"
+        <tbody>
+          <tr v-if="!documents.length">
+            <td
+              :colspan="showActions ? 4 : 3"
+              class="text-center text-muted"
             >
-              <td>
-                <div class="document-summary">
+              Nenhum documento foi vinculado a este aluno.
+            </td>
+          </tr>
+
+          <tr v-for="document in documents" :key="document.id">
+            <td>
+              <div class="document-summary">
+                <div class="document-icon" aria-hidden="true">
+                  <i class="la la-file-alt"></i>
+                </div>
+
+                <div class="document-details">
+                  <button
+                    type="button"
+                    class="document-name"
+                    :title="document.original_name"
+                    @click="openPreview(document)"
+                  >
+                    {{ document.original_name }}
+                  </button>
+
+                  <div class="document-metadata">
+                    <span class="badge badge-light text-dark">
+                      {{ getCategoryLabel(document.category) }}
+                    </span>
+
+                    <span class="document-size">
+                      {{ formatFileSize(document.size) }}
+                    </span>
+
+                    <span
+                      v-if="getPayment(document)"
+                      class="badge badge-info"
+                    >
+                      Pagamento #{{ getPayment(document)?.id }}
+                    </span>
+                  </div>
+
                   <div
-                    class="document-icon"
-                    aria-hidden="true"
+                    v-if="document.description"
+                    class="document-description"
                   >
-                    <i class="la la-file-alt"></i>
-                  </div>
-
-                  <div class="document-details">
-                    <button
-                      type="button"
-                      class="document-name"
-                      :title="document.original_name"
-                      @click="openPreview(document)"
-                    >
-                      {{ document.original_name }}
-                    </button>
-
-                    <div class="document-metadata">
-                      <span
-                        class="badge badge-light text-dark"
-                      >
-                        {{
-                          getCategoryLabel(
-                            document.category
-                          )
-                        }}
-                      </span>
-
-                      <span class="document-size">
-                        {{
-                          formatFileSize(
-                            document.size
-                          )
-                        }}
-                      </span>
-
-                      <span
-                        v-if="getPayment(document)"
-                        class="badge badge-info"
-                      >
-                        Pagamento
-                        #{{ getPayment(document)?.id }}
-                      </span>
-                    </div>
-
-                    <div
-                      v-if="document.description"
-                      class="document-description"
-                    >
-                      {{ document.description }}
-                    </div>
+                    {{ document.description }}
                   </div>
                 </div>
-              </td>
+              </div>
+            </td>
 
-              <td>
-                {{
-                  getUploader(document)?.name ??
-                  `Usuário #${document.uploaded_by}`
-                }}
-              </td>
+            <td>
+              {{
+                getUploader(document)?.name ??
+                `Usuário #${document.uploaded_by}`
+              }}
+            </td>
 
-              <td>
-                {{
-                  formatStudentDateTime(
-                    document.created_at
-                  )
-                }}
-              </td>
+            <td class="text-nowrap">
+              {{ formatStudentDateTime(document.created_at) }}
+            </td>
 
-              <td
-                v-if="showActions"
-                class="actions-column"
+            <td v-if="showActions" class="text-end text-nowrap">
+              <button
+                type="button"
+                class="btn btn-xs sharp btn-primary me-1"
+                title="Baixar documento"
+                aria-label="Baixar documento"
+                :disabled="actionDocumentId === document.id"
+                @click="downloadDocument(document)"
               >
-                <div
-                  class="document-actions d-flex flex-nowrap gap-1"
-                >
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-primary"
-                    title="Baixar documento"
-                    aria-label="Baixar documento"
-                    :disabled="
-                      actionDocumentId === document.id
-                    "
-                    @click="downloadDocument(document)"
-                  >
-                    <i class="la la-download"></i>
-                  </button>
+                <i class="fa fa-download"></i>
+              </button>
 
-                  <button
-                    v-if="canUpdateStudentDocuments"
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary"
-                    title="Substituir arquivo"
-                    aria-label="Substituir arquivo"
-                    :disabled="
-                      actionDocumentId === document.id
-                    "
-                    @click="chooseReplacement(document)"
-                  >
-                    <i class="la la-sync"></i>
-                  </button>
+              <button
+                v-if="canUpdateStudentDocuments"
+                type="button"
+                class="btn btn-xs sharp btn-primary me-1"
+                title="Substituir arquivo"
+                aria-label="Substituir arquivo"
+                :disabled="actionDocumentId === document.id"
+                @click="chooseReplacement(document)"
+              >
+                <i class="fa fa-sync"></i>
+              </button>
 
-                  <button
-                    v-if="canDeleteStudentDocuments"
-                    type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    title="Excluir documento"
-                    aria-label="Excluir documento"
-                    :disabled="
-                      actionDocumentId === document.id
-                    "
-                    @click="removeDocument(document)"
-                  >
-                    <i class="la la-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div
-        v-if="lastPage > 1"
-        class="d-flex align-items-center justify-content-between mt-3"
-      >
-        <span class="text-muted small">
-          {{ total }} documento(s)
-        </span>
-
-        <div class="btn-group">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            :disabled="page <= 1"
-            @click="goToPage(page - 1)"
-          >
-            Anterior
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            disabled
-          >
-            {{ page }} de {{ lastPage }}
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            :disabled="page >= lastPage"
-            @click="goToPage(page + 1)"
-          >
-            Próxima
-          </button>
-        </div>
-      </div>
+              <button
+                v-if="canDeleteStudentDocuments"
+                type="button"
+                class="btn btn-xs sharp btn-danger"
+                title="Excluir documento"
+                aria-label="Excluir documento"
+                :disabled="actionDocumentId === document.id"
+                @click="removeDocument(document)"
+              >
+                <i class="fa fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </ProfileTabListCard>
     </template>
 
     <StudentDocumentPreviewModal
@@ -878,31 +771,6 @@ onMounted(loadPanel);
 </template>
 
 <style scoped>
-.student-documents table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.student-documents td {
-  vertical-align: middle;
-}
-
-.student-documents .document-column {
-  width: auto;
-}
-
-.student-documents .uploader-column {
-  width: 17%;
-}
-
-.student-documents .date-column {
-  width: 155px;
-}
-
-.student-documents .actions-column {
-  width: 138px;
-}
-
 .student-documents .document-summary {
   display: flex;
   align-items: flex-start;
@@ -984,17 +852,7 @@ onMounted(loadPanel);
   -webkit-line-clamp: 2;
 }
 
-.student-documents .document-actions {
-  min-width: max-content;
-}
-
 .student-documents .badge-light {
   background-color: #f2f2f2;
-}
-
-@media (max-width: 767.98px) {
-  .student-documents table {
-    min-width: 680px;
-  }
 }
 </style>

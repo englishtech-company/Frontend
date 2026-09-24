@@ -23,6 +23,7 @@ export type ListExperimentalClassesParams = {
   id?: number;
   interestedName?: string;
   teacherName?: string;
+  teacher_id?: string | number;
   dateClassFrom?: string;
   dateClassTo?: string;
   status_class?: string;
@@ -70,6 +71,7 @@ export async function listExperimentalClasses(
   appendExact(query, "id", params.id);
   appendLike(query, "interested_name", params.interestedName);
   appendLike(query, "teacher_name", params.teacherName);
+  appendExact(query, "teacher_id", params.teacher_id);
   appendDateRange(query, "date_class", params.dateClassFrom, params.dateClassTo);
   appendExact(query, "status_class", params.status_class);
 
