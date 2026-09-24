@@ -58,6 +58,12 @@ const MenuItems = reactive<menuType[]>([
     permission: PERMISSIONS.lessons.view,
   },
   {
+    icons: "la la-redo",
+    title: "Reposições",
+    to: "/makeup-classes",
+    permission: PERMISSIONS.makeupClasses.view,
+  },
+  {
     icons: "la la-calendar",
     title: "Calendário",
     to: "/calendar",
@@ -125,7 +131,7 @@ const MenuItems = reactive<menuType[]>([
         permission: PERMISSIONS.payments.view,
       },
       {
-        menu: "Alertas",
+        menu: "Inadimplentes",
         to: "/financial-alerts",
         permission: PERMISSIONS.financialAlerts.view,
       },

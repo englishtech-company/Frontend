@@ -541,6 +541,7 @@ onMounted(loadStudent);
                         <StudentLessonsPanel
                           v-else-if="moduleTab.id === 'classes'"
                           :student-id="student.id"
+                          :student="student"
                         />
                         <StudentLibraryPanel
                           v-else-if="moduleTab.id === 'library'"

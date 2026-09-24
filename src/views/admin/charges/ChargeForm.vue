@@ -605,7 +605,7 @@ onMounted(loadForm);
                 </strong>
 
                 <small>
-                  A matrícula e o valor esperado foram
+                  A matrícula e o valor original foram
                   definidos na criação e não podem ser
                   alterados.
                 </small>
@@ -833,7 +833,7 @@ onMounted(loadForm);
                 </div>
 
                 <div>
-                  <span>Valor esperado</span>
+                  <span>Valor original</span>
 
                   <strong>
                     {{

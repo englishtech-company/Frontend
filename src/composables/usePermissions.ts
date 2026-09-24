@@ -217,6 +217,11 @@ export function usePermissions() {
         PERMISSIONS.payments.delete
       )
     ),
+    canReversePayments: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.payments.reverse
+      )
+    ),
 
     canViewStudentDocuments: computed(() =>
       auth.hasPermission(
@@ -341,6 +346,27 @@ export function usePermissions() {
     canDeleteLibraryMaterials: computed(() =>
       auth.hasPermission(
         PERMISSIONS.libraryMaterials.delete
+      )
+    ),
+
+    canViewMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.view
+      )
+    ),
+    canCreateMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.create
+      )
+    ),
+    canUpdateMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.update
+      )
+    ),
+    canDeleteMakeupClasses: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.makeupClasses.delete
       )
     ),
 

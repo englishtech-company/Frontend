@@ -58,6 +58,7 @@ export const PERMISSIONS = {
     create: "payments.create",
     update: "payments.update",
     delete: "payments.delete",
+    reverse: "payments.reverse",
   },
   financialAlerts: {
     view: "financial-alerts.view",
@@ -104,6 +105,12 @@ export const PERMISSIONS = {
     update: "library-materials.update",
     delete: "library-materials.delete",
   },
+  makeupClasses: {
+    view: "makeup-classes.view",
+    create: "makeup-classes.create",
+    update: "makeup-classes.update",
+    delete: "makeup-classes.delete",
+  },
   googleCalendar: {
     view: "google-calendar.view",
     update: "google-calendar.update",
@@ -130,6 +137,7 @@ export type PermissionName =
   | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons]
   | (typeof PERMISSIONS.libraryCategories)[keyof typeof PERMISSIONS.libraryCategories]
   | (typeof PERMISSIONS.libraryMaterials)[keyof typeof PERMISSIONS.libraryMaterials]
+  | (typeof PERMISSIONS.makeupClasses)[keyof typeof PERMISSIONS.makeupClasses]
   | (typeof PERMISSIONS.googleCalendar)[keyof typeof PERMISSIONS.googleCalendar];
 
 export function canAccessPath(
@@ -317,12 +325,6 @@ export function canAccessPath(
   if (path === "/payments/create") {
     return hasPermission(
       PERMISSIONS.payments.create
-    );
-  }
-
-  if (/^\/payments\/\d+\/edit$/.test(path)) {
-    return hasPermission(
-      PERMISSIONS.payments.update
     );
   }
 
@@ -518,12 +520,6 @@ export function resolveRoutePermission(
     return PERMISSIONS.payments.create;
   }
 
-  if (
-    /^\/payments\/\d+\/edit$/.test(path)
-  ) {
-    return PERMISSIONS.payments.update;
-  }
-
   if (path.startsWith("/payments")) {
     return PERMISSIONS.payments.view;
   }
@@ -566,6 +562,10 @@ export function resolveRoutePermission(
   if (/^\/library\/materials\/\d+\/edit$/.test(path)) return PERMISSIONS.libraryMaterials.update;
   if (path.startsWith("/library/materials")) return PERMISSIONS.libraryMaterials.view;
   if (path.startsWith("/library")) return PERMISSIONS.libraryCategories.view;
+
+  if (path === "/makeup-classes/create") return PERMISSIONS.makeupClasses.create;
+  if (/^\/makeup-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.makeupClasses.update;
+  if (path.startsWith("/makeup-classes")) return PERMISSIONS.makeupClasses.view;
 
   return null;
 }

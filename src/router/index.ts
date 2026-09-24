@@ -195,6 +195,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
     },
     {
+      path: "/makeup-classes",
+      name: "MakeupClasses",
+      component: () => import("../views/admin/makeup-classes/MakeupClassList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.view },
+    },
+    {
+      path: "/makeup-classes/create",
+      name: "MakeupClassCreate",
+      component: () => import("../views/admin/makeup-classes/MakeupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.create },
+    },
+    {
+      path: "/makeup-classes/:id/edit",
+      name: "MakeupClassEdit",
+      component: () => import("../views/admin/makeup-classes/MakeupClassForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.update },
+    },
+    {
       path: "/leads",
       name: "Leads",
       component: () => import("../views/admin/leads/LeadList.vue"),
@@ -309,6 +327,18 @@ const router = createRouter({
       },
     },
     {
+      path: "/charges/:id",
+      name: "ChargeView",
+      component: () =>
+        import(
+          "../views/admin/charges/ChargeView.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.charges.view,
+      },
+    },
+    {
       path: "/payments",
       name: "Payments",
       component: () =>
@@ -335,14 +365,7 @@ const router = createRouter({
     {
       path: "/payments/:id/edit",
       name: "PaymentEdit",
-      component: () =>
-        import(
-          "../views/admin/payments/PaymentForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.payments.update,
-      },
+      redirect: "/payments",
     },
     {
       path: "/financial-alerts",

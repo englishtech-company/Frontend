@@ -24,6 +24,10 @@ function buildPaidByChargeMap(payments: Payment[]): Map<number, number> {
   const paidByCharge = new Map<number, number>();
 
   for (const payment of payments) {
+    if (payment.reversed_at) {
+      continue;
+    }
+
     const amount = Number(payment.amount) || 0;
     paidByCharge.set(
       payment.charge_id,
@@ -39,7 +43,10 @@ export function buildFinanceSnapshot(
   payments: Payment[],
   range: PeriodRange
 ): FinanceSnapshot {
-  const paidByCharge = buildPaidByChargeMap(payments);
+  const activePayments = payments.filter(
+    (payment) => !payment.reversed_at
+  );
+  const paidByCharge = buildPaidByChargeMap(activePayments);
 
   const openCharges = charges.filter((charge) => charge.status === "open");
   const overdueCharges = charges.filter((charge) => charge.status === "overdue");
@@ -56,8 +63,10 @@ export function buildFinanceSnapshot(
   }, 0);
 
   const paymentsInPeriod = range.start
-    ? payments.filter((payment) => isDateWithinPeriod(payment.paid_at, range))
-    : payments;
+    ? activePayments.filter((payment) =>
+        isDateWithinPeriod(payment.paid_at, range)
+      )
+    : activePayments;
 
   const receivedTotal = paymentsInPeriod.reduce(
     (acc, payment) => acc + (Number(payment.amount) || 0),

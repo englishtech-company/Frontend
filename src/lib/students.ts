@@ -7,6 +7,7 @@ import {
 } from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, Paginated, Student } from "@/lib/types";
+import type { StudentMakeupSummary } from "@/lib/makeupClasses";
 
 export type ListStudentsParams = {
   page?: number;
@@ -88,4 +89,20 @@ export async function deleteStudent(id: number): Promise<void> {
 export async function getStudentOptions(): Promise<Record<string, string>> {
   const response = await api<{ action: string; plucks: Record<string, string> }>("/students/plucks");
   return response.plucks;
+}
+
+/**
+ * Fetches the aggregated make-up summary for a student from
+ * GET /students/{id}/makeup-summary.
+ *
+ * Returns: limit, used, remaining, available_credits,
+ *          scheduled_classes, expiring_soon_count, concluded, expired.
+ */
+export async function getStudentMakeupSummary(
+  studentId: number
+): Promise<StudentMakeupSummary> {
+  const response = await api<{ makeup_summary: StudentMakeupSummary }>(
+    `/students/${studentId}/makeup-summary`
+  );
+  return response.makeup_summary;
 }

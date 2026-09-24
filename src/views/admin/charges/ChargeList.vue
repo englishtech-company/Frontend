@@ -18,6 +18,9 @@ import {
   deleteCharge,
   listCharges,
 } from "@/lib/charges";
+import type {
+  ChargeWithCurrentBalance,
+} from "@/lib/charges";
 import {
   formatEnrollmentNumber,
 } from "@/lib/enrollments/format";
@@ -41,7 +44,7 @@ const {
   canDeleteCharges,
 } = usePermissions();
 
-const charges = ref<Charge[]>([]);
+const charges = ref<ChargeWithCurrentBalance[]>([]);
 const loading = ref(true);
 const error = ref("");
 
@@ -79,12 +82,13 @@ const activeFilterCount = computed(() =>
 
 const showActions = computed(
   () =>
+    canViewCharges.value ||
     canUpdateCharges.value ||
     canDeleteCharges.value
 );
 
 function applyChargeResult(
-  result: Paginated<Charge>
+  result: Paginated<ChargeWithCurrentBalance>
 ) {
   charges.value = result.data;
   lastPage.value = result.last_page;
@@ -280,7 +284,7 @@ onMounted(loadCharges);
           </FilterField>
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Valor esperado" id="charge-filter-amount">
+          <FilterField label="Valor original" id="charge-filter-amount">
             <input
               id="charge-filter-amount"
               v-model="expectedAmountFilter"
@@ -363,7 +367,11 @@ onMounted(loadCharges);
                     </th>
 
                     <th class="text-nowrap">
-                      Valor esperado
+                      Valor original
+                    </th>
+
+                    <th class="text-nowrap">
+                      Saldo atual
                     </th>
 
                     <th class="text-nowrap">
@@ -384,7 +392,7 @@ onMounted(loadCharges);
                 <tbody>
                   <tr v-if="charges.length === 0">
                     <td
-                      :colspan="showActions ? 7 : 6"
+                      :colspan="showActions ? 8 : 7"
                       class="text-center text-muted"
                     >
                       Nenhuma cobrança encontrada
@@ -439,6 +447,32 @@ onMounted(loadCharges);
                     </td>
 
                     <td class="text-nowrap">
+                      <template
+                        v-if="charge.current_balance"
+                      >
+                        <strong>
+                          {{
+                            formatCurrency(
+                              charge.current_balance
+                                .total_due_amount
+                            )
+                          }}
+                        </strong>
+
+                        <div class="small text-muted">
+                          Em {{
+                            formatDate(
+                              charge.current_balance
+                                .reference_date
+                            )
+                          }}
+                        </div>
+                      </template>
+
+                      <span v-else>—</span>
+                    </td>
+
+                    <td class="text-nowrap">
                       {{ formatDate(charge.due_date) }}
                     </td>
 
@@ -461,6 +495,14 @@ onMounted(loadCharges);
                       v-if="showActions"
                       class="text-end text-nowrap"
                     >
+                      <RouterLink
+                        :to="`/charges/${charge.id}`"
+                        class="btn btn-xs sharp btn-outline-primary me-1"
+                        :aria-label="`Visualizar cobrança ${charge.id}`"
+                      >
+                        <i class="fa fa-eye"></i>
+                      </RouterLink>
+
                       <RouterLink
                         v-if="canUpdateCharges"
                         :to="`/charges/${charge.id}/edit`"

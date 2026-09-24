@@ -18,6 +18,7 @@ export type ListEnrollmentsParams = {
   page?: number;
   limit?: number;
   id?: number;
+  student_id?: number;
   studentName?: string;
   planName?: string;
   paymentMethod?: EnrollmentPaymentMethod;
@@ -27,10 +28,16 @@ export type ListEnrollmentsParams = {
 
 export type EnrollmentPayload = {
   student_id?: number | null;
-  plan_variant_id: number;
+  teacher_id?: number | null;
+  group_class_id?: number | null;
+  plan_variant_id?: number | null;
   discount_percent?: number | null;
   payment_method: EnrollmentPaymentMethod;
   status?: EnrollmentStatus;
+  is_group_class?: boolean;
+  auto_renewal?: boolean;
+  makeup_limit?: number;
+  makeup_used?: number;
 };
 
 type EnrollmentPlucksResponse = {
@@ -50,6 +57,7 @@ export async function listEnrollments(
   const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
 
   appendExact(query, "id", params.id);
+  appendExact(query, "student_id", params.student_id);
   appendLike(query, "student_name", params.studentName);
   appendLike(query, "plan_name", params.planName);
   appendExact(query, "payment_method", params.paymentMethod);
