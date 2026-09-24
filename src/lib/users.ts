@@ -1,18 +1,21 @@
 import { api } from "@/lib/api";
+import { appendLike, createListQuery } from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type { ApiItemResponse, ApiListResponse, Paginated, User } from "@/lib/types";
 
 type ListParams = {
   page?: number;
   limit?: number;
+  name?: string;
+  email?: string;
 };
 
 export async function listUsers(params: ListParams = {}): Promise<Paginated<User>> {
-  const page = params.page ?? 1;
-  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
-  const response = await api<ApiListResponse<"users", User>>(
-    `/users?pagination[page]=${page}&pagination[limit]=${limit}`
-  );
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
+  appendLike(query, "name", params.name);
+  appendLike(query, "email", params.email);
+
+  const response = await api<ApiListResponse<"users", User>>(`/users?${query.toString()}`);
   return response.users;
 }
 

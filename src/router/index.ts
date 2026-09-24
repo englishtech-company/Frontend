@@ -157,6 +157,12 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
     },
     {
+      path: "/lessons/:id",
+      name: "LessonView",
+      component: () => import("../views/admin/lessons/LessonView.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.view },
+    },
+    {
       path: "/lessons/:id/edit",
       name: "LessonEdit",
       component: () => import("../views/admin/lessons/LessonForm.vue"),
@@ -463,71 +469,21 @@ const router = createRouter({
       meta: { layout4: "layout4" },
     },
     {
-      path: "/page-register",
-      name: "page_register",
-      component: () => import("../views/pages/Register.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
-      path: "/page-forgot-password",
-      name: "page_forgot_password",
-      component: () => import("../views/pages/ForgetPassword.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
-      path: "/page-error-400",
-      name: "page_error_400",
-      component: () => import("../views/pages/error/Error400.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
       path: "/page-error-403",
       name: "page_error_403",
       component: () => import("../views/pages/error/Error403.vue"),
       meta: { layout4: "layout4" },
     },
     {
-      path: "/page-error-404",
-      name: "page_error_404",
-      component: () => import("../views/pages/error/Error404.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
-      path: "/page-error-500",
-      name: "page_error_500",
-      component: () => import("../views/pages/error/Error500.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
-      path: "/page-error-503",
-      name: "page_error_503",
-      component: () => import("../views/pages/error/Error503.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
-      path: "/page-lock-screen",
-      name: "page_lock_screen",
-      component: () => import("../views/pages/LockScreen.vue"),
-      meta: { layout4: "layout4" },
-    },
-    {
       path: "/:pathMatch(.*)*",
-      redirect: "/",
+      name: "not_found",
+      component: () => import("../views/pages/error/Error404.vue"),
+      meta: { layout3: "layout3" },
     },
   ],
 });
 
-const publicPaths = new Set([
-  "/page-login",
-  "/page-register",
-  "/page-forgot-password",
-  "/page-error-400",
-  "/page-error-403",
-  "/page-error-404",
-  "/page-error-500",
-  "/page-error-503",
-  "/page-lock-screen",
-]);
+const publicPaths = new Set(["/page-login", "/page-error-403"]);
 
 function isPublicPath(path: string): boolean {
   if (publicPaths.has(path)) {

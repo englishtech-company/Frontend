@@ -1,8 +1,13 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { VueDraggableNext } from "vue-draggable-next";
+import { countActiveFilters } from "@/lib/filters/query";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
 import { notifyRemoved } from "@/lib/actionNotification";
@@ -32,6 +37,17 @@ const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 const orderBeforeDrag = ref<number[]>([]);
+const labelFilter = ref("");
+const activeFilter = ref<string | number | null>(null);
+
+const activeStatusOptions: SelectOption[] = [
+  { value: "1", label: "Ativa" },
+  { value: "0", label: "Inativa" },
+];
+
+const activeFilterCount = computed(() =>
+  countActiveFilters([labelFilter.value, activeFilter.value])
+);
 
 const showActions = computed(
   () => canUpdateEnrollmentQuestions.value || canDeleteEnrollmentQuestions.value
@@ -53,7 +69,14 @@ async function loadQuestions() {
 
   try {
     const [result, plucks] = await Promise.all([
-      listEnrollmentQuestions({ page: page.value }),
+      listEnrollmentQuestions({
+        page: page.value,
+        label: labelFilter.value.trim() || undefined,
+        active:
+          activeFilter.value === null || activeFilter.value === ""
+            ? undefined
+            : activeFilter.value === "1",
+      }),
       getEnrollmentQuestionPlucks(),
     ]);
 
@@ -122,6 +145,18 @@ function onDragStart() {
   orderBeforeDrag.value = questions.value.map((question) => question.id);
 }
 
+function handleSearch() {
+  page.value = 1;
+  loadQuestions();
+}
+
+function clearFilters() {
+  labelFilter.value = "";
+  activeFilter.value = null;
+  page.value = 1;
+  loadQuestions();
+}
+
 onMounted(loadQuestions);
 </script>
 
@@ -147,6 +182,41 @@ onMounted(loadQuestions);
     </div>
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <div class="row">
+      <div class="col-12">
+        <FilterPanel
+          :active-count="activeFilterCount"
+          @filter="handleSearch"
+          @clear="clearFilters"
+        >
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-4">
+              <FilterField label="Pergunta" id="enrollment-question-filter-label">
+                <input
+                  id="enrollment-question-filter-label"
+                  v-model="labelFilter"
+                  type="text"
+                  class="form-control"
+                  @keyup.enter="handleSearch"
+                />
+              </FilterField>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <FilterField label="Status" id="enrollment-question-filter-active">
+                <SingleSelect
+                  id="enrollment-question-filter-active"
+                  v-model="activeFilter"
+                  :options="activeStatusOptions"
+                  placeholder="Todas"
+                  :searchable="false"
+                />
+              </FilterField>
+            </div>
+          </div>
+        </FilterPanel>
+      </div>
+    </div>
 
     <div class="row">
       <div class="col-12">

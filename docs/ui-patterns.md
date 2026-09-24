@@ -185,10 +185,23 @@ notify.error("Erro ao salvar."); // opcional; erros de formulário podem manter 
 - [ ] `SingleSelect` nos campos de seleção
 - [ ] `alert alert-danger` para erro de submit (manter)
 
+## Exceções de UI (telas que não seguem tabela + FilterPanel)
+
+| Tela | Motivo |
+|------|--------|
+| `CalendarView.vue` | FullCalendar + modais; filtros próprios por professor/tipo |
+| `LibraryMaterialList.vue` | Grid de cards com preview/atribuição; mantém `FilterPanel` no topo |
+| `EnrollmentQuestionList.vue` | Tabela com drag-and-drop para reordenar perguntas |
+| `FinancialAlertList.vue` | Somente leitura/monitoramento; sem ações de CRUD |
+| `PermissionList.vue` | Catálogo read-only de permissões |
+
+Novos módulos devem usar tabela padrão salvo justificativa documentada nesta seção.
+
 ## Referências no código
 
 | Padrão | Arquivo |
 |--------|---------|
 | Listagem completa | `views/admin/students/StudentList.vue` |
+| Detalhe | `views/admin/lessons/LessonView.vue` |
 | Form com notify | `views/admin/teachers/TeacherForm.vue` |
 | Filtros múltiplos | `views/admin/charges/ChargeList.vue` |

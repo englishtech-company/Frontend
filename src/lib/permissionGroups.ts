@@ -25,7 +25,6 @@ const MODULE_LABELS: Record<string, string> = {
   teachers: "Professores",
   plans: "Planos",
   leads: "Interessados",
-  clients: "Clientes",
   roles: "Perfis",
   permissions: "Permissões",
   audits: "Auditoria",

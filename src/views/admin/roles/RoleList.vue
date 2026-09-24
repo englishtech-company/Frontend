@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import FilterField from "@/components/ui/FilterField.vue";
+import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
+import { countActiveFilters } from "@/lib/filters/query";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
 import { notifyRemoved } from "@/lib/actionNotification";
@@ -21,8 +24,11 @@ const error = ref("");
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
+const nameFilter = ref("");
 
 const showActions = computed(() => canUpdateRoles.value || canDeleteRoles.value);
+
+const activeFilterCount = computed(() => countActiveFilters([nameFilter.value]));
 
 async function loadRoles() {
   if (!canViewRoles.value) {
@@ -35,7 +41,10 @@ async function loadRoles() {
   error.value = "";
 
   try {
-    const result = await listRoles({ page: page.value });
+    const result = await listRoles({
+      page: page.value,
+      name: nameFilter.value.trim() || undefined,
+    });
     roles.value = result.data.filter((role) => !isProtectedRole(role.name));
     lastPage.value = result.last_page;
     total.value = result.total;
@@ -69,6 +78,17 @@ function goToPage(next: number) {
   loadRoles();
 }
 
+function handleSearch() {
+  page.value = 1;
+  loadRoles();
+}
+
+function clearFilters() {
+  nameFilter.value = "";
+  page.value = 1;
+  loadRoles();
+}
+
 onMounted(loadRoles);
 </script>
 
@@ -92,6 +112,30 @@ onMounted(loadRoles);
     </div>
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <div class="row">
+      <div class="col-12">
+        <FilterPanel
+          :active-count="activeFilterCount"
+          @filter="handleSearch"
+          @clear="clearFilters"
+        >
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-4">
+              <FilterField label="Nome" id="role-filter-name">
+                <input
+                  id="role-filter-name"
+                  v-model="nameFilter"
+                  type="text"
+                  class="form-control"
+                  @keyup.enter="handleSearch"
+                />
+              </FilterField>
+            </div>
+          </div>
+        </FilterPanel>
+      </div>
+    </div>
 
     <div class="row">
       <div class="col-12">

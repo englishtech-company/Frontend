@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
+import { RouterLink, useRouter } from "vue-router";
 import { listLessons, deleteLesson } from "@/lib/lessons";
 import type { Lesson } from "@/lib/types";
 import { usePermissions } from "@/composables/usePermissions";
@@ -12,7 +12,12 @@ import SingleSelect from "@/components/ui/SingleSelect.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 
 const router = useRouter();
-const { canCreateLessons, canUpdateLessons, canDeleteLessons } = usePermissions();
+const {
+  canViewLessons,
+  canCreateLessons,
+  canUpdateLessons,
+  canDeleteLessons,
+} = usePermissions();
 
 const loading = ref(false);
 const error = ref(false);
@@ -211,7 +216,12 @@ onMounted(() => {
                 <th>Turma / Aluno</th>
                 <th>Data e Hora</th>
                 <th>Status</th>
-                <th v-if="canUpdateLessons || canDeleteLessons" class="text-end">Ações</th>
+                <th
+                  v-if="canViewLessons || canUpdateLessons || canDeleteLessons"
+                  class="text-end"
+                >
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -242,8 +252,19 @@ onMounted(() => {
                     {{ getStatusLabel(lesson.status) }}
                   </span>
                 </td>
-                <td v-if="canUpdateLessons || canDeleteLessons" class="text-end">
+                <td
+                  v-if="canViewLessons || canUpdateLessons || canDeleteLessons"
+                  class="text-end"
+                >
                   <div class="d-flex justify-content-end gap-2">
+                    <RouterLink
+                      v-if="canViewLessons"
+                      :to="`/lessons/${lesson.id}`"
+                      class="btn btn-sm btn-outline-secondary"
+                      title="Ver detalhes"
+                    >
+                      <i class="la la-eye"></i>
+                    </RouterLink>
                     <button
                       v-if="canUpdateLessons"
                       class="btn btn-sm btn-outline-primary"

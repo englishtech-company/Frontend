@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { appendLike, createListQuery, appendExact } from "@/lib/filters/query";
 import { DEFAULT_LIST_LIMIT } from "@/lib/pagination";
 import type {
   ApiItemResponse,
@@ -12,6 +13,7 @@ type ListEnrollmentQuestionsParams = {
   page?: number;
   limit?: number;
   active?: boolean;
+  label?: string;
 };
 
 export type EnrollmentQuestionPayload = {
@@ -36,13 +38,11 @@ type EnrollmentQuestionPlucksResponse = {
 export async function listEnrollmentQuestions(
   params: ListEnrollmentQuestionsParams = {}
 ): Promise<Paginated<EnrollmentQuestion>> {
-  const query = new URLSearchParams({
-    "pagination[page]": String(params.page ?? 1),
-    "pagination[limit]": String(params.limit ?? DEFAULT_LIST_LIMIT),
-  });
+  const query = createListQuery(params.page, params.limit ?? DEFAULT_LIST_LIMIT);
+  appendLike(query, "label", params.label);
 
   if (params.active !== undefined) {
-    query.set("active", params.active ? "1" : "0");
+    appendExact(query, "active", params.active ? "1" : "0");
   }
 
   const response = await api<ApiListResponse<"enrollment_questions", EnrollmentQuestion>>(

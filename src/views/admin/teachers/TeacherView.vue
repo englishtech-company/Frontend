@@ -2,8 +2,8 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
-import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import { usePermissions } from "@/composables/usePermissions";
+import { listLessons } from "@/lib/lessons";
 import { getTeacher } from "@/lib/teachers";
 import {
   formatStudentPlanShortLabel,
@@ -19,26 +19,20 @@ import {
   getTeacherCurrentStudents,
   getTeacherDaysInSystem,
   getTeacherStudentAssignments,
-  TEACHER_MODULE_TABS,
 } from "@/lib/teachers/format";
-import type { Teacher } from "@/lib/types";
+import type { Lesson, Teacher } from "@/lib/types";
 
 const route = useRoute();
-const { canUpdateTeachers, canViewStudents } = usePermissions();
+const { canUpdateTeachers, canViewStudents, canViewLessons } = usePermissions();
 
 const teacherId = computed(() => Number(route.params.id));
 const teacher = ref<Teacher | null>(null);
 const loading = ref(true);
 const error = ref("");
-const activeTab = ref<
-  | "overview"
-  | "students"
-  | "classes"
-  | "reports"
-  | "documents"
-  | "availability"
-  | "history"
->("overview");
+const activeTab = ref<"overview" | "students" | "classes" | "history">("overview");
+const teacherLessons = ref<Lesson[]>([]);
+const lessonsLoading = ref(false);
+const lessonsError = ref("");
 
 const statusBadge = computed(() =>
   formatTeacherStatusBadge(teacher.value?.status ?? "")
@@ -63,6 +57,42 @@ async function loadTeacher() {
   } finally {
     loading.value = false;
   }
+}
+
+async function loadTeacherLessons() {
+  if (!teacher.value || !canViewLessons.value) return;
+
+  lessonsLoading.value = true;
+  lessonsError.value = "";
+
+  try {
+    const result = await listLessons({
+      teacher_id: teacher.value.id,
+      limit: 20,
+      page: 1,
+    });
+    teacherLessons.value = result.data;
+  } catch (e) {
+    lessonsError.value = e instanceof Error ? e.message : "Erro ao carregar aulas";
+    teacherLessons.value = [];
+  } finally {
+    lessonsLoading.value = false;
+  }
+}
+
+function openTab(tab: typeof activeTab.value) {
+  activeTab.value = tab;
+  if (tab === "classes") {
+    loadTeacherLessons();
+  }
+}
+
+function formatLessonDateTime(value?: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 onMounted(loadTeacher);
@@ -212,7 +242,7 @@ onMounted(loadTeacher);
                           type="button"
                           class="nav-link"
                           :class="{ active: activeTab === 'overview' }"
-                          @click="activeTab = 'overview'"
+                          @click="openTab('overview')"
                         >
                           Resumo
                         </button>
@@ -222,7 +252,7 @@ onMounted(loadTeacher);
                           type="button"
                           class="nav-link"
                           :class="{ active: activeTab === 'students' }"
-                          @click="activeTab = 'students'"
+                          @click="openTab('students')"
                         >
                           Alunos
                           <span v-if="currentStudents.length" class="badge badge-primary ms-1">
@@ -230,19 +260,14 @@ onMounted(loadTeacher);
                           </span>
                         </button>
                       </li>
-                      <li
-                        v-for="moduleTab in TEACHER_MODULE_TABS"
-                        :key="moduleTab.id"
-                        class="nav-item"
-                        role="presentation"
-                      >
+                      <li v-if="canViewLessons" class="nav-item" role="presentation">
                         <button
                           type="button"
                           class="nav-link"
-                          :class="{ active: activeTab === moduleTab.id }"
-                          @click="activeTab = moduleTab.id as typeof activeTab"
+                          :class="{ active: activeTab === 'classes' }"
+                          @click="openTab('classes')"
                         >
-                          {{ moduleTab.label }}
+                          Aulas
                         </button>
                       </li>
                       <li class="nav-item" role="presentation">
@@ -250,7 +275,7 @@ onMounted(loadTeacher);
                           type="button"
                           class="nav-link"
                           :class="{ active: activeTab === 'history' }"
-                          @click="activeTab = 'history'"
+                          @click="openTab('history')"
                         >
                           Histórico
                         </button>
@@ -327,18 +352,55 @@ onMounted(loadTeacher);
                       </div>
 
                       <div
-                        v-for="moduleTab in TEACHER_MODULE_TABS"
-                        :key="moduleTab.id"
-                        v-show="activeTab === moduleTab.id"
+                        v-show="activeTab === 'classes'"
                         class="tab-pane fade active show"
                         role="tabpanel"
                       >
-                        <ProfileModulePlaceholder
-                          :title="moduleTab.title"
-                          :description="moduleTab.description"
-                          :icon="moduleTab.icon"
-                          :examples="moduleTab.examples"
-                        />
+                        <div class="pt-4 pb-3">
+                          <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Aulas recentes</h5>
+                            <RouterLink to="/lessons" class="btn btn-sm btn-outline-primary">
+                              Ver todas
+                            </RouterLink>
+                          </div>
+
+                          <div v-if="lessonsError" class="alert alert-danger">
+                            {{ lessonsError }}
+                          </div>
+                          <div v-else-if="lessonsLoading" class="text-muted py-3">
+                            Carregando aulas...
+                          </div>
+                          <div v-else-if="teacherLessons.length" class="table-responsive">
+                            <table class="table table-striped table-responsive-sm">
+                              <thead>
+                                <tr>
+                                  <th>Tópico</th>
+                                  <th>Data</th>
+                                  <th>Status</th>
+                                  <th class="text-end">Ações</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr v-for="lesson in teacherLessons" :key="lesson.id">
+                                  <td>{{ lesson.topic }}</td>
+                                  <td>{{ formatLessonDateTime(lesson.class_datetime) }}</td>
+                                  <td>{{ lesson.status }}</td>
+                                  <td class="text-end">
+                                    <RouterLink
+                                      :to="`/lessons/${lesson.id}`"
+                                      class="btn btn-xs sharp btn-primary"
+                                    >
+                                      <i class="fa fa-eye"></i>
+                                    </RouterLink>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <p v-else class="text-muted mb-0">
+                            Nenhuma aula encontrada para este professor.
+                          </p>
+                        </div>
                       </div>
 
                       <div

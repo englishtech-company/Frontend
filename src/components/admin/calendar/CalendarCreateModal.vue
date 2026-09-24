@@ -155,7 +155,7 @@ async function loadOptions() {
     leadOptions.value = Object.entries(experimentalPlucks.interested).map(
       ([value, label]) => ({
         value: Number(value),
-        label,
+        label: String(label),
       })
     );
   } catch (e) {

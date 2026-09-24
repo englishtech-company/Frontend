@@ -5,9 +5,11 @@ import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import type {
   CalendarApi,
+  CalendarOptions,
   DateSelectArg,
   DatesSetArg,
   EventClickArg,
@@ -107,7 +109,7 @@ const calendarEvents = computed<EventInput[]>(() =>
   })
 );
 
-const calendarOptions = computed(() => ({
+const calendarOptions = computed<CalendarOptions>(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   locales: [ptBrLocale],
   locale: "pt-br",
@@ -386,7 +388,7 @@ function handleDateSelect(selectInfo: DateSelectArg) {
   getApi()?.unselect();
 }
 
-function handleDateClick(clickInfo: { date: Date }) {
+function handleDateClick(clickInfo: DateClickArg) {
   if (!canCreateEvents.value) {
     return;
   }

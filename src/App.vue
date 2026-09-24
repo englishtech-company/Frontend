@@ -4,9 +4,7 @@
 import { RouterView } from "vue-router";
 import NavHeader from "./layouts/NavHeader.vue";
 import Header from "./layouts/Header.vue";
-import ChatBox from "./layouts/chatbox/ChatBox.vue";
 import Sidebar from "./layouts/Sidebar.vue";
-import AddNewTask from "./components/AddNewTask.vue";
 import ActionNotificationHost from "./components/ui/ActionNotificationHost.vue";
 import { useStore } from "./stores/Store";
 import { storeToRefs } from "pinia";
@@ -70,7 +68,6 @@ onUnmounted(() => {
   <div id="main-wrapper" :class="`show ${naveHeader ? 'menu-toggle' : ''} ${iconHover ? 'iconhover-toggle' : ''}`">
     <component :is="$route.meta.layout">
       <NavHeader />
-      <ChatBox />
       <Header />
       <Sidebar />
       <div class="content-body">
@@ -88,14 +85,12 @@ onUnmounted(() => {
     </component>
     <component :is="$route.meta.layout2">
       <NavHeader />
-      <ChatBox />
       <Header />
       <Sidebar />
       <RouterView />
     </component>
     <component :is="$route.meta.layout3">
       <NavHeader />
-      <ChatBox />
       <Header />
       <Sidebar />
       <div class="content-body" ref="contentHeight">
@@ -118,14 +113,12 @@ onUnmounted(() => {
     </component>
     <component :is="$route.meta.layout5">
       <NavHeader />
-      <ChatBox />
       <Header />
       <Sidebar />
       <div class="content-body">
         <RouterView />
       </div>
     </component>
-    <AddNewTask />
     <ActionNotificationHost />
   </div>
 </template>
