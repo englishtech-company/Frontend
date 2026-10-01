@@ -10,6 +10,7 @@ import { usePermissions } from "@/composables/usePermissions";
 import { notify, notifyRemoved } from "@/lib/actionNotification";
 import { confirmDelete } from "@/lib/confirm";
 import { countActiveFilters } from "@/lib/filters/query";
+import { formatMakeupClassStatusBadge } from "@/lib/makeupClasses/format";
 import {
   deleteMakeupClass,
   listMakeupClasses,
@@ -84,36 +85,6 @@ function formatDate(dateString?: string | null, withTime = true) {
     dateStyle: "short",
     ...(withTime ? { timeStyle: "short" } : {}),
   });
-}
-
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case "available":
-      return "badge-info";
-    case "scheduled":
-      return "badge-primary";
-    case "concluded":
-      return "badge-success";
-    case "expired":
-      return "badge-danger";
-    default:
-      return "badge-secondary";
-  }
-}
-
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "available":
-      return "Disponível";
-    case "scheduled":
-      return "Agendada";
-    case "concluded":
-      return "Concluída";
-    case "expired":
-      return "Expirada";
-    default:
-      return status;
-  }
 }
 
 function getTeacherName(item: MakeupClass): string {
@@ -478,8 +449,11 @@ onMounted(async () => {
                   <span v-else class="text-muted small fst-italic">Não agendada</span>
                 </td>
                 <td>
-                  <span class="badge" :class="getStatusBadgeClass(item.status)">
-                    {{ getStatusLabel(item.status) }}
+                  <span
+                    class="badge"
+                    :class="formatMakeupClassStatusBadge(item.status).class"
+                  >
+                    {{ formatMakeupClassStatusBadge(item.status).label }}
                   </span>
                 </td>
                 <td v-if="showActions" class="text-end text-nowrap">

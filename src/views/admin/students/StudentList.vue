@@ -13,6 +13,7 @@ import { countActiveFilters } from "@/lib/filters/query";
 import { deleteStudent, listStudents } from "@/lib/students";
 import {
   formatStudentPlanShortLabel,
+  formatStudentStatusBadge,
   getStudentCurrentPlanVariant,
   getStudentCurrentTeacher,
 } from "@/lib/students/format";
@@ -138,14 +139,6 @@ function goToPage(next: number) {
   if (next < 1 || next > lastPage.value) return;
   page.value = next;
   loadStudents();
-}
-
-function formatStatusBadge(status: string) {
-  const s = status?.toLowerCase();
-  if (s === "active" || s === "ativo") return { label: "Ativo", class: "badge-success" };
-  if (s === "inactive" || s === "inativo") return { label: "Inativo", class: "badge-secondary" };
-  if (s === "pending" || s === "pendente") return { label: "Pendente", class: "badge-warning" };
-  return { label: status, class: "badge-light text-dark" };
 }
 
 onMounted(loadStudents);
@@ -331,8 +324,8 @@ onMounted(loadStudents);
                     <td>{{ student.email }}</td>
                     <td>{{ student.phone || "—" }}</td>
                     <td>
-                      <span class="badge" :class="formatStatusBadge(student.status).class">
-                        {{ formatStatusBadge(student.status).label }}
+                      <span class="badge" :class="formatStudentStatusBadge(student.status).class">
+                        {{ formatStudentStatusBadge(student.status).label }}
                       </span>
                     </td>
                     <td>{{ getStudentCurrentTeacher(student)?.name || "—" }}</td>

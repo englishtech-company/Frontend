@@ -11,6 +11,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import { deleteGroupClass, listGroupClasses } from "@/lib/groupClasses";
+import { formatGroupClassStatusBadge } from "@/lib/groupClasses/format";
 import type { GroupClass, GroupClassStatus } from "@/lib/types";
 
 const {
@@ -139,20 +140,6 @@ function goToPage(nextPage: number) {
 
   page.value = nextPage;
   loadGroupClasses();
-}
-
-function formatStatusBadge(status: GroupClassStatus) {
-  if (status === "active") {
-    return {
-      label: "Ativo",
-      class: "badge-success",
-    };
-  }
-
-  return {
-    label: "Inativo",
-    class: "badge-secondary",
-  };
 }
 
 onMounted(() => {
@@ -380,9 +367,9 @@ onMounted(() => {
                     <td class="text-nowrap">
                       <span
                         class="badge"
-                        :class="formatStatusBadge(groupClass.status).class"
+                        :class="formatGroupClassStatusBadge(groupClass.status).class"
                       >
-                        {{ formatStatusBadge(groupClass.status).label }}
+                        {{ formatGroupClassStatusBadge(groupClass.status).label }}
                       </span>
                     </td>
 

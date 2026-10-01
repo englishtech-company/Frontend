@@ -11,6 +11,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import { deleteLesson, listLessons } from "@/lib/lessons";
+import { formatLessonStatusBadge } from "@/lib/lessons/format";
 import type { Lesson } from "@/lib/types";
 
 const {
@@ -113,23 +114,6 @@ function formatDateTime(value?: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   });
-}
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "completed":
-      return { label: "Concluída", class: "badge-success" };
-    case "scheduled":
-      return { label: "Agendada", class: "badge-primary" };
-    case "cancelled":
-      return { label: "Cancelada", class: "badge-danger" };
-    case "postponed":
-      return { label: "Adiada", class: "badge-warning" };
-    case "makeup":
-      return { label: "Reposição", class: "badge-info" };
-    default:
-      return { label: status || "—", class: "badge-light text-dark" };
-  }
 }
 
 function getTeacherName(lesson: Lesson) {
@@ -281,9 +265,9 @@ onMounted(loadLessons);
                     <td>
                       <span
                         class="badge"
-                        :class="getStatusBadge(lesson.status).class"
+                        :class="formatLessonStatusBadge(lesson.status).class"
                       >
-                        {{ getStatusBadge(lesson.status).label }}
+                        {{ formatLessonStatusBadge(lesson.status).label }}
                       </span>
                     </td>
                     <td v-if="showActions" class="text-end text-nowrap">

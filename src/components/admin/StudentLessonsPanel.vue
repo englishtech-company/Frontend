@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from "vue";
 import { RouterLink } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
 import { listLessonsForStudent } from "@/lib/lessons";
+import { formatLessonStatusBadge } from "@/lib/lessons/format";
 import { getStudentMakeupSummary } from "@/lib/students";
 import type { Lesson, Student } from "@/lib/types";
 import type { StudentMakeupSummary } from "@/lib/makeupClasses";
@@ -41,28 +42,6 @@ function formatDate(dateString?: string | null, withTime = true) {
     dateStyle: "short",
     ...(withTime ? { timeStyle: "short" } : {}),
   });
-}
-
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case "completed":
-    case "concluded": return "badge-success";
-    case "scheduled": return "badge-info";
-    case "cancelled": return "badge-danger";
-    case "postponed": return "badge-warning";
-    default:          return "badge-secondary";
-  }
-}
-
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "scheduled": return "Agendada";
-    case "concluded":
-    case "completed": return "Concluída";
-    case "cancelled": return "Cancelada";
-    case "postponed": return "Adiada";
-    default:          return status;
-  }
 }
 
 function getLessonType(lesson: Lesson) {
@@ -310,8 +289,11 @@ onMounted(fetchData);
                 </td>
                 <td>{{ formatDate(lesson.class_datetime) }}</td>
                 <td>
-                  <span class="badge" :class="getStatusBadgeClass(lesson.status)">
-                    {{ getStatusLabel(lesson.status) }}
+                  <span
+                    class="badge"
+                    :class="formatLessonStatusBadge(lesson.status).class"
+                  >
+                    {{ formatLessonStatusBadge(lesson.status).label }}
                   </span>
                 </td>
                 <td v-if="canUpdateLessons" class="text-end text-nowrap">

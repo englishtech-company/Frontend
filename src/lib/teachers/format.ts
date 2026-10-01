@@ -1,3 +1,4 @@
+import { formatDatePt, formatDateTimePt } from "@/lib/datetime/format";
 import type { Student, StudentTeacherAssignment, Teacher, TeacherStatus } from "@/lib/types";
 import { formatStudentStatusBadge } from "@/lib/students/format";
 
@@ -22,13 +23,11 @@ export function formatTeacherStatusBadge(status: TeacherStatus | string): Teache
 }
 
 export function formatTeacherDate(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR");
+  return formatDatePt(value);
 }
 
 export function formatTeacherDateTime(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR");
+  return formatDateTimePt(value);
 }
 
 export function getTeacherStudentAssignments(teacher: Teacher): StudentTeacherAssignment[] {

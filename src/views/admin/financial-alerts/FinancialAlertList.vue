@@ -23,23 +23,14 @@ import {
 import type {
   FinancialAlertWithCurrentBalance,
 } from "@/lib/financialAlerts";
-import {
-  PERMISSIONS,
-} from "@/lib/permissions/access";
 import type {
   FinancialAlertStatus,
   FinancialAlertType,
   ChargeStatus,
 } from "@/lib/types";
-import { useAuthStore } from "@/stores/auth";
+import { usePermissions } from "@/composables/usePermissions";
 
-const auth = useAuthStore();
-
-const canViewFinancialAlerts = computed(() =>
-  auth.hasPermission(
-    PERMISSIONS.financialAlerts.view
-  )
-);
+const { canViewFinancialAlerts } = usePermissions();
 
 const financialAlerts =
   ref<FinancialAlertWithCurrentBalance[]>([]);

@@ -416,19 +416,19 @@ const router = createRouter({
     {
       path: "/experimental-classes",
       name: "ExperimentalClasses",
-      component: () => import("../views/experimental-classes/ExperimentalClassList.vue"),
+      component: () => import("../views/admin/experimental-classes/ExperimentalClassList.vue"),
       meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.view },
     },
     {
       path: "/experimental-classes/create",
       name: "ExperimentalClassCreate",
-      component: () => import("../views/experimental-classes/ExperimentalClassForm.vue"),
+      component: () => import("../views/admin/experimental-classes/ExperimentalClassForm.vue"),
       meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.create },
     },
     {
       path: "/experimental-classes/:id/edit",
       name: "ExperimentalClassEdit",
-      component: () => import("../views/experimental-classes/ExperimentalClassForm.vue"),
+      component: () => import("../views/admin/experimental-classes/ExperimentalClassForm.vue"),
       meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.update },
     },
     {

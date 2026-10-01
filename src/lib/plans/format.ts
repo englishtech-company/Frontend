@@ -158,3 +158,18 @@ export function parsePriceInput(value: string): number {
 export function formatPriceForInput(value: string | number): string {
   return formatPriceInput(String(Math.round(Number(value) * 100)));
 }
+
+export type PlanActiveStatusBadge = {
+  label: string;
+  class: string;
+};
+
+export function formatPlanActiveStatusBadge(
+  active: boolean
+): PlanActiveStatusBadge {
+  if (active) {
+    return { label: "Ativo", class: "badge-success" };
+  }
+
+  return { label: "Inativo", class: "badge-secondary" };
+}

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { listExperimentalClasses } from "@/lib/experimentalClasses";
 import { listCharges } from "@/lib/charges";
@@ -74,6 +76,13 @@ const financeStats = ref<FinanceSnapshot | null>(null);
 const recentPayments = ref<PaymentWithReceipt[]>([]);
 const pendingCharges = ref<Charge[]>([]);
 const selectedPeriod = ref<DashboardPeriod>("30d");
+
+const periodSelectOptions = computed<SelectOption[]>(() =>
+  DASHBOARD_PERIOD_OPTIONS.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }))
+);
 
 const periodRange = computed(() => getDashboardPeriodRange(selectedPeriod.value));
 
@@ -648,9 +657,9 @@ async function loadStats() {
   loading.value = false;
 }
 
-function handlePeriodChange() {
+watch(selectedPeriod, () => {
   loadStats();
-}
+});
 
 onMounted(loadStats);
 </script>
@@ -670,21 +679,13 @@ onMounted(loadStats);
       >
         <div class="dashboard-period-filter w-100 w-sm-auto">
           <label for="dashboard-period" class="form-label mb-1">Período</label>
-          <select
+          <SingleSelect
             id="dashboard-period"
             v-model="selectedPeriod"
-            class="form-select form-select-sm"
+            :options="periodSelectOptions"
+            :searchable="false"
             :disabled="loading"
-            @change="handlePeriodChange"
-          >
-            <option
-              v-for="option in DASHBOARD_PERIOD_OPTIONS"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </option>
-          </select>
+          />
         </div>
       </div>
     </div>

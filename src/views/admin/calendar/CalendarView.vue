@@ -36,7 +36,7 @@ import {
   getCalendarEventBackground,
   getCalendarEventColor,
   getCalendarLegendItem,
-} from "@/lib/calendar/mockEvents";
+} from "@/lib/calendar/theme";
 import { useBodyThemeVersion } from "@/composables/useBodyThemeVersion";
 import type { CalendarEventKind, CalendarMockEvent } from "@/lib/calendar/types";
 import { confirmAction } from "@/lib/confirm";

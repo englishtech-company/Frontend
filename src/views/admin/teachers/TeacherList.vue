@@ -15,6 +15,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import { deleteTeacher, listTeachers } from "@/lib/teachers";
+import { formatTeacherStatusBadge } from "@/lib/teachers/format";
 import type { Teacher, TeacherStatus } from "@/lib/types";
 
 const {
@@ -135,20 +136,6 @@ function goToPage(nextPage: number) {
 
   page.value = nextPage;
   loadTeachers();
-}
-
-function formatStatusBadge(status: TeacherStatus) {
-  if (status === "active") {
-    return {
-      label: "Ativo",
-      class: "badge-success",
-    };
-  }
-
-  return {
-    label: "Inativo",
-    class: "badge-secondary",
-  };
 }
 
 onMounted(() => {
@@ -344,9 +331,9 @@ onMounted(() => {
                     <td class="text-nowrap">
                       <span
                         class="badge"
-                        :class="formatStatusBadge(teacher.status).class"
+                        :class="formatTeacherStatusBadge(teacher.status).class"
                       >
-                        {{ formatStatusBadge(teacher.status).label }}
+                        {{ formatTeacherStatusBadge(teacher.status).label }}
                       </span>
                     </td>
 

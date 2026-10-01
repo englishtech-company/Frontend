@@ -1,3 +1,4 @@
+import { formatDatePt, formatDateTimePt } from "@/lib/datetime/format";
 import { formatPlanVariantOptionLabel, formatPrice } from "@/lib/plans/format";
 import type {
   Enrollment,
@@ -87,13 +88,11 @@ export const ENROLLMENT_QUESTION_TYPE_LABELS: Record<EnrollmentQuestionType, str
 };
 
 export function formatEnrollmentDate(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR");
+  return formatDatePt(value);
 }
 
 export function formatEnrollmentDateTime(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR");
+  return formatDateTimePt(value);
 }
 
 export function getEnrollmentStudent(enrollment: Enrollment): Student | null {

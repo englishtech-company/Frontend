@@ -370,6 +370,12 @@ export function usePermissions() {
       )
     ),
 
+    canViewFinancialAlerts: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.financialAlerts.view
+      )
+    ),
+
     canViewGoogleCalendar: computed(() =>
       auth.hasPermission(
         PERMISSIONS.googleCalendar.view

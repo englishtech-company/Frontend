@@ -17,6 +17,7 @@ import {
   formatCommitmentLabel,
   formatDurationLabel,
   formatPriceRange,
+  formatPlanActiveStatusBadge,
 } from "@/lib/plans/format";
 import type { Plan, PlanCommitment } from "@/lib/types";
 
@@ -151,20 +152,6 @@ function goToPage(nextPage: number) {
 
   page.value = nextPage;
   loadPlans();
-}
-
-function formatStatusBadge(active: boolean) {
-  if (active) {
-    return {
-      label: "Ativo",
-      class: "badge-success",
-    };
-  }
-
-  return {
-    label: "Inativo",
-    class: "badge-secondary",
-  };
 }
 
 onMounted(loadPlans);
@@ -353,9 +340,9 @@ onMounted(loadPlans);
                     <td class="text-nowrap">
                       <span
                         class="badge"
-                        :class="formatStatusBadge(plan.active).class"
+                        :class="formatPlanActiveStatusBadge(plan.active).class"
                       >
-                        {{ formatStatusBadge(plan.active).label }}
+                        {{ formatPlanActiveStatusBadge(plan.active).label }}
                       </span>
                     </td>
 

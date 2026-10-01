@@ -25,6 +25,8 @@ import {
   isValidNumericAnswer,
   sanitizeNumericInput,
 } from "@/lib/enrollments/numberQuestion";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
 import type { EnrollmentFormQuestion, PublicEnrollment } from "@/lib/types";
 
 const TOTAL_STEPS = 2;
@@ -234,6 +236,15 @@ function initializeAnswers(questions: EnrollmentFormQuestion[]) {
   }
 
   answers.value = nextAnswers;
+}
+
+function questionSelectOptions(
+  question: EnrollmentFormQuestion
+): SelectOption[] {
+  return (question.options ?? []).map((option) => ({
+    value: option,
+    label: option,
+  }));
 }
 
 function toggleCheckbox(questionId: number, option: string, checked: boolean) {
@@ -765,22 +776,24 @@ onUnmounted(() => {
                   :required="question.required"
                 />
 
-                <select
-                  v-else-if="question.type === 'select'"
-                  :id="`question-${question.id}`"
-                  v-model="answers[String(question.id)]"
-                  class="form-select"
-                  :required="question.required"
-                >
-                  <option value="">Selecione...</option>
-                  <option
-                    v-for="option in question.options ?? []"
-                    :key="option"
-                    :value="option"
-                  >
-                    {{ option }}
-                  </option>
-                </select>
+                <div v-else-if="question.type === 'select'">
+                  <SingleSelect
+                    :id="`question-${question.id}`"
+                    v-model="answers[String(question.id)]"
+                    :options="questionSelectOptions(question)"
+                    placeholder="Selecione..."
+                    :searchable="(question.options?.length ?? 0) > 8"
+                  />
+                  <input
+                    v-if="question.required"
+                    type="text"
+                    class="public-enrollment-form__select-validator"
+                    tabindex="-1"
+                    aria-hidden="true"
+                    required
+                    :value="answers[String(question.id)] ? 'ok' : ''"
+                  />
+                </div>
 
                 <div
                   v-else-if="question.type === 'radio'"
@@ -929,6 +942,18 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.public-enrollment-form__select-validator {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .public-enrollment {
   display: flex;
   flex-direction: column;

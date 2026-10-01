@@ -29,7 +29,7 @@ export async function registerStudentClass(
   payload: RegisterStudentClassPayload
 ): Promise<RegisterStudentClassResponse> {
   return await api<RegisterStudentClassResponse>(
-    `/students/${studentId}/classes`,
+    `/students/${studentId}/classes/create`,
     {
       method: "POST",
       body: payload,

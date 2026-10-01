@@ -2,9 +2,12 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { usePermissions } from "@/composables/usePermissions";
+import { formatDateTimeShortPt } from "@/lib/datetime/format";
 import { getGroupClass } from "@/lib/groupClasses";
+import { formatGroupClassStatusBadge } from "@/lib/groupClasses/format";
 import { listLessonsForGroupClass } from "@/lib/lessons";
-import type { GroupClass, GroupClassStatus, GroupClassStudent, Lesson } from "@/lib/types";
+import { formatLessonStatusBadge } from "@/lib/lessons/format";
+import type { GroupClass, GroupClassStudent, Lesson } from "@/lib/types";
 
 const route = useRoute();
 const router = useRouter();
@@ -16,56 +19,6 @@ const lessons = ref<Lesson[]>([]);
 const loading = ref(true);
 const loadingLessons = ref(false);
 const error = ref("");
-
-function formatStatusBadge(status: GroupClassStatus) {
-  if (status === "active") {
-    return {
-      label: "Ativo",
-      class: "badge-success",
-    };
-  }
-
-  return {
-    label: "Inativo",
-    class: "badge-secondary",
-  };
-}
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-};
-
-const getStatusBadgeClass = (status: string) => {
-  switch (status) {
-    case "completed":
-      return "badge-success";
-    case "scheduled":
-      return "badge-primary";
-    case "cancelled":
-      return "badge-danger";
-    case "postponed":
-      return "badge-warning";
-    case "makeup":
-      return "badge-info";
-    default:
-      return "badge-secondary";
-  }
-};
-
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case "scheduled": return "Agendada";
-    case "completed": return "Concluída";
-    case "cancelled": return "Cancelada";
-    case "postponed": return "Adiada";
-    case "makeup": return "Reposição";
-    default: return status;
-  }
-};
 
 async function loadData() {
   loading.value = true;
@@ -129,8 +82,8 @@ onMounted(loadData);
           <div class="card-body">
             <div class="text-center mb-4">
               <h3 class="mt-2">{{ groupClass.name }}</h3>
-              <span class="badge" :class="formatStatusBadge(groupClass.status).class">
-                {{ formatStatusBadge(groupClass.status).label }}
+              <span class="badge" :class="formatGroupClassStatusBadge(groupClass.status).class">
+                {{ formatGroupClassStatusBadge(groupClass.status).label }}
               </span>
             </div>
 
@@ -281,10 +234,13 @@ onMounted(loadData);
                     <td>{{ lesson.id }}</td>
                     <td><strong>{{ lesson.topic }}</strong></td>
                     <td>{{ lesson.relationships?.teacher?.name ?? lesson.teacher?.name ?? "—" }}</td>
-                    <td>{{ formatDate(lesson.class_datetime) }}</td>
+                    <td>{{ formatDateTimeShortPt(lesson.class_datetime) }}</td>
                     <td>
-                      <span class="badge" :class="getStatusBadgeClass(lesson.status)">
-                        {{ getStatusLabel(lesson.status) }}
+                      <span
+                        class="badge"
+                        :class="formatLessonStatusBadge(lesson.status).class"
+                      >
+                        {{ formatLessonStatusBadge(lesson.status).label }}
                       </span>
                     </td>
                     <td v-if="canUpdateLessons" class="text-end">

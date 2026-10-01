@@ -7,6 +7,11 @@ import type {
   Teacher,
 } from "@/lib/types";
 import {
+  formatDatePt,
+  formatDateTimePt,
+  EMPTY_DATE_LABEL,
+} from "@/lib/datetime/format";
+import {
   formatCommitmentLabel,
   formatDurationLabel,
   formatHoursLabel,
@@ -33,15 +38,14 @@ export function formatStudentStatusBadge(status: string): StudentStatusBadge {
   const normalized = status?.toLowerCase() ?? "";
   return (
     STATUS_MAP[normalized] ?? {
-      label: status || "—",
+      label: status || EMPTY_DATE_LABEL,
       class: "badge-light text-dark",
     }
   );
 }
 
 export function formatStudentDate(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR");
+  return formatDatePt(value);
 }
 
 export function formatCpf(value?: string | null): string {
@@ -57,8 +61,7 @@ export function formatCpf(value?: string | null): string {
 }
 
 export function formatStudentDateTime(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR");
+  return formatDateTimePt(value);
 }
 
 export function getStudentAge(birthdate?: string | null): string {
