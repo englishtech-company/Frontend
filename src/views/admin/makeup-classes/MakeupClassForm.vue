@@ -18,6 +18,11 @@ const route = useRoute();
 const router = useRouter();
 
 const isEdit = computed(() => !!route.params.id);
+const presetStudentId = computed(() => {
+  const raw = route.query.student_id;
+  const id = typeof raw === "string" ? Number(raw) : NaN;
+  return Number.isFinite(id) && id > 0 ? id : null;
+});
 const loading = ref(false);
 const submitting = ref(false);
 const errorMessage = ref("");
@@ -66,14 +71,25 @@ const statusOptions: SelectOption[] = [
 
 const loadSelectOptions = async () => {
   try {
+    const enrollmentParams = presetStudentId.value
+      ? { student_id: presetStudentId.value, limit: 100 }
+      : { limit: 100 };
+
     const [enrRes, teachRes, grpRes] = await Promise.all([
-      listEnrollments({ limit: 100 }),
+      listEnrollments(enrollmentParams),
       listTeachers({ limit: 100 }),
       listGroupClasses({ limit: 100 }),
     ]);
     enrollmentsList.value = enrRes.data;
     teachersList.value = teachRes.data;
     groupClassesList.value = grpRes.data;
+
+    if (!isEdit.value && presetStudentId.value && enrRes.data.length > 0) {
+      const preferred =
+        enrRes.data.find((e) => e.student_id === presetStudentId.value) ??
+        enrRes.data[0];
+      form.value.enrollment_id = preferred.id;
+    }
   } catch (err) {
     console.error("Erro ao carregar opções para o formulário:", err);
   }
@@ -120,7 +136,15 @@ const submit = async () => {
     }
 
     notifySaved("Aula de Reposição", isEdit.value);
-    router.push("/makeup-classes");
+
+    if (!isEdit.value && presetStudentId.value) {
+      router.push({
+        path: `/students/${presetStudentId.value}`,
+        query: { tab: "makeup" },
+      });
+    } else {
+      router.push("/makeup-classes");
+    }
   } catch (err: any) {
     console.error(err);
     errorMessage.value = err?.message || "Erro ao salvar a aula de reposição.";
@@ -145,7 +169,14 @@ onMounted(() => {
         </div>
       </div>
       <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
-        <RouterLink to="/makeup-classes" class="btn btn-outline-secondary">
+        <RouterLink
+          :to="
+            presetStudentId && !isEdit
+              ? { path: `/students/${presetStudentId}`, query: { tab: 'makeup' } }
+              : '/makeup-classes'
+          "
+          class="btn btn-outline-secondary"
+        >
           Voltar
         </RouterLink>
       </div>

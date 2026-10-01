@@ -225,6 +225,28 @@ export const STUDENT_MODULE_TABS: StudentModuleTab[] = [
     ],
   },
   {
+    id: "makeup",
+    label: "Reposições",
+    title: "Créditos de reposição",
+    description:
+      "Créditos de falta, prazos, agendamento e status das reposições vinculadas ao aluno.",
+    icon: "la la-redo-alt",
+    examples: [
+      {
+        title: "Falta em 10/03/2026",
+        subtitle: "Prazo até 10/04/2026 · Prof. Sarah Johnson",
+        badge: "Disponível",
+        badgeClass: "badge-info",
+      },
+      {
+        title: "Agendada para 15/03/2026",
+        subtitle: "Reposição confirmada",
+        badge: "Agendada",
+        badgeClass: "badge-primary",
+      },
+    ],
+  },
+  {
     id: "payments",
     label: "Pagamentos",
     title: "Pagamentos",

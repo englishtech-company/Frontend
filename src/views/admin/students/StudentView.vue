@@ -2,9 +2,11 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
+import ProfileTabListCard from "@/components/admin/ProfileTabListCard.vue";
 import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
-import StudentPaymentsPanel from "@/components/admin/StudentPaymentsPanel.vue";
 import StudentLessonsPanel from "@/components/admin/StudentLessonsPanel.vue";
+import StudentMakeupClassesPanel from "@/components/admin/StudentMakeupClassesPanel.vue";
+import StudentPaymentsPanel from "@/components/admin/StudentPaymentsPanel.vue";
 import StudentLibraryPanel from "@/components/admin/StudentLibraryPanel.vue";
 import ProfileModulePlaceholder from "@/components/admin/ProfileModulePlaceholder.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
@@ -37,9 +39,13 @@ const studentId = computed(() => Number(route.params.id));
 const student = ref<Student | null>(null);
 const loading = ref(true);
 const error = ref("");
-const activeTab = ref<
-  "overview" | "classes" | "payments" | "documents" | "library" | "history" | "turmas"
->("overview");
+type StudentProfileTab =
+  | "overview"
+  | "history"
+  | "turmas"
+  | (typeof STUDENT_MODULE_TABS)[number]["id"];
+
+const activeTab = ref<StudentProfileTab>("overview");
 const tabsScrollRef = ref<HTMLElement | null>(null);
 
 function scrollActiveTabIntoView() {
@@ -86,6 +92,10 @@ const planSummary = computed(() => formatStudentPlanSummary(currentPlanVariant.v
 
 const enrollmentHistory = computed(() =>
   student.value ? getStudentEnrollmentHistory(student.value) : []
+);
+
+const studentGroupClasses = computed(
+  () => student.value?.relationships?.group_classes ?? []
 );
 
 async function loadStudent() {
@@ -150,7 +160,26 @@ async function submitEnrollment() {
   }
 }
 
-onMounted(loadStudent);
+function applyTabFromQuery() {
+  const tab = route.query.tab;
+  if (typeof tab !== "string") return;
+
+  if (tab === "overview" || tab === "history" || tab === "turmas") {
+    activeTab.value = tab;
+    return;
+  }
+
+  if (STUDENT_MODULE_TABS.some((moduleTab) => moduleTab.id === tab)) {
+    activeTab.value = tab as StudentProfileTab;
+  }
+}
+
+watch(() => route.query.tab, applyTabFromQuery);
+
+onMounted(() => {
+  applyTabFromQuery();
+  loadStudent();
+});
 </script>
 
 <template>
@@ -178,154 +207,190 @@ onMounted(loadStudent);
 
     <div v-if="loading" class="text-center py-5">Carregando...</div>
 
-    <div v-else-if="student" class="row">
-      <div class="col-xl-3 col-xxl-4 col-lg-4">
-        <div class="row">
-          <div class="col-lg-12">
-            <div class="card">
-              <div class="text-center p-3 overlay-box">
-                <div class="profile-photo">
-                  <ProfileAvatar :size="100" />
+    <div v-else-if="student" class="student-profile">
+      <div class="row">
+        <div class="col-12">
+          <div class="card student-profile-header mb-3">
+            <div class="student-profile-header__banner">
+              <div class="student-profile-header__banner-inner">
+                <div class="student-profile-header__identity">
+                  <ProfileAvatar :size="92" />
+                  <div class="student-profile-header__name">
+                    <h3 class="mb-2">{{ student.name }}</h3>
+                    <div class="student-profile-header__chips">
+                      <span class="badge" :class="statusBadge.class">{{ statusBadge.label }}</span>
+                      <span v-if="currentPlanVariant" class="student-profile-header__chip">
+                        <i class="fa fa-tag" aria-hidden="true"></i>
+                        {{ formatStudentPlanVariantLabel(currentPlanVariant) }}
+                      </span>
+                      <span v-if="currentTeacher" class="student-profile-header__chip">
+                        <i class="fa fa-chalkboard-teacher" aria-hidden="true"></i>
+                        <RouterLink
+                          v-if="canViewTeachers"
+                          :to="`/teachers/${currentTeacher.id}`"
+                        >
+                          {{ currentTeacher.name }}
+                        </RouterLink>
+                        <span v-else>{{ currentTeacher.name }}</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h3 class="mt-3 mb-1 text-white">{{ student.name }}</h3>
-                <span class="badge" :class="statusBadge.class">{{ statusBadge.label }}</span>
-              </div>
-              <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between">
-                  <span class="mb-0">Início</span>
-                  <strong class="text-muted">{{ formatStudentDate(student.start_date) }}</strong>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                  <span class="mb-0">Término</span>
-                  <strong class="text-muted">{{ formatStudentDate(student.end_date) }}</strong>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                  <span class="mb-0">Cadastro</span>
-                  <strong class="text-muted">{{ formatStudentDate(student.created_at) }}</strong>
-                </li>
-              </ul>
-              <div class="card-footer text-center border-0 mt-0">
-                <div class="profile-actions">
-                  <RouterLink
-                    to="/students"
-                    class="btn btn-warning"
-                    data-tooltip="Voltar"
-                    aria-label="Voltar"
-                  >
-                    <i class="fa fa-arrow-left"></i>
+
+                <div class="student-profile-header__actions">
+                  <RouterLink to="/students" class="btn btn-light btn-sm">
+                    <i class="fa fa-arrow-left me-1"></i>
+                    Voltar
                   </RouterLink>
                   <RouterLink
                     v-if="canUpdateStudents"
                     :to="`/students/${student.id}/edit`"
-                    class="btn btn-primary"
-                    data-tooltip="Editar"
-                    aria-label="Editar"
+                    class="btn btn-light btn-sm"
                   >
-                    <i class="fa fa-pencil"></i>
+                    <i class="fa fa-pencil me-1"></i>
+                    Editar
                   </RouterLink>
                   <button
                     v-if="canUpdateGroupClasses"
                     type="button"
-                    class="btn btn-success"
-                    data-tooltip="Matricular em Turma"
-                    aria-label="Matricular em Turma"
+                    class="btn btn-success btn-sm"
                     @click="openEnrollModal"
                   >
-                    <i class="fa fa-graduation-cap"></i>
+                    <i class="fa fa-graduation-cap me-1"></i>
+                    Matricular
                   </button>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="col-lg-12">
-            <div class="card overflow-hidden">
-              <div class="card-header">
-                <h2 class="card-title">Sobre</h2>
+            <div class="card-body student-profile-header__body">
+              <div class="student-profile-header__sections">
+                <section class="student-profile-header__section">
+                  <h6 class="student-profile-header__section-title">
+                    <i class="fa fa-address-card" aria-hidden="true"></i>
+                    Contato
+                  </h6>
+                  <dl class="student-profile-header__details">
+                    <div class="student-profile-header__detail">
+                      <dt>E-mail</dt>
+                      <dd>{{ student.email }}</dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>Telefone</dt>
+                      <dd>{{ student.phone || "—" }}</dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>CPF</dt>
+                      <dd>{{ formatCpf(student.cpf) }}</dd>
+                    </div>
+                    <div class="student-profile-header__detail student-profile-header__detail--wide">
+                      <dt>Endereço</dt>
+                      <dd>{{ student.address || "Endereço não informado." }}</dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section class="student-profile-header__section">
+                  <h6 class="student-profile-header__section-title">
+                    <i class="fa fa-graduation-cap" aria-hidden="true"></i>
+                    Acadêmico
+                  </h6>
+                  <dl class="student-profile-header__details">
+                    <div class="student-profile-header__detail">
+                      <dt>Professor</dt>
+                      <dd>
+                        <RouterLink
+                          v-if="currentTeacher && canViewTeachers"
+                          :to="`/teachers/${currentTeacher.id}`"
+                          class="text-primary"
+                        >
+                          {{ currentTeacher.name }}
+                        </RouterLink>
+                        <span v-else>{{ currentTeacher?.name || "—" }}</span>
+                      </dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>Plano</dt>
+                      <dd>{{ formatStudentPlanVariantLabel(currentPlanVariant) }}</dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>Nascimento</dt>
+                      <dd>
+                        {{ formatStudentDate(student.birthdate) }}
+                        <span class="text-muted">({{ getStudentAge(student.birthdate) }})</span>
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section class="student-profile-header__section">
+                  <h6 class="student-profile-header__section-title">
+                    <i class="fa fa-calendar-alt" aria-hidden="true"></i>
+                    Matrícula
+                  </h6>
+                  <dl class="student-profile-header__details">
+                    <div class="student-profile-header__detail">
+                      <dt>Início</dt>
+                      <dd>{{ formatStudentDate(student.start_date) }}</dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>Término</dt>
+                      <dd>{{ formatStudentDate(student.end_date) }}</dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>Cadastro</dt>
+                      <dd>{{ formatStudentDate(student.created_at) }}</dd>
+                    </div>
+                  </dl>
+                </section>
               </div>
-              <div class="card-body pb-0">
-                <p class="text-muted mb-3">
-                  Dados de contato e identificação do aluno no sistema.
-                </p>
-                <ul class="list-group list-group-flush">
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>E-mail</strong>
-                    <span class="mb-0 text-end">{{ student.email }}</span>
-                  </li>
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>CPF</strong>
-                    <span class="mb-0">{{ formatCpf(student.cpf) }}</span>
-                  </li>
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>Telefone</strong>
-                    <span class="mb-0">{{ student.phone || "—" }}</span>
-                  </li>
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>Nascimento</strong>
-                    <span class="mb-0">{{ formatStudentDate(student.birthdate) }}</span>
-                  </li>
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>Idade</strong>
-                    <span class="mb-0">{{ getStudentAge(student.birthdate) }}</span>
-                  </li>
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>Professor</strong>
-                    <span class="mb-0 text-end">
-                      <RouterLink
-                        v-if="currentTeacher && canViewTeachers"
-                        :to="`/teachers/${currentTeacher.id}`"
-                        class="text-primary"
-                      >
-                        {{ currentTeacher.name }}
-                      </RouterLink>
-                      <span v-else>{{ currentTeacher?.name || "—" }}</span>
-                    </span>
-                  </li>
-                  <li class="list-group-item d-flex px-0 justify-content-between">
-                    <strong>Plano</strong>
-                    <span class="mb-0 text-end">
-                      {{ formatStudentPlanVariantLabel(currentPlanVariant) }}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-              <div class="card-footer pt-0 pb-0 text-center">
-                <div class="row">
-                  <div class="col-4 pt-3 pb-3 border-end">
-                    <h3 class="mb-1 text-primary">—</h3>
+
+              <div class="student-profile-header__metrics">
+                <button
+                  type="button"
+                  class="student-profile-header__metric"
+                  @click="activeTab = 'classes'"
+                >
+                  <span class="student-profile-header__metric-icon">
+                    <i class="fa fa-book" aria-hidden="true"></i>
+                  </span>
+                  <span class="student-profile-header__metric-content">
+                    <strong>—</strong>
                     <span>Aulas</span>
-                  </div>
-                  <div class="col-4 pt-3 pb-3 border-end">
-                    <h3 class="mb-1 text-primary">—</h3>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="student-profile-header__metric"
+                  @click="activeTab = 'payments'"
+                >
+                  <span class="student-profile-header__metric-icon">
+                    <i class="fa fa-credit-card" aria-hidden="true"></i>
+                  </span>
+                  <span class="student-profile-header__metric-content">
+                    <strong>—</strong>
                     <span>Pagamentos</span>
-                  </div>
-                  <div class="col-4 pt-3 pb-3">
-                    <h3 class="mb-1 text-primary">{{ getStudentEnrollmentDays(student) }}</h3>
+                  </span>
+                </button>
+                <div class="student-profile-header__metric student-profile-header__metric--static">
+                  <span class="student-profile-header__metric-icon">
+                    <i class="fa fa-clock" aria-hidden="true"></i>
+                  </span>
+                  <span class="student-profile-header__metric-content">
+                    <strong>{{ getStudentEnrollmentDays(student) }}</strong>
                     <span>Dias matriculado</span>
-                  </div>
+                  </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-12">
-            <div class="card">
-              <div class="card-header d-block">
-                <h4 class="card-title">Endereço</h4>
-              </div>
-              <div class="card-body">
-                <p class="mb-0">{{ student.address || "Endereço não informado." }}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="col-xl-9 col-xxl-8 col-lg-8">
-        <div class="row">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body">
+      <div class="row">
+        <div class="col-12">
+          <div class="card student-profile-tabs-card">
+            <div class="card-body">
                 <div class="profile-tab">
                   <div class="custom-tab-1">
                     <div
@@ -502,6 +567,10 @@ onMounted(loadStudent);
                           :student-id="student.id"
                           :student="student"
                         />
+                        <StudentMakeupClassesPanel
+                          v-else-if="moduleTab.id === 'makeup'"
+                          :student-id="student.id"
+                        />
                         <StudentLibraryPanel
                           v-else-if="moduleTab.id === 'library'"
                           :student-id="student.id"
@@ -521,59 +590,99 @@ onMounted(loadStudent);
                         class="tab-pane fade active show"
                         role="tabpanel"
                       >
-                        <div class="pt-4">
-                          <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h4 class="text-primary mb-0">Turmas do aluno</h4>
+                        <ProfileTabListCard
+                          title="Lista de turmas"
+                          :total="studentGroupClasses.length"
+                          :read-only="!canViewGroupClasses"
+                        >
+                          <template #actions>
                             <button
                               v-if="canUpdateGroupClasses"
                               type="button"
-                              class="btn btn-sm btn-success"
+                              class="btn btn-success btn-sm"
                               @click="openEnrollModal"
                             >
-                              <i class="fa fa-plus me-1"></i> Matricular em Turma
+                              <i class="fa fa-plus me-1"></i>
+                              Matricular em turma
                             </button>
-                          </div>
-                          <p class="text-muted small mb-4">
-                            Turmas em que este aluno está matriculado no momento.
-                          </p>
-                          <div v-if="student.relationships?.group_classes?.length" class="table-responsive">
-                            <table class="table table-responsive-md">
-                              <thead>
-                                <tr>
-                                  <th>Turma</th>
-                                  <th>Status</th>
-                                  <th>Data de Ingresso</th>
-                                  <th>Ações</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr v-for="groupClass in student.relationships.group_classes" :key="groupClass.id">
-                                  <td>
-                                    <RouterLink v-if="canViewGroupClasses" :to="`/group-classes/${groupClass.id}`" class="text-primary">
-                                      <strong>{{ groupClass.name }}</strong>
-                                    </RouterLink>
-                                    <strong v-else>{{ groupClass.name }}</strong>
-                                  </td>
-                                  <td>
-                                    <span class="badge" :class="groupClass.pivot?.status === 'enrolled' ? 'badge-success' : 'badge-secondary'">
-                                      {{ groupClass.pivot?.status === 'enrolled' ? 'Inscrito' : (groupClass.pivot?.status || 'Inscrito') }}
-                                    </span>
-                                  </td>
-                                  <td>{{ groupClass.pivot?.joined_at ? formatStudentDate(groupClass.pivot.joined_at) : '—' }}</td>
-                                  <td>
-                                    <RouterLink v-if="canViewGroupClasses" :to="`/group-classes/${groupClass.id}`" class="btn btn-xs sharp btn-primary">
-                                      <i class="fa fa-eye"></i>
-                                    </RouterLink>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                          <div v-else class="text-muted text-center py-4">
-                            <i class="fa fa-info-circle me-1"></i>
-                            O aluno não está matriculado em nenhuma turma.
-                          </div>
-                        </div>
+                          </template>
+
+                          <thead>
+                            <tr>
+                              <th>Turma</th>
+                              <th>Status</th>
+                              <th class="text-nowrap">Data de ingresso</th>
+                              <th
+                                v-if="canViewGroupClasses"
+                                class="text-end text-nowrap"
+                              >
+                                Ações
+                              </th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            <tr v-if="!studentGroupClasses.length">
+                              <td
+                                :colspan="canViewGroupClasses ? 4 : 3"
+                                class="text-center text-muted"
+                              >
+                                O aluno não está matriculado em nenhuma turma.
+                              </td>
+                            </tr>
+
+                            <tr
+                              v-for="groupClass in studentGroupClasses"
+                              :key="groupClass.id"
+                            >
+                              <td>
+                                <RouterLink
+                                  v-if="canViewGroupClasses"
+                                  :to="`/group-classes/${groupClass.id}`"
+                                  class="text-primary"
+                                >
+                                  <strong>{{ groupClass.name }}</strong>
+                                </RouterLink>
+                                <strong v-else>{{ groupClass.name }}</strong>
+                              </td>
+                              <td>
+                                <span
+                                  class="badge"
+                                  :class="
+                                    groupClass.pivot?.status === 'enrolled'
+                                      ? 'badge-success'
+                                      : 'badge-secondary'
+                                  "
+                                >
+                                  {{
+                                    groupClass.pivot?.status === "enrolled"
+                                      ? "Inscrito"
+                                      : groupClass.pivot?.status || "Inscrito"
+                                  }}
+                                </span>
+                              </td>
+                              <td class="text-nowrap">
+                                {{
+                                  groupClass.pivot?.joined_at
+                                    ? formatStudentDate(groupClass.pivot.joined_at)
+                                    : "—"
+                                }}
+                              </td>
+                              <td
+                                v-if="canViewGroupClasses"
+                                class="text-end text-nowrap"
+                              >
+                                <RouterLink
+                                  :to="`/group-classes/${groupClass.id}`"
+                                  class="btn btn-xs sharp btn-primary"
+                                  :aria-label="`Ver turma ${groupClass.name}`"
+                                >
+                                  <i class="fa fa-eye"></i>
+                                </RouterLink>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </ProfileTabListCard>
                       </div>
 
                       <div
@@ -681,7 +790,6 @@ onMounted(loadStudent);
             </div>
           </div>
         </div>
-      </div>
     </div>
 
     <!-- Enroll in Group Class Modal -->
@@ -768,6 +876,243 @@ onMounted(loadStudent);
 </template>
 
 <style scoped>
+.student-profile-header {
+  overflow: hidden;
+}
+
+.student-profile-header__banner {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary, #600022) 92%, #000) 0%,
+    color-mix(in srgb, var(--primary, #600022) 72%, #452b90) 100%
+  );
+  padding: 1.35rem 1.5rem 1.1rem;
+}
+
+.student-profile-header__banner-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.student-profile-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  min-width: 0;
+}
+
+.student-profile-header__name h3 {
+  font-size: 1.55rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.student-profile-header__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.student-profile-header__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  max-width: 100%;
+}
+
+.student-profile-header__chip a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.student-profile-header__chip a:hover {
+  text-decoration: underline;
+}
+
+.student-profile-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.student-profile-header__body {
+  padding: 1.25rem 1.5rem 1.35rem;
+}
+
+.student-profile-header__sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.student-profile-header__section {
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border, #e8ecef);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--primary, #600022) 3%, #fff);
+  min-width: 0;
+}
+
+.student-profile-header__section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  color: var(--primary, #600022);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.student-profile-header__details {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.student-profile-header__detail {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.student-profile-header__detail--wide {
+  grid-template-columns: 1fr;
+  gap: 0.2rem;
+}
+
+.student-profile-header__detail dt {
+  margin: 0;
+  color: #6e6e6e;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.student-profile-header__detail dd {
+  margin: 0;
+  color: #111827;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.student-profile-header__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding-top: 0.15rem;
+}
+
+.student-profile-header__metric {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border, #e8ecef);
+  border-radius: 0.65rem;
+  background: #fff;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+button.student-profile-header__metric {
+  cursor: pointer;
+}
+
+button.student-profile-header__metric:hover {
+  border-color: color-mix(in srgb, var(--primary, #600022) 28%, var(--border, #e8ecef));
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.06);
+  transform: translateY(-1px);
+}
+
+.student-profile-header__metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--primary, #600022) 10%, #fff);
+  color: var(--primary, #600022);
+  flex-shrink: 0;
+}
+
+.student-profile-header__metric-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.student-profile-header__metric-content strong {
+  color: var(--primary, #600022);
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.student-profile-header__metric-content span {
+  color: #6e6e6e;
+  font-size: 0.8rem;
+}
+
+.student-profile-tabs-card {
+  margin-bottom: 0;
+}
+
+.student-profile-tabs-card .card-body {
+  padding-top: 0.75rem;
+}
+
+@media (max-width: 1199.98px) {
+  .student-profile-header__sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .student-profile-header__banner {
+    padding: 1rem;
+  }
+
+  .student-profile-header__banner-inner {
+    flex-direction: column;
+  }
+
+  .student-profile-header__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .student-profile-header__body {
+    padding: 1rem;
+  }
+
+  .student-profile-header__detail {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .student-profile-header__metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 .student-profile-tabs-scroll {
   overflow-x: auto;
   overflow-y: hidden;

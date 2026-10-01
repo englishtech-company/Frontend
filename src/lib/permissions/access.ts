@@ -111,6 +111,10 @@ export const PERMISSIONS = {
     update: "makeup-classes.update",
     delete: "makeup-classes.delete",
   },
+  googleCalendar: {
+    view: "google-calendar.view",
+    update: "google-calendar.update",
+  },
 } as const;
 
 export type PermissionName =
@@ -133,7 +137,8 @@ export type PermissionName =
   | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons]
   | (typeof PERMISSIONS.libraryCategories)[keyof typeof PERMISSIONS.libraryCategories]
   | (typeof PERMISSIONS.libraryMaterials)[keyof typeof PERMISSIONS.libraryMaterials]
-  | (typeof PERMISSIONS.makeupClasses)[keyof typeof PERMISSIONS.makeupClasses];
+  | (typeof PERMISSIONS.makeupClasses)[keyof typeof PERMISSIONS.makeupClasses]
+  | (typeof PERMISSIONS.googleCalendar)[keyof typeof PERMISSIONS.googleCalendar];
 
 export function canAccessPath(
   path: string,
@@ -355,6 +360,8 @@ export function canAccessPath(
   if (/^\/group-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.groupClasses.update);
   if (path.startsWith("/group-classes")) return hasPermission(PERMISSIONS.groupClasses.view);
 
+  if (path.startsWith("/calendar")) return hasPermission(PERMISSIONS.lessons.view);
+
   if (path === "/lessons/create") return hasPermission(PERMISSIONS.lessons.create);
   if (/^\/lessons\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.lessons.update);
   if (/^\/group-classes\/\d+\/lessons\/create$/.test(path)) return hasPermission(PERMISSIONS.lessons.create);
@@ -536,6 +543,8 @@ export function resolveRoutePermission(
   if (path === "/group-classes/create") return PERMISSIONS.groupClasses.create;
   if (/^\/group-classes\/\d+\/edit$/.test(path)) return PERMISSIONS.groupClasses.update;
   if (path.startsWith("/group-classes")) return PERMISSIONS.groupClasses.view;
+
+  if (path.startsWith("/calendar")) return PERMISSIONS.lessons.view;
 
   if (path === "/lessons/create") return PERMISSIONS.lessons.create;
   if (/^\/lessons\/\d+\/edit$/.test(path)) return PERMISSIONS.lessons.update;

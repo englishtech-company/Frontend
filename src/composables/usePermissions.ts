@@ -370,6 +370,17 @@ export function usePermissions() {
       )
     ),
 
+    canViewGoogleCalendar: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.googleCalendar.view
+      )
+    ),
+    canUpdateGoogleCalendar: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.googleCalendar.update
+      )
+    ),
+
     canViewPermissions: computed(() =>
       auth.hasPermission(
         PERMISSIONS.permissions.view

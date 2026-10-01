@@ -25,7 +25,6 @@ const MODULE_LABELS: Record<string, string> = {
   teachers: "Professores",
   plans: "Planos",
   leads: "Interessados",
-  clients: "Clientes",
   roles: "Perfis",
   permissions: "Permissões",
   audits: "Auditoria",
@@ -40,6 +39,7 @@ const MODULE_LABELS: Record<string, string> = {
   "library-categories": "Categorias da biblioteca",
   "library-materials": "Materiais da biblioteca",
   "makeup-classes": "Aulas de Reposição",
+  "google-calendar": "Google Calendar",
 };
 
 const MODULE_GROUP_MAP: Record<string, string> = {

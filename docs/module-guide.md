@@ -2,6 +2,8 @@
 
 Checklist para criar um novo módulo no frontend. Use `users/` como referência.
 
+> **Nota:** exemplos abaixo usam o nome fictício *Client* apenas como ilustração. Não existe módulo `/clients` no produto — copie de `views/admin/users/` e `lib/users.ts`.
+
 ## 1. Tipo — `lib/types.ts`
 
 ```typescript

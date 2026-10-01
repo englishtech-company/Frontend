@@ -104,6 +104,13 @@ export async function listLessonsForStudent(
   const search = params.search?.trim();
   if (search) query.set("topic", `%${search}%`);
   if (params.status) query.set("status", String(params.status));
+  if (params.teacher_id) query.set("teacher_id", String(params.teacher_id));
+  if (params.class_datetime_from) {
+    query.set("class_datetime_from", String(params.class_datetime_from));
+  }
+  if (params.class_datetime_to) {
+    query.set("class_datetime_to", String(params.class_datetime_to));
+  }
 
   const response = await api<ApiListResponse<"lessons", Lesson>>(
     `/students/${studentId}/lessons?${query.toString()}`
