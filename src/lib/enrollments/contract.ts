@@ -14,10 +14,17 @@ function formatCpf(cpf: string): string {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
-export function buildEnrollmentContract(data: EnrollmentContractData): string {
+export function buildEnrollmentContract(
+  data: EnrollmentContractData,
+  isGroupClass = false
+): string {
   const name = data.name.trim() || "[NOME DO ALUNO]";
   const cpf = formatCpf(data.cpf);
   const address = data.address.trim() || "[ENDEREÇO DO ALUNO]";
+
+  if (isGroupClass) {
+    return buildGroupEnrollmentContract(name, cpf, address);
+  }
 
   return `CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS
 
@@ -104,6 +111,102 @@ A tolerância de uma parte para com a outra não implicará novação ou renúnc
 
 CLÁUSULA 17ª – FORO
 Fica eleito o foro do domicílio do CONTRATANTE (consumidor) para dirimir quaisquer controvérsias oriundas deste contrato, garantindo a facilitação da defesa de seus direitos, conforme Art. 101, I, da Lei 8.078/1990 (Código de Defesa do Consumidor).`;
+}
+
+function buildGroupEnrollmentContract(
+  name: string,
+  cpf: string,
+  address: string
+): string {
+  return `CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS - TURMAS
+
+ENGLISHTECH, pessoa jurídica de direito privado, inscrita no CNPJ n° 55.832.510/0001-17, com sede na Rua Radialista Antônio Assunção, 380, Jardim Cidade Universitária, João Pessoa/PB, doravante denominada CONTRATADA; e
+
+CONTRATANTE (ALUNO): ${name}, CPF: ${cpf}, residente e domiciliado na ${address}.
+
+As partes resolvem celebrar o presente Contrato de Prestação de Serviços Educacionais, que se regerá pelas cláusulas e condições abaixo.
+
+CLÁUSULA 1ª – OBJETO
+O presente contrato tem por objeto a prestação de aulas de língua inglesa em turmas (aulas em grupo), na modalidade online, com foco em desenvolvimento linguístico aplicado ao contexto profissional, conforme metodologia própria da CONTRATADA.
+
+CLÁUSULA 2ª – MODALIDADE E PLATAFORMA
+As aulas serão realizadas exclusivamente de forma online, por meio da plataforma Google Meet ou outra que venha a substituí-la. É responsabilidade de ambas as partes dispor de conexão de internet adequada. Problemas técnicos isolados do CONTRATANTE não obrigam a CONTRATADA à reposição da aula ministrada ao grupo.
+
+CLÁUSULA 3ª – VIGÊNCIA E CARGA HORÁRIA
+O CONTRATANTE adere, por meio deste instrumento, ao plano de prestação de serviços educacionais em turma selecionado no momento da contratação e aceite digital.
+
+A vigência do presente contrato estender-se-á pelo período integral do plano escolhido, renovando-se automaticamente por períodos iguais e sucessivos, salvo manifestação expressa de cancelamento ou não renovação pelo CONTRATANTE nos termos deste contrato.
+
+O eventual parcelamento do valor total ajustado constitui mera facilidade de pagamento concedida ao CONTRATANTE, não descaracterizando a contratação pelo período completo acordado.
+
+CLÁUSULA 4ª – VALORES E FORMA DE PAGAMENTO
+O CONTRATANTE pagará à CONTRATADA os valores descritos no plano escolhido no momento da contratação, por meio do método de pagamento selecionado (PIX, Boleto Bancário ou Cartão de Crédito).
+
+O pagamento deverá ser realizado até 1 (um) dia útil antes do início de cada período contratado. A ausência de pagamento autoriza a CONTRATADA a não iniciar ou suspender o acesso do aluno às aulas até a regularização.
+
+Em caso de atraso, incidirá multa moratória de 2% sobre o valor devido, acrescida de juros de 1% ao mês, pro rata die.
+
+A inadimplência superior a 7 (sete) dias autoriza a suspensão temporária do aluno, sem prejuízo da cobrança dos valores em aberto. A suspensão por inadimplência não caracteriza cancelamento do contrato.
+
+CLÁUSULA 5ª – OBRIGAÇÕES DO CONTRATANTE
+● Comparecer pontualmente às aulas agendadas para a sua turma;
+● Manter comportamento respeitoso e colaborativo com o professor e demais colegas de turma;
+● Utilizar os materiais exclusivamente para fins pessoais, sendo vedada reprodução, gravação ou compartilhamento;
+● Manter os pagamentos em dia.
+
+CLÁUSULA 6ª – OBRIGAÇÕES DA CONTRATADA
+● Ministrar as aulas conforme metodologia apresentada;
+● Disponibilizar professor qualificado;
+● Informar previamente eventuais impossibilidades operacionais.
+
+CLÁUSULA 7ª – FALTAS E AUSÊNCIA DE REPOSIÇÃO
+Atrasos: o CONTRATANTE poderá acessar a sala de aula virtual em caso de atrasos de até 15 minutos, porém a aula será encerrada no horário previsto para a turma, não havendo prorrogação do horário para compensação.
+
+Ausência de reposição: por se tratar de modalidade educacional em grupo com cronograma fixo, não haverá reposição de aulas exclusivas ou individuais caso o CONTRATANTE falte, independentemente do motivo da ausência, incluindo atestados médicos ou problemas técnicos pessoais.
+
+Acompanhamento: em caso de falta, o CONTRATANTE poderá solicitar à CONTRATADA o material didático utilizado ou o resumo dos tópicos abordados para estudo autônomo, não cabendo redução ou desconto no valor da mensalidade.
+
+CLÁUSULA 8ª – QUÓRUM MÍNIMO E REMANEJAMENTO DE TURMAS
+A manutenção da turma está condicionada a um quórum mínimo de alunos matriculados, definido a critério da CONTRATADA.
+
+Caso a turma não atinja ou não mantenha o quórum mínimo ao longo de sua vigência, a CONTRATADA reserva-se o direito de encerrar a turma, oferecendo ao CONTRATANTE a opção de:
+(a) migrar para outra turma em horário equivalente;
+(b) migrar para a modalidade de aulas particulares, com ajuste de valores; ou
+(c) rescindir o contrato sem qualquer multa ou penalidade para ambas as partes, com a devolução de eventuais valores pagos antecipadamente por aulas não ministradas.
+
+CLÁUSULA 9ª – FERIADOS E RECESSOS
+A CONTRATADA poderá estabelecer recessos pedagógicos ou administrativos ao longo do calendário anual, informando os alunos com a devida antecedência.
+
+As aulas que coincidirem com feriados nacionais ou recessos expressamente comunicados pela escola não serão ministradas. O cronograma acadêmico já contempla essas pausas, de modo que não haverá reposição automática, compensação de carga horária ou desconto no valor do plano.
+
+Por se tratar de serviço educacional online com turmas de abrangência nacional, feriados estaduais ou municipais serão considerados dias letivos normais. As aulas ocorrerão regularmente nessas datas.
+
+Caso o CONTRATANTE opte por não comparecer à aula em virtude de feriado exclusivo de sua cidade ou estado, a ausência será registrada normalmente, aplicando-se a regra de não reposição prevista na Cláusula 7ª.
+
+CLÁUSULA 10ª – CANCELAMENTO, RESCISÃO E NÃO RENOVAÇÃO
+Para que não ocorra a renovação automática para um novo ciclo, o CONTRATANTE deverá manifestar o desejo de encerrar o contrato mediante comunicação formal com antecedência mínima de 15 (quinze) dias do término do período de vigência atual.
+
+O cancelamento solicitado antes do término do período de vigência configurará rescisão antecipada. Incidirá multa compensatória de 10% (dez por cento) sobre a soma das parcelas vincendas. As parcelas já quitadas e aulas usufruídas no ciclo vigente serão recalculadas com base na tarifa sem desconto vigente à época da contratação, sendo a diferença cobrada do aluno ou descontada de eventual saldo a restituir.
+
+O valor final resultante da apuração de débitos e créditos deverá ser quitado no ato do cancelamento. A ausência do CONTRATANTE nas aulas não o isenta das obrigações financeiras assumidas até a formalização do cancelamento.
+
+CLÁUSULA 11ª – INADIMPLÊNCIA E COBRANÇA ADMINISTRATIVA
+Persistindo o débito por prazo superior a 15 (quinze) dias, a CONTRATADA poderá adotar medidas administrativas de cobrança. Não havendo regularização após notificação com prazo mínimo de 5 (cinco) dias, a CONTRATADA poderá proceder ao registro do débito junto a órgãos de proteção ao crédito.
+
+CLÁUSULA 12ª – USO DE IMAGEM E VOZ
+O uso de imagem e voz do CONTRATANTE para fins institucionais somente ocorrerá mediante termo específico.
+
+CLÁUSULA 13ª – PROTEÇÃO DE DADOS (LGPD)
+As partes declaram estar cientes de que os dados pessoais fornecidos serão tratados exclusivamente para fins de execução deste contrato, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados).
+
+CLÁUSULA 14ª – CASO FORTUITO E FORÇA MAIOR
+Nenhuma das partes será responsabilizada por falhas ou impossibilidades de cumprimento decorrentes de caso fortuito ou força maior.
+
+CLÁUSULA 15ª – ASSINATURA ELETRÔNICA
+O presente contrato poderá ser firmado por meio eletrônico, inclusive mediante aceite digital dentro da plataforma da CONTRATADA, produzindo todos os efeitos legais, nos termos da legislação vigente.
+
+CLÁUSULA 16ª – DISPOSIÇÕES GERAIS E FORO
+A tolerância de uma parte para com a outra não implicará novação ou renúncia de direitos. Fica eleito o foro da Comarca de João Pessoa/PB para dirimir quaisquer controvérsias oriundas deste contrato.`;
 }
 
 export const ENROLLMENT_CONTRACT_TITLE =
