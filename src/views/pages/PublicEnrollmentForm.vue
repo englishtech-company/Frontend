@@ -123,7 +123,7 @@ const contractText = computed(() =>
     name: name.value,
     cpf: cpf.value,
     address: buildAddress(),
-  })
+  }, enrollment.value?.is_group_class ?? false)
 );
 
 function openContractModal() {
