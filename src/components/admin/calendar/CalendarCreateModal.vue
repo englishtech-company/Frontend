@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { notify, notifySaved } from "@/lib/actionNotification";
@@ -37,7 +38,7 @@ const error = ref("");
 const loadingOptions = ref(true);
 
 const topic = ref("");
-const classDatetime = ref("");
+const classDate = ref<string | null>(null); // YYYY-MM-DD
 const durationMinutes = ref(60);
 const teacherId = ref<string | number | null>(null);
 const groupClassId = ref<string | number | null>(null);
@@ -46,6 +47,7 @@ const lessonStatus = ref<string | number | null>("scheduled");
 const observation = ref("");
 
 const interestedId = ref<string | number | null>(null);
+const experimentalDateClass = ref<string | null>(null); // YYYY-MM-DD (date only)
 const experimentalStatus = ref<string | number | null>("agendada");
 const experimentalNotes = ref("");
 
@@ -113,7 +115,7 @@ const modalTitle = computed(() => {
 function resetForm() {
   error.value = "";
   topic.value = "";
-  classDatetime.value = props.initialDateTime ?? "";
+  classDate.value = props.initialDateTime ? props.initialDateTime.slice(0, 10) : null;
   durationMinutes.value = 60;
   teacherId.value = null;
   groupClassId.value = null;
@@ -122,6 +124,7 @@ function resetForm() {
     eventKind.value === "makeup_lesson" ? "makeup" : "scheduled";
   observation.value = "";
   interestedId.value = null;
+  experimentalDateClass.value = null;
   experimentalStatus.value = "agendada";
   experimentalNotes.value = "";
 }
@@ -172,8 +175,8 @@ function validateLessonPayload(): LessonPayload | null {
     return null;
   }
 
-  if (!classDatetime.value) {
-    error.value = "Informe a data e hora.";
+  if (!classDate.value) {
+    error.value = "Informe a data da aula.";
     return null;
   }
 
@@ -198,7 +201,7 @@ function validateLessonPayload(): LessonPayload | null {
 
   return {
     topic: topic.value.trim(),
-    class_datetime: classDatetime.value,
+    class_datetime: classDate.value ?? "",
     teacher_id: Number(teacherId.value),
     group_class_id:
       eventKind.value === "group_lesson" ? Number(groupClassId.value) : null,
@@ -228,15 +231,15 @@ async function submit() {
         return;
       }
 
-      if (!classDatetime.value) {
-        error.value = "Informe a data e hora.";
+      if (!experimentalDateClass.value) {
+        error.value = "Informe a data da aula experimental.";
         return;
       }
 
       await createExperimentalClass({
         interested_id: Number(interestedId.value),
         teacher_id: teacherId.value ? Number(teacherId.value) : null,
-        date_class: classDatetime.value,
+        date_class: experimentalDateClass.value ?? "",
         status_class: String(experimentalStatus.value ?? "agendada"),
         observations_feedback: experimentalNotes.value.trim() || null,
       });
@@ -278,7 +281,7 @@ watch(
   () => props.initialDateTime,
   (value) => {
     if (value) {
-      classDatetime.value = value;
+      classDate.value = value.slice(0, 10);
     }
   },
   { immediate: true }
@@ -336,33 +339,31 @@ onMounted(async () => {
             </div>
 
             <div class="row g-3">
-              <div class="col-md-8">
-                <label class="form-label" for="calendar-create-datetime">
-                  Data e hora <span class="text-danger">*</span>
-                </label>
-                <input
-                  id="calendar-create-datetime"
-                  v-model="classDatetime"
-                  type="datetime-local"
-                  class="form-control"
-                  required
-                />
-              </div>
+              <!-- Lesson form: pure date selection -->
+              <template v-if="isLessonForm">
+                <div class="col-md-6">
+                  <AppDatePicker
+                    id="calendar-create-date"
+                    v-model="classDate"
+                    label="Data da aula *"
+                    placeholder="DD/MM/AAAA"
+                    required
+                  />
+                </div>
+              </template>
 
-              <div class="col-md-4">
-                <label class="form-label" for="calendar-create-duration">
-                  Duração (min)
-                </label>
-                <input
-                  id="calendar-create-duration"
-                  v-model.number="durationMinutes"
-                  type="number"
-                  min="15"
-                  max="240"
-                  step="5"
-                  class="form-control"
-                />
-              </div>
+              <!-- Experimental class: date only -->
+              <template v-else>
+                <div class="col-md-6">
+                  <AppDatePicker
+                    id="calendar-create-experimental-date"
+                    v-model="experimentalDateClass"
+                    label="Data da aula *"
+                    placeholder="DD/MM/AAAA"
+                    required
+                  />
+                </div>
+              </template>
 
               <div class="col-md-6">
                 <label class="form-label">Professor</label>

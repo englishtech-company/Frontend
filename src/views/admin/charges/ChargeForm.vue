@@ -13,6 +13,7 @@ import {
 import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import AppCombobox from "@/components/ui/AppCombobox.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -627,24 +628,15 @@ onMounted(loadForm);
                 </div>
 
                 <div class="col-lg-5 mb-3">
-                  <label
-                    class="form-label charge-form__label"
-                    for="charge-due-date"
-                  >
-                    {{
-                      !isEdit &&
-                      generateRecurrence
-                        ? "Primeiro vencimento"
-                        : "Data de vencimento"
-                    }}
-                    <span>*</span>
-                  </label>
-
-                  <input
+                  <AppDatePicker
                     id="charge-due-date"
                     v-model="dueDate"
-                    type="date"
-                    class="form-control charge-form__input"
+                    :label="
+                      !isEdit && generateRecurrence
+                        ? 'Primeiro vencimento *'
+                        : 'Data de vencimento *'
+                    "
+                    placeholder="DD/MM/AAAA"
                     required
                   />
 

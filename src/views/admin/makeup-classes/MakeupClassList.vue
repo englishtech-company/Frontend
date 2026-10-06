@@ -58,7 +58,7 @@ const teacherOptions = ref<SelectOption[]>([]);
 
 // Scheduling Modal state
 const schedulingItem = ref<MakeupClass | null>(null);
-const modalNewDate = ref("");
+const modalNewDateISO = ref<string | null>(null); // YYYY-MM-DD
 const modalTeacherId = ref<string | number | null>(null);
 const modalSaving = ref(false);
 const modalError = ref("");
@@ -221,7 +221,7 @@ async function copyPublicLink(item: MakeupClass) {
 
 function openSchedulingModal(item: MakeupClass) {
   schedulingItem.value = item;
-  modalNewDate.value = item.new_date ? item.new_date.slice(0, 16) : "";
+  modalNewDateISO.value = item.new_date ? item.new_date.slice(0, 10) : null;
   modalTeacherId.value = item.teacher_id ? String(item.teacher_id) : null;
   modalError.value = "";
 }
@@ -233,8 +233,8 @@ function closeSchedulingModal() {
 
 async function saveScheduling() {
   if (!schedulingItem.value) return;
-  if (!modalNewDate.value) {
-    modalError.value = "Informe a data e horário do agendamento.";
+  if (!modalNewDateISO.value) {
+    modalError.value = "Informe a data do agendamento.";
     return;
   }
 
@@ -242,7 +242,7 @@ async function saveScheduling() {
   modalError.value = "";
   try {
     await updateMakeupClass(schedulingItem.value.id, {
-      new_date: modalNewDate.value,
+      new_date: modalNewDateISO.value,
       teacher_id: modalTeacherId.value ? Number(modalTeacherId.value) : undefined,
       status: "scheduled",
     });
@@ -528,14 +528,16 @@ onMounted(() => {
               </div>
 
               <div class="mb-3">
-                <label class="form-label fw-semibold">Data e Horário do Agendamento *</label>
-                <input
-                  type="datetime-local"
-                  class="form-control"
-                  v-model="modalNewDate"
+                <AppDatePicker
+                  id="makeup-list-modal-new-date"
+                  v-model="modalNewDateISO"
+                  label="Data do agendamento *"
+                  placeholder="DD/MM/AAAA"
                   required
                 />
               </div>
+
+
 
               <div class="mb-3">
                 <label class="form-label fw-semibold">Professor Responsável</label>

@@ -4,13 +4,13 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import AppCombobox from "@/components/ui/AppCombobox.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   createExperimentalClass,
   getExperimentalClass,
   getExperimentalClassPlucks,
-  toDateTimeLocalValue,
   updateExperimentalClass,
 } from "@/lib/experimentalClasses";
 import type { ExperimentalClassPayload } from "@/lib/experimentalClasses";
@@ -97,7 +97,7 @@ async function loadForm() {
 
     interestedId.value = String(item.interested_id);
     teacherId.value = item.teacher_id != null ? String(item.teacher_id) : null;
-    dateClass.value = toDateTimeLocalValue(item.date_class);
+    dateClass.value = item.date_class ? item.date_class.slice(0, 10) : "";
     statusClass.value = item.status_class;
     conversao.value = item.conversao;
     selfDeclaredLevel.value = item.self_declared_level ?? "";
@@ -242,18 +242,13 @@ onMounted(async () => {
               <!-- Row 2: Data, Status, Conversão -->
               <div class="row">
                 <div class="col-sm-4">
-                  <div class="form-group">
-                    <label class="form-label" for="exp-date">
-                      Data e horário da aula *
-                    </label>
-                    <input
-                      id="exp-date"
-                      v-model="dateClass"
-                      type="datetime-local"
-                      class="form-control"
-                      required
-                    />
-                  </div>
+                  <AppDatePicker
+                    id="exp-date"
+                    v-model="dateClass"
+                    label="Data da aula *"
+                    placeholder="DD/MM/AAAA"
+                    required
+                  />
                 </div>
 
                 <div class="col-sm-4">
