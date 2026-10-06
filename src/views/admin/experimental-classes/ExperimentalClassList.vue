@@ -5,6 +5,7 @@ import FilterField from "@/components/ui/FilterField.vue";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -255,24 +256,20 @@ onMounted(loadList);
           </FilterField>
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Data desde" id="experimental-class-filter-date-from">
-            <input
-              id="experimental-class-filter-date-from"
-              v-model="dateClassFrom"
-              type="date"
-              class="form-control"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="experimental-class-filter-date-from"
+            v-model="dateClassFrom"
+            label="Data desde"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Data até" id="experimental-class-filter-date-to">
-            <input
-              id="experimental-class-filter-date-to"
-              v-model="dateClassTo"
-              type="date"
-              class="form-control"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="experimental-class-filter-date-to"
+            v-model="dateClassTo"
+            label="Data até"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
         <div class="col-md-6 col-lg-3">
           <FilterField label="Status" id="experimental-class-filter-status">

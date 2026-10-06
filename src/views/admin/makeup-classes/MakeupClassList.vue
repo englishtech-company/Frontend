@@ -17,6 +17,8 @@ import { formatMakeupClassStatusBadge } from "@/lib/makeupClasses/format";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import FilterField from "@/components/ui/FilterField.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 
@@ -317,39 +319,31 @@ onMounted(() => {
         </div>
 
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Professor" id="makeup-filter-teacher">
-            <SingleSelect
-              id="makeup-filter-teacher"
-              v-model="teacherIdFilter"
-              :options="teacherOptions"
-              placeholder="Todos os professores"
-              :searchable="true"
-            />
-          </FilterField>
+          <AppCombobox
+            id="makeup-filter-teacher"
+            v-model="teacherIdFilter"
+            :options="teacherOptions"
+            label="Professor"
+            placeholder="Todos os professores"
+          />
         </div>
 
         <div class="col-md-6 col-lg-2">
-          <FilterField label="Data Falta (De)" id="makeup-filter-date-from">
-            <input
-              id="makeup-filter-date-from"
-              v-model="dateFromFilter"
-              type="date"
-              class="form-control"
-              @keyup.enter="handleSearch"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="makeup-filter-date-from"
+            v-model="dateFromFilter"
+            label="Data Falta (De)"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
 
         <div class="col-md-6 col-lg-2">
-          <FilterField label="Data Falta (Até)" id="makeup-filter-date-to">
-            <input
-              id="makeup-filter-date-to"
-              v-model="dateToFilter"
-              type="date"
-              class="form-control"
-              @keyup.enter="handleSearch"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="makeup-filter-date-to"
+            v-model="dateToFilter"
+            label="Data Falta (Até)"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
       </div>
     </FilterPanel>

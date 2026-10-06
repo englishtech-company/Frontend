@@ -12,6 +12,9 @@ Componentes e fluxos **obrigatórios** para listagens admin e feedback de açõe
 | `FilterPanel` | `@/components/ui/FilterPanel.vue` | Card colapsável **Filtros** (linha inteira, fora da tabela) |
 | `FilterField` | `@/components/ui/FilterField.vue` | Label + slot do campo + hint opcional |
 | `SingleSelect` | `@/components/ui/SingleSelect.vue` | **Todos** os selects de filtro e formulário |
+| `AppCombobox` | `@/components/ui/AppCombobox.vue` | Combobox acessível com busca inline e remoção de acentos (estudantes, professores, planos) |
+| `AppDatePicker` | `@/components/ui/AppDatePicker.vue` | Datepicker puro desacoplado de hora, formato ISO-8601 (YYYY-MM-DD) sem shifts de timezone |
+| `DiscountPercentInput` | `@/components/ui/DiscountPercentInput.vue` | Campo de digitação direta para porcentagem de desconto (0-100%) |
 | `ListPagination` | `@/components/ui/ListPagination.vue` | Paginação alinhada à **direita**, números pequenos |
 | `ActionNotificationHost` | `@/components/ui/ActionNotificationHost.vue` | Montado em `App.vue` (não repetir nas views) |
 | `notify` / helpers | `@/lib/actionNotification.ts` | Toast de ação no canto superior direito (5s) |

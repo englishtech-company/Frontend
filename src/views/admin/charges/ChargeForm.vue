@@ -12,6 +12,7 @@ import {
 } from "vue-router";
 import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -613,7 +614,7 @@ onMounted(loadForm);
 
               <div class="row">
                 <div class="col-lg-7 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="charge-enrollment"
                     v-model="enrollmentId"
                     label="Matrícula"

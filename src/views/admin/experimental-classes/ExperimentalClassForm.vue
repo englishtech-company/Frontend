@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -214,7 +215,7 @@ onMounted(async () => {
               <div class="row">
                 <div class="col-sm-6">
                   <div class="form-group">
-                    <SingleSelect
+                    <AppCombobox
                       id="exp-interested"
                       v-model="interestedId"
                       label="Interessado"
@@ -227,7 +228,7 @@ onMounted(async () => {
 
                 <div class="col-sm-6">
                   <div class="form-group">
-                    <SingleSelect
+                    <AppCombobox
                       id="exp-teacher"
                       v-model="teacherId"
                       label="Professor"
