@@ -1,16 +1,21 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { notify, notifySaved } from "@/lib/actionNotification";
-import type { CalendarCreateKind } from "@/lib/calendar/types";
+import type { CalendarCreateKind, CalendarMockEvent } from "@/lib/calendar/types";
 import {
   createExperimentalClass,
+  getExperimentalClass,
   getExperimentalClassPlucks,
+  toDateTimeLocalValue,
+  updateExperimentalClass,
 } from "@/lib/experimentalClasses";
 import {
   createLesson,
+  getLesson,
+  updateLesson,
   type LessonPayload,
 } from "@/lib/lessons";
 import { listGroupClasses } from "@/lib/groupClasses";
@@ -19,6 +24,8 @@ import { listTeachers } from "@/lib/teachers";
 
 const props = defineProps<{
   initialDateTime?: string;
+  /** Quando informado, abre o modal em modo edição (aula ou experimental). */
+  editEvent?: CalendarMockEvent | null;
 }>();
 
 const emit = defineEmits<{
@@ -29,7 +36,14 @@ const emit = defineEmits<{
 const {
   canCreateLessons,
   canCreateExperimentalClasses,
+  canUpdateLessons,
+  canUpdateExperimentalClasses,
+  canViewGoogleCalendar,
 } = usePermissions();
+
+const isEditMode = computed(() => Boolean(props.editEvent?.sourceId));
+
+const editingRecordId = ref<number | null>(null);
 
 const eventKind = ref<CalendarCreateKind>("group_lesson");
 const saving = ref(false);
@@ -48,6 +62,7 @@ const observation = ref("");
 const interestedId = ref<string | number | null>(null);
 const experimentalStatus = ref<string | number | null>("agendada");
 const experimentalNotes = ref("");
+const googleInviteAttendees = ref(true);
 
 const teacherOptions = ref<SelectOption[]>([]);
 const groupClassOptions = ref<SelectOption[]>([]);
@@ -98,17 +113,133 @@ const isLessonForm = computed(
 );
 
 const modalTitle = computed(() => {
+  const prefix = isEditMode.value ? "Editar" : "Nova";
+
   switch (eventKind.value) {
     case "group_lesson":
-      return "Nova aula em turma";
+      return `${prefix} aula em turma`;
     case "individual_lesson":
-      return "Nova aula individual";
+      return `${prefix} aula individual`;
     case "makeup_lesson":
-      return "Nova reposição";
+      return `${prefix} reposição`;
     default:
-      return "Nova aula experimental";
+      return `${prefix} aula experimental`;
   }
 });
+
+const modalSubtitle = computed(() =>
+  isEditMode.value
+    ? "Altere horário, status ou detalhes sem sair do calendário."
+    : "Agende aulas, atribua turma, aluno ou interessado."
+);
+
+const saveButtonLabel = computed(() => {
+  if (saving.value) {
+    return "Salvando...";
+  }
+
+  return isEditMode.value ? "Salvar alterações" : "Salvar no calendário";
+});
+
+function durationMinutesFromEvent(event: CalendarMockEvent): number {
+  const minutes = Math.round(
+    (new Date(event.end).getTime() - new Date(event.start).getTime()) / 60_000
+  );
+
+  return Number.isFinite(minutes) && minutes >= 15 ? minutes : 60;
+}
+
+function normalizeExperimentalStatus(raw: unknown): string {
+  const value = String(raw ?? "agendada").toLowerCase();
+
+  if (value === "scheduled") {
+    return "agendada";
+  }
+
+  if (value === "agendada" || value === "realizada" || value === "cancelada") {
+    return value;
+  }
+
+  return "agendada";
+}
+
+function isExperimentalCalendarEvent(event: CalendarMockEvent): boolean {
+  return (
+    event.sourceType === "experimental" ||
+    event.kind === "experimental_class" ||
+    event.id.startsWith("experimental-")
+  );
+}
+
+function lessonKindFromRecord(lesson: {
+  status: string;
+  group_class_id?: number | null;
+}): CalendarCreateKind {
+  if (lesson.status === "makeup") {
+    return "makeup_lesson";
+  }
+
+  return lesson.group_class_id ? "group_lesson" : "individual_lesson";
+}
+
+async function populateFromEditEvent(event: CalendarMockEvent) {
+  if (!event.sourceId) {
+    error.value = "Evento sem referência para edição.";
+    return;
+  }
+
+  loadingOptions.value = true;
+  error.value = "";
+  editingRecordId.value = event.sourceId;
+
+  try {
+    if (isExperimentalCalendarEvent(event)) {
+      if (!canUpdateExperimentalClasses.value) {
+        error.value = "Você não tem permissão para editar aulas experimentais.";
+        return;
+      }
+
+      eventKind.value = "experimental_class";
+      const item = await getExperimentalClass(event.sourceId);
+      classDatetime.value = toDateTimeLocalValue(item.date_class);
+      durationMinutes.value = durationMinutesFromEvent(event);
+      teacherId.value = item.teacher_id ?? null;
+      interestedId.value = item.interested_id;
+      experimentalStatus.value = normalizeExperimentalStatus(item.status_class);
+      experimentalNotes.value = item.observations_feedback ?? "";
+      return;
+    }
+
+    if (!event.id.startsWith("lesson-")) {
+      error.value = "Este evento só pode ser editado na tela dedicada.";
+      return;
+    }
+
+    if (!canUpdateLessons.value) {
+      error.value = "Você não tem permissão para editar aulas.";
+      return;
+    }
+
+    const lesson = await getLesson(event.sourceId);
+    eventKind.value = lessonKindFromRecord(lesson);
+    topic.value = lesson.topic ?? "";
+    classDatetime.value = lesson.class_datetime
+      ? lesson.class_datetime.slice(0, 16)
+      : toDateTimeLocalValue(event.start);
+    durationMinutes.value = durationMinutesFromEvent(event);
+    teacherId.value = lesson.teacher_id ?? null;
+    groupClassId.value = lesson.group_class_id ?? null;
+    studentId.value = lesson.student_id ?? null;
+    lessonStatus.value =
+      eventKind.value === "makeup_lesson" ? "makeup" : (lesson.status ?? "scheduled");
+    observation.value = lesson.observation ?? "";
+  } catch (e) {
+    error.value =
+      e instanceof Error ? e.message : "Erro ao carregar dados para edição.";
+  } finally {
+    loadingOptions.value = false;
+  }
+}
 
 function resetForm() {
   error.value = "";
@@ -124,6 +255,7 @@ function resetForm() {
   interestedId.value = null;
   experimentalStatus.value = "agendada";
   experimentalNotes.value = "";
+  googleInviteAttendees.value = true;
 }
 
 async function loadOptions() {
@@ -135,7 +267,8 @@ async function loadOptions() {
         listTeachers({ limit: 200 }),
         listGroupClasses({ limit: 200 }),
         listStudents({ limit: 200 }),
-        canCreateExperimentalClasses.value
+        canCreateExperimentalClasses.value ||
+        canUpdateExperimentalClasses.value
           ? getExperimentalClassPlucks()
           : Promise.resolve({ interested: {}, teachers: {} }),
       ]);
@@ -209,6 +342,7 @@ function validateLessonPayload(): LessonPayload | null {
         ? "makeup"
         : String(lessonStatus.value ?? "scheduled"),
     observation: observation.value.trim() || null,
+    google_invite_attendees: googleInviteAttendees.value,
   };
 }
 
@@ -218,6 +352,42 @@ async function submit() {
 
   try {
     if (eventKind.value === "experimental_class") {
+      if (isEditMode.value) {
+        if (!canUpdateExperimentalClasses.value || !editingRecordId.value) {
+          error.value = "Você não tem permissão para editar aulas experimentais.";
+          return;
+        }
+
+        if (!interestedId.value) {
+          error.value = "Selecione o interessado.";
+          return;
+        }
+
+        if (!classDatetime.value) {
+          error.value = "Informe a data e hora.";
+          return;
+        }
+
+        if (!experimentalStatus.value) {
+          error.value = "Selecione o status.";
+          return;
+        }
+
+        await updateExperimentalClass(editingRecordId.value, {
+          interested_id: Number(interestedId.value),
+          teacher_id: teacherId.value ? Number(teacherId.value) : null,
+          date_class: classDatetime.value,
+          status_class: String(experimentalStatus.value ?? "agendada"),
+          observations_feedback: experimentalNotes.value.trim() || null,
+          google_invite_attendees: googleInviteAttendees.value,
+        });
+
+        notifySaved("Aula experimental", true);
+        emit("created");
+        emit("close");
+        return;
+      }
+
       if (!canCreateExperimentalClasses.value) {
         error.value = "Você não tem permissão para criar aulas experimentais.";
         return;
@@ -233,28 +403,44 @@ async function submit() {
         return;
       }
 
+      if (!experimentalStatus.value) {
+        error.value = "Selecione o status.";
+        return;
+      }
+
       await createExperimentalClass({
         interested_id: Number(interestedId.value),
         teacher_id: teacherId.value ? Number(teacherId.value) : null,
         date_class: classDatetime.value,
         status_class: String(experimentalStatus.value ?? "agendada"),
         observations_feedback: experimentalNotes.value.trim() || null,
+        google_invite_attendees: googleInviteAttendees.value,
       });
 
       notifySaved("Aula experimental", false);
     } else {
-      if (!canCreateLessons.value) {
-        error.value = "Você não tem permissão para criar aulas.";
-        return;
-      }
-
       const payload = validateLessonPayload();
       if (!payload) {
         return;
       }
 
-      await createLesson(payload);
-      notifySaved("Aula", false);
+      if (isEditMode.value) {
+        if (!canUpdateLessons.value || !editingRecordId.value) {
+          error.value = "Você não tem permissão para editar aulas.";
+          return;
+        }
+
+        await updateLesson(editingRecordId.value, payload);
+        notifySaved("Aula", true);
+      } else {
+        if (!canCreateLessons.value) {
+          error.value = "Você não tem permissão para criar aulas.";
+          return;
+        }
+
+        await createLesson(payload);
+        notifySaved("Aula", false);
+      }
     }
 
     emit("created");
@@ -268,6 +454,10 @@ async function submit() {
 }
 
 watch(eventKind, () => {
+  if (isEditMode.value) {
+    return;
+  }
+
   lessonStatus.value =
     eventKind.value === "makeup_lesson" ? "makeup" : "scheduled";
   groupClassId.value = null;
@@ -285,6 +475,14 @@ watch(
 );
 
 onMounted(async () => {
+  document.body.classList.add("modal-open");
+
+  if (isEditMode.value && props.editEvent) {
+    await loadOptions();
+    await populateFromEditEvent(props.editEvent);
+    return;
+  }
+
   resetForm();
 
   if (!eventKindOptions.value.length) {
@@ -295,17 +493,27 @@ onMounted(async () => {
   eventKind.value = eventKindOptions.value[0].value;
   await loadOptions();
 });
+
+onUnmounted(() => {
+  document.body.classList.remove("modal-open");
+});
 </script>
 
 <template>
-  <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg calendar-create-modal">
-      <div class="modal-content">
+  <Teleport to="body">
+    <div
+      class="calendar-create-modal-root modal fade show d-block"
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-lg calendar-create-modal">
+        <div class="modal-content">
         <div class="modal-header">
           <div>
             <h5 class="modal-title mb-1">{{ modalTitle }}</h5>
             <p class="text-muted mb-0 small">
-              Agende aulas, atribua turma, aluno ou interessado.
+              {{ modalSubtitle }}
             </p>
           </div>
           <button
@@ -322,7 +530,10 @@ onMounted(async () => {
           <div v-if="loadingOptions" class="text-center py-4">Carregando...</div>
 
           <form v-else @submit.prevent="submit">
-            <div class="calendar-create-modal__types mb-4">
+            <div
+              v-if="!isEditMode && eventKindOptions.length"
+              class="calendar-create-modal__types mb-4"
+            >
               <button
                 v-for="option in eventKindOptions"
                 :key="option.value"
@@ -423,6 +634,24 @@ onMounted(async () => {
                   />
                 </div>
 
+                <div v-if="canViewGoogleCalendar" class="col-12">
+                  <div class="form-check">
+                    <input
+                      id="calendar-create-google-invite"
+                      v-model="googleInviteAttendees"
+                      class="form-check-input"
+                      type="checkbox"
+                    />
+                    <label class="form-check-label" for="calendar-create-google-invite">
+                      Enviar convite por e-mail (Google Calendar)
+                    </label>
+                  </div>
+                  <p class="form-text mb-0">
+                    Usa o e-mail do aluno ou dos matriculados na turma. Requer conta Google
+                    vinculada e evento criado no Google.
+                  </p>
+                </div>
+
                 <div class="col-12">
                   <label class="form-label" for="calendar-create-observation">
                     Observação
@@ -437,7 +666,7 @@ onMounted(async () => {
                 </div>
               </template>
 
-              <template v-else>
+              <template v-if="eventKind === 'experimental_class'">
                 <div class="col-md-6">
                   <label class="form-label">
                     Interessado <span class="text-danger">*</span>
@@ -450,12 +679,43 @@ onMounted(async () => {
                 </div>
 
                 <div class="col-md-6">
-                  <label class="form-label">Status</label>
-                  <SingleSelect
+                  <label class="form-label" for="calendar-create-experimental-status">
+                    Status <span class="text-danger">*</span>
+                  </label>
+                  <select
+                    id="calendar-create-experimental-status"
                     v-model="experimentalStatus"
-                    :options="experimentalStatusOptions"
-                    :searchable="false"
-                  />
+                    class="form-select"
+                    required
+                  >
+                    <option
+                      v-for="option in experimentalStatusOptions"
+                      :key="String(option.value)"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div v-if="canViewGoogleCalendar" class="col-12">
+                  <div class="form-check">
+                    <input
+                      id="calendar-create-google-invite-experimental"
+                      v-model="googleInviteAttendees"
+                      class="form-check-input"
+                      type="checkbox"
+                    />
+                    <label
+                      class="form-check-label"
+                      for="calendar-create-google-invite-experimental"
+                    >
+                      Enviar convite por e-mail (Google Calendar)
+                    </label>
+                  </div>
+                  <p class="form-text mb-0">
+                    Usa o e-mail do interessado cadastrado no lead.
+                  </p>
                 </div>
 
                 <div class="col-12">
@@ -487,19 +747,42 @@ onMounted(async () => {
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="saving || loadingOptions || !eventKindOptions.length"
+            :disabled="
+              saving ||
+              loadingOptions ||
+              (!isEditMode && !eventKindOptions.length)
+            "
             @click="submit"
           >
-            {{ saving ? "Salvando..." : "Salvar no calendário" }}
+            {{ saveButtonLabel }}
           </button>
         </div>
       </div>
     </div>
-  </div>
-  <div class="modal-backdrop fade show"></div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
+.calendar-create-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.calendar-create-modal-root .modal-dialog {
+  margin: 1.75rem auto;
+  pointer-events: auto;
+}
+
+.calendar-create-modal-root :deep(.single-select__dropdown) {
+  z-index: 10060;
+}
+
 .calendar-create-modal__types {
   display: flex;
   flex-wrap: wrap;

@@ -78,19 +78,35 @@ export async function disconnectGoogleCalendar(): Promise<GoogleCalendarStatus> 
   return response.google_calendar;
 }
 
-export async function listGoogleCalendarEvents(params: {
+type GoogleCalendarSyncResponse = {
+  google_calendar: GoogleCalendarStatus;
+  google_calendar_events: GoogleCalendarEvent[];
+  imported_count: number;
+};
+
+export async function syncGoogleCalendarEvents(params: {
   rangeStart: Date;
   rangeEnd: Date;
-  teacherId?: number;
-}): Promise<GoogleCalendarEvent[]> {
+}): Promise<GoogleCalendarSyncResponse> {
   const query = new URLSearchParams({
     from: formatApiDate(params.rangeStart),
     to: formatApiDate(params.rangeEnd),
   });
 
-  if (params.teacherId !== undefined) {
-    query.set("teacher_id", String(params.teacherId));
-  }
+  return api<GoogleCalendarSyncResponse>(
+    `/google-calendar/sync?${query.toString()}`,
+    { method: "POST" }
+  );
+}
+
+export async function listGoogleCalendarEvents(params: {
+  rangeStart: Date;
+  rangeEnd: Date;
+}): Promise<GoogleCalendarEvent[]> {
+  const query = new URLSearchParams({
+    from: formatApiDate(params.rangeStart),
+    to: formatApiDate(params.rangeEnd),
+  });
 
   const response = await api<GoogleCalendarEventsResponse>(
     `/google-calendar/events?${query.toString()}`
@@ -122,6 +138,12 @@ export function googleEventToCalendarEvent(
       : "Google Calendar",
     statusLabel:
       GOOGLE_STATUS_LABELS[event.status ?? ""] ?? event.status ?? "Google",
+    statusKey:
+      event.status === "cancelled"
+        ? "google_cancelled"
+        : event.status === "tentative"
+          ? "google_tentative"
+          : undefined,
     observation: event.description ?? undefined,
     sourceType: "google",
     sourceId: event.id,
