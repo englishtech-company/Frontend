@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import MultiSelect from "@/components/ui/MultiSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { getGroupClassOptions } from "@/lib/groupClasses";
@@ -238,12 +240,11 @@ function onPhoneInput(event: Event) {
 
               <div class="row">
                 <div class="col-lg-4 mb-3">
-                  <label class="form-label student-form__label" for="birthdate">Data de nascimento</label>
-                  <input
+                  <AppDatePicker
                     id="birthdate"
                     v-model="birthdate"
-                    type="date"
-                    class="form-control"
+                    label="Data de nascimento"
+                    placeholder="DD/MM/AAAA"
                   />
                 </div>
                 <div class="col-lg-4 mb-3">
@@ -257,7 +258,7 @@ function onPhoneInput(event: Event) {
                   />
                 </div>
                 <div class="col-lg-4 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="teacherId"
                     v-model="teacherId"
                     label="Professor responsável"
@@ -270,7 +271,7 @@ function onPhoneInput(event: Event) {
 
               <div class="row">
                 <div class="col-lg-6 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="planVariantId"
                     v-model="planVariantId"
                     label="Plano contratado"
@@ -280,21 +281,19 @@ function onPhoneInput(event: Event) {
                   />
                 </div>
                 <div class="col-lg-3 mb-3">
-                  <label class="form-label student-form__label" for="startDate">Data de início</label>
-                  <input
+                  <AppDatePicker
                     id="startDate"
                     v-model="startDate"
-                    type="date"
-                    class="form-control"
+                    label="Data de início"
+                    placeholder="DD/MM/AAAA"
                   />
                 </div>
                 <div class="col-lg-3 mb-3">
-                  <label class="form-label student-form__label" for="endDate">Data de término</label>
-                  <input
+                  <AppDatePicker
                     id="endDate"
                     v-model="endDate"
-                    type="date"
-                    class="form-control"
+                    label="Data de término"
+                    placeholder="DD/MM/AAAA"
                   />
                 </div>
               </div>

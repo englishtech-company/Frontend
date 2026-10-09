@@ -4,6 +4,7 @@ import { RouterLink } from "vue-router";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import FilterField from "@/components/ui/FilterField.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
@@ -56,7 +57,7 @@ const statusOptions: SelectOption[] = [
 const teacherOptions = ref<SelectOption[]>([]);
 
 const schedulingItem = ref<MakeupClass | null>(null);
-const modalNewDate = ref("");
+const modalNewDateISO = ref<string | null>(null); // YYYY-MM-DD
 const modalTeacherId = ref<string | number | null>(null);
 const modalSaving = ref(false);
 const modalError = ref("");
@@ -211,7 +212,7 @@ async function copyPublicLink(item: MakeupClass) {
 
 function openSchedulingModal(item: MakeupClass) {
   schedulingItem.value = item;
-  modalNewDate.value = item.new_date ? item.new_date.slice(0, 16) : "";
+  modalNewDateISO.value = item.new_date ? item.new_date.slice(0, 10) : null;
   modalTeacherId.value = item.teacher_id ? String(item.teacher_id) : null;
   modalError.value = "";
 }
@@ -223,8 +224,8 @@ function closeSchedulingModal() {
 
 async function saveScheduling() {
   if (!schedulingItem.value) return;
-  if (!modalNewDate.value) {
-    modalError.value = "Informe a data e horário do agendamento.";
+  if (!modalNewDateISO.value) {
+    modalError.value = "Informe a data do agendamento.";
     return;
   }
 
@@ -232,7 +233,7 @@ async function saveScheduling() {
   modalError.value = "";
   try {
     await updateMakeupClass(schedulingItem.value.id, {
-      new_date: modalNewDate.value,
+      new_date: modalNewDateISO.value,
       teacher_id: modalTeacherId.value ? Number(modalTeacherId.value) : undefined,
       status: "scheduled",
     });
@@ -375,27 +376,21 @@ onMounted(async () => {
         </div>
 
         <div class="col-md-6 col-lg-2">
-          <FilterField label="Data falta (de)" id="student-makeup-filter-from">
-            <input
-              id="student-makeup-filter-from"
-              v-model="dateFromFilter"
-              type="date"
-              class="form-control"
-              @keyup.enter="handleSearch"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="student-makeup-filter-from"
+            v-model="dateFromFilter"
+            label="Data falta (de)"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
 
         <div class="col-md-6 col-lg-2">
-          <FilterField label="Data falta (até)" id="student-makeup-filter-to">
-            <input
-              id="student-makeup-filter-to"
-              v-model="dateToFilter"
-              type="date"
-              class="form-control"
-              @keyup.enter="handleSearch"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="student-makeup-filter-to"
+            v-model="dateToFilter"
+            label="Data falta (até)"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
       </div>
     </FilterPanel>
@@ -557,14 +552,16 @@ onMounted(async () => {
               </div>
 
               <div class="mb-3">
-                <label class="form-label fw-semibold">Data e horário do agendamento *</label>
-                <input
-                  v-model="modalNewDate"
-                  type="datetime-local"
-                  class="form-control"
+                <AppDatePicker
+                  id="student-makeup-modal-new-date"
+                  v-model="modalNewDateISO"
+                  label="Data do agendamento *"
+                  placeholder="DD/MM/AAAA"
                   required
                 />
               </div>
+
+
 
               <div class="mb-3">
                 <label class="form-label fw-semibold">Professor responsável</label>

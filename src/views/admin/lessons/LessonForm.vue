@@ -17,6 +17,8 @@ import { listStudents, getStudent } from "@/lib/students";
 import { notifySaved, notify } from "@/lib/actionNotification";
 
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -112,7 +114,7 @@ const loadLesson = async () => {
       group_class_id: lesson.group_class_id ?? null,
       student_id: lesson.student_id ?? null,
       teacher_id: lesson.teacher_id ?? 0,
-      class_datetime: lesson.class_datetime ? lesson.class_datetime.slice(0, 16) : "",
+      class_datetime: lesson.class_datetime ? lesson.class_datetime.slice(0, 10) : "",
       topic: lesson.topic ?? "",
       status: lesson.status ?? "scheduled",
       observation: lesson.observation ?? "",
@@ -216,45 +218,42 @@ onMounted(async () => {
             </div>
 
             <div class="col-md-6">
-              <label class="form-label" for="class_datetime">Data e Hora <span class="text-danger">*</span></label>
-              <input
+              <AppDatePicker
                 id="class_datetime"
                 v-model="formData.class_datetime"
-                type="datetime-local"
-                class="form-control"
+                label="Data da Aula *"
+                placeholder="DD/MM/AAAA"
                 required
               />
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Professor <span class="text-danger">*</span></label>
-              <SingleSelect
+              <AppCombobox
                 v-model="formData.teacher_id"
+                label="Professor *"
                 :options="teacherOptions"
                 placeholder="Selecione um professor"
-                :searchable="true"
+                required
               />
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Turma</label>
-              <SingleSelect
+              <AppCombobox
                 v-model="formData.group_class_id"
+                label="Turma"
                 :options="groupClassOptions"
                 placeholder="Selecione uma turma (se aplicável)"
-                :searchable="true"
                 :disabled="Boolean(groupClassId)"
               />
               <small v-if="groupClassId" class="text-muted">Fixado por contexto da turma</small>
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Aluno (Individual)</label>
-              <SingleSelect
+              <AppCombobox
                 v-model="formData.student_id"
+                label="Aluno (Individual)"
                 :options="studentOptions"
                 placeholder="Selecione um aluno (se aula individual)"
-                :searchable="true"
                 :disabled="Boolean(studentId)"
               />
               <small v-if="studentId" class="text-muted">Fixado por contexto do aluno</small>

@@ -12,6 +12,8 @@ import { listGroupClasses } from "@/lib/groupClasses";
 import type { MakeupClassStatus, Enrollment, Teacher, GroupClass } from "@/lib/types";
 import { notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 
 const route = useRoute();
@@ -197,86 +199,74 @@ onMounted(() => {
 
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label" for="makeup-enrollment">
-                Matrícula / Aluno <span class="text-danger">*</span>
-              </label>
-              <SingleSelect
+              <AppCombobox
                 id="makeup-enrollment"
                 v-model="form.enrollment_id"
+                label="Matrícula / Aluno *"
                 :options="enrollmentOptions"
                 placeholder="Selecione a matrícula"
-                :searchable="true"
+                required
               />
             </div>
 
             <div class="col-md-6">
-              <label class="form-label" for="makeup-group-class">Turma (opcional)</label>
-              <SingleSelect
+              <AppCombobox
                 id="makeup-group-class"
                 v-model="form.group_class_id"
+                label="Turma (opcional)"
                 :options="groupClassOptions"
                 placeholder="Selecione a turma"
-                :searchable="true"
               />
             </div>
 
             <div class="col-md-6">
-              <label class="form-label" for="makeup-teacher">Professor Responsável</label>
-              <SingleSelect
+              <AppCombobox
                 id="makeup-teacher"
                 v-model="form.teacher_id"
+                label="Professor Responsável"
                 :options="teacherOptions"
                 placeholder="Selecione o professor"
-                :searchable="true"
               />
             </div>
 
             <div class="col-md-6">
-              <label class="form-label" for="makeup-status">
-                Status da Reposição <span class="text-danger">*</span>
-              </label>
               <SingleSelect
                 id="makeup-status"
                 v-model="form.status"
+                label="Status da Reposição *"
                 :options="statusOptions"
                 placeholder="Selecione o status"
                 :searchable="false"
+                required
               />
             </div>
 
             <div class="col-md-4">
-              <label class="form-label" for="makeup-original-date">
-                Data Original da Falta <span class="text-danger">*</span>
-              </label>
-              <input
+              <AppDatePicker
                 id="makeup-original-date"
                 v-model="form.original_date"
-                type="datetime-local"
-                class="form-control"
+                label="Data Original da Falta *"
+                placeholder="DD/MM/AAAA"
                 required
               />
             </div>
 
             <div class="col-md-4">
-              <label class="form-label" for="makeup-expired-date">
-                Data Limite Expiração <span class="text-danger">*</span>
-              </label>
-              <input
+              <AppDatePicker
                 id="makeup-expired-date"
                 v-model="form.expired_date"
-                type="datetime-local"
-                class="form-control"
+                label="Data Limite Expiração *"
+                placeholder="DD/MM/AAAA"
                 required
               />
             </div>
 
             <div class="col-md-4">
-              <label class="form-label" for="makeup-new-date">Nova Data Agendada</label>
-              <input
+              <AppDatePicker
                 id="makeup-new-date"
                 v-model="form.new_date"
-                type="datetime-local"
-                class="form-control"
+                label="Nova Data Agendada"
+                placeholder="DD/MM/AAAA"
               />
             </div>
           </div>
