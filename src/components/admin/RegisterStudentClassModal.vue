@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { listTeachers } from "@/lib/teachers";
 import { listEnrollments } from "@/lib/enrollments";
@@ -36,8 +37,7 @@ const classType = ref<"regular" | "makeup" | "extra">("regular");
 const selectedMakeupClassId = ref<string>("");
 const consumeNewCredit = ref<boolean>(false);
 const selectedTeacherId = ref<string>("");
-const classDate = ref<string>("");
-const startTime = ref<string>("09:00");
+const classDate = ref<string | null>(null); // YYYY-MM-DD
 const durationMinutes = ref<number>(60);
 const topic = ref<string>("");
 const notes = ref<string>("");
@@ -91,21 +91,10 @@ const durationOptions: SelectOption[] = [
   { value: 120, label: "120 minutos (2h)" },
 ];
 
-const endTime = computed(() => {
-  if (!startTime.value) return "--:--";
-  const [hours, mins] = startTime.value.split(":").map(Number);
-  if (isNaN(hours) || isNaN(mins)) return "--:--";
-
-  const d = new Date();
-  d.setHours(hours, mins, 0, 0);
-  d.setMinutes(d.getMinutes() + Number(durationMinutes.value || 60));
-  return d.toTimeString().slice(0, 5);
-});
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 function initDefaults() {
-  const today = new Date();
   // Set date to today in YYYY-MM-DD
+  const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
@@ -196,8 +185,8 @@ async function handleSubmit() {
     errors.value.teacher_id = ["Selecione o professor responsável."];
     return;
   }
-  if (!classDate.value || !startTime.value) {
-    errors.value.scheduled_at = ["Defina a data e o horário da aula."];
+  if (!classDate.value) {
+    errors.value.scheduled_at = ["Defina a data da aula."];
     return;
   }
 
@@ -210,7 +199,7 @@ async function handleSubmit() {
     }
   }
 
-  const scheduledAt = `${classDate.value}T${startTime.value}:00`;
+  const scheduledAt = classDate.value;
 
   submitting.value = true;
   try {
@@ -431,13 +420,11 @@ async function handleSubmit() {
                   </div>
 
                   <div class="col-md-6">
-                    <label class="form-label fw-semibold">
-                      Data da Aula <span class="text-danger">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      class="form-control"
+                    <AppDatePicker
+                      id="register-class-date"
                       v-model="classDate"
+                      label="Data da Aula *"
+                      placeholder="DD/MM/AAAA"
                       required
                     />
                     <div v-if="errors.scheduled_at" class="text-danger small mt-1">
@@ -446,40 +433,7 @@ async function handleSubmit() {
                   </div>
                 </div>
 
-                <!-- Row 4: Time & Duration -->
-                <div class="row g-3 mb-3">
-                  <div class="col-md-4">
-                    <label class="form-label fw-semibold">
-                      Horário Início <span class="text-danger">*</span>
-                    </label>
-                    <input
-                      type="time"
-                      class="form-control"
-                      v-model="startTime"
-                      required
-                    />
-                  </div>
 
-                  <div class="col-md-4">
-                    <label class="form-label fw-semibold">Duração</label>
-                    <SingleSelect
-                      v-model="durationMinutes"
-                      :options="durationOptions"
-                      :searchable="false"
-                      placeholder="Duração da aula..."
-                    />
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label fw-semibold">Horário Término</label>
-                    <input
-                      type="text"
-                      class="form-control bg-light"
-                      :value="endTime"
-                      readonly
-                    />
-                  </div>
-                </div>
 
                 <!-- Row 5: Topic & Notes -->
                 <div class="mb-3">

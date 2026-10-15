@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import FilterField from "@/components/ui/FilterField.vue";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
@@ -175,24 +176,20 @@ onMounted(async () => {
           </FilterField>
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Data desde" id="audit-filter-date-from">
-            <input
-              id="audit-filter-date-from"
-              v-model="createdAtFrom"
-              type="date"
-              class="form-control"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="audit-filter-date-from"
+            v-model="createdAtFrom"
+            label="Data desde"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Data até" id="audit-filter-date-to">
-            <input
-              id="audit-filter-date-to"
-              v-model="createdAtTo"
-              type="date"
-              class="form-control"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="audit-filter-date-to"
+            v-model="createdAtTo"
+            label="Data até"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
         <div class="col-md-6 col-lg-3">
           <FilterField label="Usuário" id="audit-filter-user">

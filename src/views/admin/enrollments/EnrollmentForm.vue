@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { notify, notifySaved } from "@/lib/actionNotification";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
+import DiscountPercentInput from "@/components/ui/DiscountPercentInput.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import {
   createEnrollment,
@@ -35,7 +37,7 @@ const isGroupClass = ref(false);
 const autoRenewal = ref(true);
 const makeupLimit = ref<number>(0);
 const planVariantId = ref<string | null>(null);
-const discountPercent = ref("");
+const discountPercent = ref<number | null>(null);
 const paymentMethod = ref<EnrollmentPaymentMethod>("pix");
 const status = ref<EnrollmentStatus>("pending");
 
@@ -119,9 +121,9 @@ async function loadForm() {
     makeupLimit.value = enrollment.makeup_limit ?? 0;
     savedStudentId.value = enrollment.student_id ?? null;
     planVariantId.value = enrollment.plan_variant_id ? String(enrollment.plan_variant_id) : null;
-    discountPercent.value = enrollment.discount_percent
-      ? String(enrollment.discount_percent)
-      : "";
+    discountPercent.value = enrollment.discount_percent !== null && enrollment.discount_percent !== undefined
+      ? Number(enrollment.discount_percent)
+      : null;
     paymentMethod.value = enrollment.payment_method;
     status.value = enrollment.status;
     savedStatus.value = enrollment.status;
@@ -142,7 +144,7 @@ async function submit() {
     teacher_id: teacherId.value ? Number(teacherId.value) : null,
     group_class_id: groupClassId.value ? Number(groupClassId.value) : null,
     plan_variant_id: planVariantId.value ? Number(planVariantId.value) : null,
-    discount_percent: discountPercent.value ? Number(discountPercent.value) : null,
+    discount_percent: discountPercent.value !== null ? Number(discountPercent.value) : null,
     payment_method: paymentMethod.value,
     status: status.value,
     is_group_class: isGroupClass.value,
@@ -262,7 +264,7 @@ onMounted(loadForm);
 
               <div class="row">
                 <div class="col-lg-6 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="studentId"
                     v-model="studentId"
                     label="Aluno (opcional)"
@@ -273,7 +275,7 @@ onMounted(loadForm);
                 </div>
 
                 <div v-if="isGroupClass" class="col-lg-6 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="groupClassId"
                     v-model="groupClassId"
                     label="Turma de Alunos *"
@@ -282,7 +284,7 @@ onMounted(loadForm);
                   />
                 </div>
                 <div v-else class="col-lg-6 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="teacherId"
                     v-model="teacherId"
                     label="Professor Responsável (Individual)"
@@ -292,7 +294,7 @@ onMounted(loadForm);
                 </div>
 
                 <div class="col-lg-6 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="planVariantId"
                     v-model="planVariantId"
                     label="Plano / Variante"
@@ -317,16 +319,12 @@ onMounted(loadForm);
 
               <div class="row">
                 <div class="col-lg-4 mb-3">
-                  <label class="form-label" for="discountPercent">Desconto (%)</label>
-                  <input
+                  <DiscountPercentInput
                     id="discountPercent"
                     v-model="discountPercent"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    class="form-control"
+                    label="Desconto (%)"
                     placeholder="0"
+                    hint="Digite o percentual ou use ↑ / ↓"
                   />
                 </div>
                 <div class="col-lg-4 mb-3">

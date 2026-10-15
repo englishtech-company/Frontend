@@ -5,6 +5,7 @@ import FilterField from "@/components/ui/FilterField.vue";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppDatePicker from "@/components/ui/AppDatePicker.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import { confirmDelete } from "@/lib/confirm";
@@ -257,24 +258,20 @@ onMounted(loadStudents);
           </FilterField>
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Início desde" id="student-filter-start-from">
-            <input
-              id="student-filter-start-from"
-              v-model="startDateFrom"
-              type="date"
-              class="form-control"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="student-filter-start-from"
+            v-model="startDateFrom"
+            label="Início desde"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
         <div class="col-md-6 col-lg-3">
-          <FilterField label="Início até" id="student-filter-start-to">
-            <input
-              id="student-filter-start-to"
-              v-model="startDateTo"
-              type="date"
-              class="form-control"
-            />
-          </FilterField>
+          <AppDatePicker
+            id="student-filter-start-to"
+            v-model="startDateTo"
+            label="Início até"
+            placeholder="DD/MM/AAAA"
+          />
         </div>
       </div>
     </FilterPanel>

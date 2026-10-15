@@ -14,6 +14,7 @@ import { notify, notifySaved } from "@/lib/actionNotification";
 import ChargeFinancialSummary from "@/components/admin/ChargeFinancialSummary.vue";
 import StudentDocumentPreviewModal from "@/components/admin/StudentDocumentPreviewModal.vue";
 import SingleSelect from "@/components/ui/SingleSelect.vue";
+import AppCombobox from "@/components/ui/AppCombobox.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePermissions } from "@/composables/usePermissions";
 import {
@@ -775,7 +776,7 @@ onMounted(loadForm);
 
               <div class="row">
                 <div class="col-lg-7 mb-3">
-                  <SingleSelect
+                  <AppCombobox
                     id="payment-charge"
                     v-model="chargeId"
                     label="Cobrança"
