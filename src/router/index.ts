@@ -339,6 +339,18 @@ const router = createRouter({
       },
     },
     {
+      path: "/payments/dashboard",
+      name: "PaymentDashboard",
+      component: () =>
+        import(
+          "../views/admin/payments/PaymentDashboard.vue"
+        ),
+      meta: {
+        layout3: "layout3",
+        permission: PERMISSIONS.payments.view,
+      },
+    },
+    {
       path: "/payments",
       name: "Payments",
       component: () =>
