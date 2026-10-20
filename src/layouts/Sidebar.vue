@@ -1,106 +1,156 @@
 <!-- @format -->
+<!--
+  Sidebar.vue  (Phase 3 — schema-driven)
 
+  Driven entirely by useFilteredMenu() which reads navigation.schema.ts.
+  No hardcoded links remain here.
+
+  Accordion expansion:
+    - `expandedKey` tracks which group dropdown is open.
+    - A watcher on `openGroupKey` (from useFilteredMenu) syncs it with the
+      current route so that:
+        • Navigating to /configuracoes opens the "administracao" group
+        • Following /auditoria (redirect) also opens it
+        • Landing on /enrollments/create expands "matriculas"
+    - Clicking a group header manually toggles its accordion, allowing
+      the user to collapse/re-open independently.
+-->
 <template>
   <div class="dlabnav" @mouseenter="iconHover = true" @mouseleave="iconHover = false">
     <div class="dlabnav-scroll">
-      <ul class="metismenu" id="menu">
+      <ul class="metismenu" id="menu" role="menubar">
         <li class="nav-label first">Menu Principal</li>
-        <template v-for="({ title, icons, className, subMenuItems, to }, ind) in menuItems" :key="ind">
-          <li v-if="className == 'sub-menu'" :class="addActive == title ? (!showMenu ? 'mm-active' : '') : ''">
-            <RouterLink class="has-arrow" to="?" data-bs-toggle="collapse" :data-bs-target="`#collapseExample${ind}`" aria-expanded="false" @click="addActive == title ? (showMenu = !showMenu) : null">
-              <i :class="icons"></i>{{ " " }}
-              <span class="nav-text">{{ title }}</span>
-            </RouterLink>
-            <ul :class="`collapse mm-show ${addActive == title ? 'mm-active show' : ''}`" :id="`collapseExample${ind}`">
-              <template v-for="({ menu, subMenuDownItems, className, to }, index) in subMenuItems" :key="index">
-                <li v-if="className == 'sub-menu-down'">
-                  <RouterLink :class="`has-arrow collapsed`" to="?" data-bs-toggle="collapse" :data-bs-target="`#collapseExample2${index}`" aria-expanded="false">{{ menu }}</RouterLink>
-                  <ul aria-expanded="false" :class="`collapse`" :id="`collapseExample2${index}`">
-                    <li v-for="({ child, to }, ind) in subMenuDownItems" :key="ind">
-                      <RouterLink :to="`${to}`" :class="{ active: $route.path === to }">{{ child }}</RouterLink>
-                    </li>
-                  </ul>
-                </li>
-                <li v-else>
-                  <RouterLink
-                    :to="`${to}`"
-                    :class="{
-                      active:
-                        $route.path === to ||
-                        (to && to !== '/' && $route.path.startsWith(String(to))),
-                    }"
-                  >
-                    {{ menu }}
-                  </RouterLink>
-                </li>
-              </template>
+
+        <template v-for="entry in menuEntries" :key="entry.kind === 'group' ? entry.key : entry.to">
+          <!-- ── Group (dropdown) ────────────────────────────────────── -->
+          <li
+            v-if="entry.kind === 'group'"
+            :class="['sidebar-group', { 'mm-active': expandedKey === entry.key }]"
+            role="none"
+          >
+            <a
+              :id="`sidebar-group-${entry.key}`"
+              class="has-arrow sidebar-group__trigger"
+              href="javascript:void(0);"
+              role="button"
+              :aria-expanded="expandedKey === entry.key"
+              :aria-controls="`sidebar-children-${entry.key}`"
+              @click.prevent="toggleGroup(entry.key)"
+            >
+              <i :class="entry.icon" aria-hidden="true"></i>
+              {{ " " }}
+              <span class="nav-text">{{ entry.label }}</span>
+            </a>
+
+            <ul
+              :id="`sidebar-children-${entry.key}`"
+              class="mm-collapse"
+              :class="{ 'mm-show': expandedKey === entry.key }"
+              role="menu"
+              :aria-labelledby="`sidebar-group-${entry.key}`"
+            >
+              <li
+                v-for="child in entry.children"
+                :key="child.to"
+                role="none"
+              >
+                <RouterLink
+                  :to="child.to"
+                  role="menuitem"
+                  :aria-current="isChildActive(child.to) ? 'page' : undefined"
+                  :class="{ active: isChildActive(child.to) }"
+                >
+                  {{ child.label }}
+                </RouterLink>
+              </li>
             </ul>
           </li>
-          <li class="nav-label" v-else-if="className == 'menu-title'">{{ title }}</li>
-          <li v-else>
+
+          <!-- ── Direct item ────────────────────────────────────────── -->
+          <li v-else role="none">
             <RouterLink
-              :to="`${to}`"
+              :to="entry.to"
               aria-expanded="false"
+              role="menuitem"
+              :aria-current="isItemActive(entry.to) ? 'page' : undefined"
               :class="{
-                active:
-                  $route.path === to ||
-                  (to && to !== '/' && $route.path.startsWith(String(to))),
+                active: isItemActive(entry.to),
               }"
             >
-              <i :class="icons"></i>
-              <span class="nav-text">{{ title }}</span>
+              <i :class="entry.icon" aria-hidden="true"></i>
+              <span class="nav-text">{{ entry.label }}</span>
             </RouterLink>
           </li>
         </template>
       </ul>
     </div>
+
     <div class="copyright sidebar-copyright">
-      <p>EnglishTech © {{ new Date().getFullYear() }}</p>
+      <p>EnglishTech &copy; {{ currentYear }}</p>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref, watchEffect } from "vue";
-import { useFilteredMenu } from "@/layouts/useFilteredMenu";
-import router from "@/router";
-import { useStore } from "@/stores/Store";
+<script lang="ts" setup>
+import { ref, watch, computed } from "vue";
+import { useRoute, RouterLink } from "vue-router";
 import { storeToRefs } from "pinia";
+import { useStore } from "@/stores/Store";
+import { useFilteredMenu } from "@/layouts/useFilteredMenu";
 
-export default defineComponent({
-  name: "sidebar_",
-  setup() {
-    const { iconHover } = storeToRefs(useStore());
-    const { menuItems } = useFilteredMenu();
-    const addActive = ref("Dashboard");
-    const showMenu = ref(false);
-    function isRouteActive(path?: string): boolean {
-      if (!path) return false;
-      const current = router.currentRoute.value.path;
-      return current === path || (path !== "/" && current.startsWith(path));
-    }
+// ── Store ──────────────────────────────────────────────────────────────────
+const { iconHover } = storeToRefs(useStore());
 
-    function menuActive() {
-      menuItems.value.map((el) => {
-        if (isRouteActive(el.to)) {
-          addActive.value = String(el.title);
-        }
-        el.subMenuItems?.map((ell) => {
-          if (isRouteActive(ell.to)) {
-            addActive.value = String(el.title);
-          }
-        });
-      });
+// ── Menu ───────────────────────────────────────────────────────────────────
+const { menuEntries, openGroupKey } = useFilteredMenu();
+
+// ── Route ──────────────────────────────────────────────────────────────────
+const route = useRoute();
+
+// ── Accordion state ────────────────────────────────────────────────────────
+/**
+ * expandedKey: which group dropdown is currently open.
+ * null = all collapsed.
+ */
+const expandedKey = ref<string | null>(null);
+
+/**
+ * Route watcher — syncs accordion with route.matched.
+ * Runs immediately on mount and on every navigation.
+ * Only auto-expands; never auto-collapses a manually opened group.
+ */
+watch(
+  openGroupKey,
+  (key) => {
+    if (key !== null) {
+      expandedKey.value = key;
     }
-    watchEffect(() => {
-      menuActive();
-    });
-    return { showMenu, menuItems, addActive, iconHover };
   },
-});
+  { immediate: true }
+);
+
+function toggleGroup(key: string) {
+  expandedKey.value = expandedKey.value === key ? null : key;
+}
+
+// ── Active state helpers ───────────────────────────────────────────────────
+function isItemActive(to: string): boolean {
+  if (to === "/") return route.path === "/";
+  return route.path === to || route.path.startsWith(to + "/");
+}
+
+function isChildActive(to: string): boolean {
+  if (!to) return false;
+  if (to === "/") return route.path === "/";
+  return route.path === to || route.path.startsWith(to + "/");
+}
+
+// ── Misc ───────────────────────────────────────────────────────────────────
+const currentYear = computed(() => new Date().getFullYear());
 </script>
 
 <style>
+/* ── Layout ────────────────────────────────────────────────────────────────── */
 .dlabnav {
   display: flex;
   flex-direction: column;
@@ -126,10 +176,32 @@ export default defineComponent({
   margin: 0;
 }
 
+/* ── Accordion ─────────────────────────────────────────────────────────────── */
+.mm-collapse {
+  display: none;
+  overflow: hidden;
+  transition: height 0.25s ease;
+}
+
+.mm-collapse.mm-show {
+  display: block;
+}
+
 .mm-show {
   transition: all 0.3s linear;
 }
+
+/* ── Active link ───────────────────────────────────────────────────────────── */
 .metismenu .active {
   color: var(--primary) !important;
+}
+
+/* ── Group trigger ─────────────────────────────────────────────────────────── */
+.sidebar-group__trigger {
+  cursor: pointer;
+}
+
+.sidebar-group.mm-active > .sidebar-group__trigger {
+  color: var(--primary);
 }
 </style>

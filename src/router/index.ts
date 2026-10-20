@@ -2,6 +2,12 @@ import { createRouter, createWebHistory } from "vue-router";
 import { PERMISSIONS } from "@/lib/permissions/access";
 import { resolveRoutePermission } from "@/lib/permissions/access";
 
+// ─── Domain route modules ────────────────────────────────────────────────────
+import { comercialRoutes } from "./comercial.routes";
+import { pedagogicoRoutes } from "./pedagogico.routes";
+import { financeiroRoutes } from "./financeiro.routes";
+import { administrativoRoutes } from "./administrativo.routes";
+
 declare module "vue-router" {
   interface RouteMeta {
     layout?: string;
@@ -18,6 +24,7 @@ const router = createRouter({
     return { el: "#app", top: 0, behavior: "smooth" };
   },
   routes: [
+    // ─── Rotas globais (sem domínio) ──────────────────────────────────────
     {
       path: "/",
       name: "Dashboard",
@@ -30,491 +37,29 @@ const router = createRouter({
       component: () => import("../views/pages/MyProfile.vue"),
       meta: { layout3: "layout3" },
     },
-    {
-      path: "/users",
-      name: "Users",
-      component: () => import("../views/admin/users/UserList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.users.view },
-    },
-    {
-      path: "/users/create",
-      name: "UserCreate",
-      component: () => import("../views/admin/users/UserForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.users.create },
-    },
-    {
-      path: "/users/:id/edit",
-      name: "UserEdit",
-      component: () => import("../views/admin/users/UserForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.users.update },
-    },
-    {
-      path: "/roles",
-      name: "Roles",
-      component: () => import("../views/admin/roles/RoleList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.roles.view },
-    },
-    {
-      path: "/roles/create",
-      name: "RoleCreate",
-      component: () => import("../views/admin/roles/RoleForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.roles.create },
-    },
-    {
-      path: "/roles/:id/edit",
-      name: "RoleEdit",
-      component: () => import("../views/admin/roles/RoleForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.roles.update },
-    },
-    {
-      path: "/students",
-      name: "Students",
-      component: () => import("../views/admin/students/StudentList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.students.view },
-    },
-    {
-      path: "/students/create",
-      name: "StudentCreate",
-      component: () => import("../views/admin/students/StudentForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.students.create },
-    },
-    {
-      path: "/students/:id/edit",
-      name: "StudentEdit",
-      component: () => import("../views/admin/students/StudentForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.students.update },
-    },
-    {
-      path: "/students/:id",
-      name: "StudentView",
-      component: () => import("../views/admin/students/StudentView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.students.view },
-    },
-    {
-      path: "/teachers",
-      name: "Teachers",
-      component: () => import("../views/admin/teachers/TeacherList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.view },
-    },
-    {
-      path: "/teachers/create",
-      name: "TeacherCreate",
-      component: () => import("../views/admin/teachers/TeacherForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.create },
-    },
-    {
-      path: "/teachers/:id/edit",
-      name: "TeacherEdit",
-      component: () => import("../views/admin/teachers/TeacherForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.update },
-    },
-    {
-      path: "/teachers/:id",
-      name: "TeacherView",
-      component: () => import("../views/admin/teachers/TeacherView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.teachers.view },
-    },
-    {
-      path: "/group-classes",
-      name: "GroupClasses",
-      component: () => import("../views/admin/group-classes/GroupClassList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.view },
-    },
-    {
-      path: "/group-classes/create",
-      name: "GroupClassCreate",
-      component: () => import("../views/admin/group-classes/GroupClassForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.create },
-    },
-    {
-      path: "/group-classes/:id",
-      name: "GroupClassView",
-      component: () => import("../views/admin/group-classes/GroupClassView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.view },
-    },
-    {
-      path: "/group-classes/:id/edit",
-      name: "GroupClassEdit",
-      component: () => import("../views/admin/group-classes/GroupClassForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.groupClasses.update },
-    },
-    {
-      path: "/calendar",
-      name: "Calendar",
-      component: () => import("../views/admin/calendar/CalendarView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.view },
-    },
-    {
-      path: "/lessons",
-      name: "Lessons",
-      component: () => import("../views/admin/lessons/LessonList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.view },
-    },
-    {
-      path: "/lessons/create",
-      name: "LessonCreate",
-      component: () => import("../views/admin/lessons/LessonForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
-    },
-    {
-      path: "/lessons/:id",
-      name: "LessonView",
-      component: () => import("../views/admin/lessons/LessonView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.view },
-    },
-    {
-      path: "/lessons/:id/edit",
-      name: "LessonEdit",
-      component: () => import("../views/admin/lessons/LessonForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
-    },
-    // Nested under GroupClass
-    {
-      path: "/group-classes/:groupClassId/lessons/create",
-      name: "GroupClassLessonCreate",
-      component: () => import("../views/admin/lessons/LessonForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
-    },
-    {
-      path: "/group-classes/:groupClassId/lessons/:id/edit",
-      name: "GroupClassLessonEdit",
-      component: () => import("../views/admin/lessons/LessonForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
-    },
-    // Nested under Student
-    {
-      path: "/students/:studentId/lessons/create",
-      name: "StudentLessonCreate",
-      component: () => import("../views/admin/lessons/LessonForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.create },
-    },
-    {
-      path: "/students/:studentId/lessons/:id/edit",
-      name: "StudentLessonEdit",
-      component: () => import("../views/admin/lessons/LessonForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.lessons.update },
-    },
-    {
-      path: "/makeup-classes",
-      name: "MakeupClasses",
-      component: () => import("../views/admin/makeup-classes/MakeupClassList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.view },
-    },
-    {
-      path: "/makeup-classes/create",
-      name: "MakeupClassCreate",
-      component: () => import("../views/admin/makeup-classes/MakeupClassForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.create },
-    },
-    {
-      path: "/makeup-classes/:id/edit",
-      name: "MakeupClassEdit",
-      component: () => import("../views/admin/makeup-classes/MakeupClassForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.makeupClasses.update },
-    },
-    {
-      path: "/leads",
-      name: "Leads",
-      component: () => import("../views/admin/leads/LeadList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.leads.view },
-    },
-    {
-      path: "/leads/create",
-      name: "LeadCreate",
-      component: () => import("../views/admin/leads/LeadForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.leads.create },
-    },
-    {
-      path: "/leads/:id/edit",
-      name: "LeadEdit",
-      component: () => import("../views/admin/leads/LeadForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.leads.update },
-    },
-    {
-      path: "/enrollments",
-      name: "Enrollments",
-      component: () => import("../views/admin/enrollments/EnrollmentList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.view },
-    },
-    {
-      path: "/enrollments/create",
-      name: "EnrollmentCreate",
-      component: () => import("../views/admin/enrollments/EnrollmentForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.create },
-    },
-    {
-      path: "/enrollments/:id/edit",
-      name: "EnrollmentEdit",
-      component: () => import("../views/admin/enrollments/EnrollmentForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.update },
-    },
-    {
-      path: "/enrollments/:id",
-      name: "EnrollmentView",
-      component: () => import("../views/admin/enrollments/EnrollmentView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.enrollments.view },
-    },
-    {
-      path: "/enrollment-questions",
-      name: "EnrollmentQuestions",
-      component: () =>
-        import(
-          "../views/admin/enrollment-questions/EnrollmentQuestionList.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.enrollmentQuestions.view,
-      },
-    },
-    {
-      path: "/enrollment-questions/create",
-      name: "EnrollmentQuestionCreate",
-      component: () =>
-        import(
-          "../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.enrollmentQuestions.create,
-      },
-    },
-    {
-      path: "/enrollment-questions/:id/edit",
-      name: "EnrollmentQuestionEdit",
-      component: () =>
-        import(
-          "../views/admin/enrollment-questions/EnrollmentQuestionForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.enrollmentQuestions.update,
-      },
-    },
-    {
-      path: "/charges",
-      name: "Charges",
-      component: () =>
-        import(
-          "../views/admin/charges/ChargeList.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.charges.view,
-      },
-    },
-    {
-      path: "/charges/create",
-      name: "ChargeCreate",
-      component: () =>
-        import(
-          "../views/admin/charges/ChargeForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.charges.create,
-      },
-    },
-    {
-      path: "/charges/:id/edit",
-      name: "ChargeEdit",
-      component: () =>
-        import(
-          "../views/admin/charges/ChargeForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.charges.update,
-      },
-    },
-    {
-      path: "/charges/:id",
-      name: "ChargeView",
-      component: () =>
-        import(
-          "../views/admin/charges/ChargeView.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.charges.view,
-      },
-    },
-    {
-      path: "/payments/dashboard",
-      name: "PaymentDashboard",
-      component: () =>
-        import(
-          "../views/admin/payments/PaymentDashboard.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.payments.view,
-      },
-    },
-    {
-      path: "/payments",
-      name: "Payments",
-      component: () =>
-        import(
-          "../views/admin/payments/PaymentList.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.payments.view,
-      },
-    },
-    {
-      path: "/payments/create",
-      name: "PaymentCreate",
-      component: () =>
-        import(
-          "../views/admin/payments/PaymentForm.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.payments.create,
-      },
-    },
-    {
-      path: "/payments/:id/edit",
-      name: "PaymentEdit",
-      redirect: "/payments",
-    },
-    {
-      path: "/financial-alerts",
-      name: "FinancialAlerts",
-      component: () =>
-        import(
-          "../views/admin/financial-alerts/FinancialAlertList.vue"
-        ),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.financialAlerts.view,
-      },
-    },
-    {
-      path: "/plans",
-      name: "Plans",
-      component: () => import("../views/admin/plans/PlanList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.plans.view },
-    },
-    {
-      path: "/plans/create",
-      name: "PlanCreate",
-      component: () => import("../views/admin/plans/PlanForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.plans.create },
-    },
-    {
-      path: "/plans/:id/edit",
-      name: "PlanEdit",
-      component: () => import("../views/admin/plans/PlanForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.plans.update },
-    },
-    {
-      path: "/coupons",
-      name: "Coupons",
-      component: () => import("../views/admin/coupons/CouponList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.coupons.view },
-    },
-    {
-      path: "/coupons/create",
-      name: "CouponCreate",
-      component: () => import("../views/admin/coupons/CouponForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.coupons.create },
-    },
-    {
-      path: "/coupons/:id/edit",
-      name: "CouponEdit",
-      component: () => import("../views/admin/coupons/CouponForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.coupons.update },
-    },
-    {
-      path: "/permissions",
-      name: "Permissions",
-      component: () =>
-        import("../views/admin/permissions/PermissionList.vue"),
-      meta: {
-        layout3: "layout3",
-        permission: PERMISSIONS.permissions.view,
-      },
-    },
-    {
-      path: "/audits",
-      name: "Audits",
-      component: () => import("../views/admin/audits/AuditList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.audits.view },
-    },
-    {
-      path: "/experimental-classes",
-      name: "ExperimentalClasses",
-      component: () => import("../views/admin/experimental-classes/ExperimentalClassList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.view },
-    },
-    {
-      path: "/experimental-classes/create",
-      name: "ExperimentalClassCreate",
-      component: () => import("../views/admin/experimental-classes/ExperimentalClassForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.create },
-    },
-    {
-      path: "/experimental-classes/:id/edit",
-      name: "ExperimentalClassEdit",
-      component: () => import("../views/admin/experimental-classes/ExperimentalClassForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.experimentalClasses.update },
-    },
-    {
-      path: "/library/categories",
-      name: "LibraryCategories",
-      component: () => import("../views/admin/library/LibraryCategoryList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.view },
-    },
-    {
-      path: "/library/categories/create",
-      name: "LibraryCategoryCreate",
-      component: () => import("../views/admin/library/LibraryCategoryForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.create },
-    },
-    {
-      path: "/library/categories/:id",
-      name: "LibraryCategoryView",
-      component: () => import("../views/admin/library/LibraryCategoryView.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.view },
-    },
-    {
-      path: "/library/categories/:id/edit",
-      name: "LibraryCategoryEdit",
-      component: () => import("../views/admin/library/LibraryCategoryForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryCategories.update },
-    },
-    {
-      path: "/library/materials",
-      name: "LibraryMaterials",
-      component: () => import("../views/admin/library/LibraryMaterialList.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryMaterials.view },
-    },
-    {
-      path: "/library/materials/create",
-      name: "LibraryMaterialCreate",
-      component: () => import("../views/admin/library/LibraryMaterialForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryMaterials.create },
-    },
-    {
-      path: "/library/materials/:id/edit",
-      name: "LibraryMaterialEdit",
-      component: () => import("../views/admin/library/LibraryMaterialForm.vue"),
-      meta: { layout3: "layout3", permission: PERMISSIONS.libraryMaterials.update },
-    },
+
+    // ─── Módulos por domínio ──────────────────────────────────────────────
+    ...pedagogicoRoutes,
+    ...comercialRoutes,
+    ...financeiroRoutes,
+    ...administrativoRoutes,
+
+    // ─── Matrícula pública (token) ────────────────────────────────────────
     {
       path: "/enrollment/:token",
       name: "PublicEnrollment",
       component: () => import("../views/pages/PublicEnrollmentForm.vue"),
       meta: { layout4: "layout4" },
     },
+    // Legacy PT alias para matrícula pública (com token)
     {
       path: "/matricula/:token",
       redirect: (to) => ({
         path: `/enrollment/${String(to.params.token)}`,
       }),
     },
+
+    // ─── Páginas de sistema ───────────────────────────────────────────────
     {
       path: "/page-login",
       name: "page_login",
@@ -536,6 +81,8 @@ const router = createRouter({
   ],
 });
 
+// ─── Guard helpers ────────────────────────────────────────────────────────────
+
 const publicPaths = new Set(["/page-login", "/page-error-403"]);
 
 function isPublicPath(path: string): boolean {
@@ -545,6 +92,8 @@ function isPublicPath(path: string): boolean {
 
   return path.startsWith("/enrollment/");
 }
+
+// ─── Global navigation guard ──────────────────────────────────────────────────
 
 router.beforeEach(async (to) => {
   const { useAuthStore } = await import("@/stores/auth");
