@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
   >
     <label v-if="label" :for="id" class="single-select__label">
       {{ label }}
-      <span v-if="required" class="single-select__required">*</span>
+      <span v-if="required" class="text-danger">*</span>
     </label>
 
     <input
@@ -292,10 +292,6 @@ onBeforeUnmount(() => {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #6c757d;
-}
-
-.single-select__required {
-  color: var(--primary);
 }
 
 .single-select__trigger {

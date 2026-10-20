@@ -10,12 +10,29 @@ export type PublicEnrollmentSubmitPayload = {
   birthdate: string;
   answers?: Record<string, string | string[]>;
   contract_accepted: boolean;
+  coupon_name?: string | null;
 };
 
 export async function getPublicEnrollment(token: string): Promise<PublicEnrollment> {
   const response = await api<ApiItemResponse<"enrollment", PublicEnrollment>>(
     `/public/enrollments/${token}`,
     { auth: false }
+  );
+
+  return response.enrollment;
+}
+
+export async function applyPublicEnrollmentCoupon(
+  token: string,
+  couponName: string
+): Promise<PublicEnrollment> {
+  const response = await api<ApiItemResponse<"enrollment", PublicEnrollment>>(
+    `/public/enrollments/${token}/coupon`,
+    {
+      method: "POST",
+      body: { coupon_name: couponName },
+      auth: false,
+    }
   );
 
   return response.enrollment;

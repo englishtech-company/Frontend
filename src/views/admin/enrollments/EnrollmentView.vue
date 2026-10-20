@@ -289,6 +289,20 @@ onMounted(loadEnrollment);
                                 <strong>{{ PAYMENT_METHOD_LABELS[enrollment.payment_method] }}</strong>
                               </li>
                               <li class="list-group-item d-flex justify-content-between px-0">
+                                <span>Cupom</span>
+                                <strong class="d-flex align-items-center gap-1">
+                                  {{
+                                    enrollment.relationships?.coupon?.name || "—"
+                                  }}
+                                  <span
+                                    v-if="enrollment.relationships?.coupon?.unique_per_student"
+                                    class="badge badge-primary"
+                                  >
+                                    Único
+                                  </span>
+                                </strong>
+                              </li>
+                              <li class="list-group-item d-flex justify-content-between px-0">
                                 <span>Desconto</span>
                                 <strong>
                                   {{

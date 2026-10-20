@@ -16,6 +16,7 @@ import {
 import {
   ENROLLMENT_STATUS_LABELS,
   formatEnrollmentNumber,
+  getEnrollmentCoupon,
   getEnrollmentPublicUrl,
 } from "@/lib/enrollments/format";
 import { listPlans } from "@/lib/plans";
@@ -37,6 +38,7 @@ const isGroupClass = ref(false);
 const autoRenewal = ref(true);
 const makeupLimit = ref<number>(0);
 const planVariantId = ref<string | null>(null);
+const couponName = ref("");
 const discountPercent = ref<number | null>(null);
 const paymentMethod = ref<EnrollmentPaymentMethod>("pix");
 const status = ref<EnrollmentStatus>("pending");
@@ -121,6 +123,7 @@ async function loadForm() {
     makeupLimit.value = enrollment.makeup_limit ?? 0;
     savedStudentId.value = enrollment.student_id ?? null;
     planVariantId.value = enrollment.plan_variant_id ? String(enrollment.plan_variant_id) : null;
+    couponName.value = getEnrollmentCoupon(enrollment)?.name ?? "";
     discountPercent.value = enrollment.discount_percent !== null && enrollment.discount_percent !== undefined
       ? Number(enrollment.discount_percent)
       : null;
@@ -144,6 +147,7 @@ async function submit() {
     teacher_id: teacherId.value ? Number(teacherId.value) : null,
     group_class_id: groupClassId.value ? Number(groupClassId.value) : null,
     plan_variant_id: planVariantId.value ? Number(planVariantId.value) : null,
+    coupon_name: couponName.value.trim() || null,
     discount_percent: discountPercent.value !== null ? Number(discountPercent.value) : null,
     payment_method: paymentMethod.value,
     status: status.value,
@@ -319,12 +323,27 @@ onMounted(loadForm);
 
               <div class="row">
                 <div class="col-lg-4 mb-3">
+                  <label class="form-label" for="couponName">Cupom</label>
+                  <input
+                    id="couponName"
+                    v-model="couponName"
+                    type="text"
+                    maxlength="255"
+                    class="form-control"
+                    placeholder="Nome do cupom"
+                  />
+                  <small class="form-text text-muted">
+                    Ao salvar, o desconto do cupom é aplicado na matrícula.
+                  </small>
+                </div>
+                <div class="col-lg-4 mb-3">
                   <DiscountPercentInput
                     id="discountPercent"
                     v-model="discountPercent"
                     label="Desconto (%)"
                     placeholder="0"
                     hint="Digite o percentual ou use ↑ / ↓"
+                    :disabled="Boolean(couponName.trim())"
                   />
                 </div>
                 <div class="col-lg-4 mb-3">

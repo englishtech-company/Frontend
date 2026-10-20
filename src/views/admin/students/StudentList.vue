@@ -13,6 +13,7 @@ import { notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import { deleteStudent, listStudents } from "@/lib/students";
 import {
+  formatStudentCouponLabel,
   formatStudentPlanShortLabel,
   formatStudentStatusBadge,
   getStudentCurrentPlanVariant,
@@ -40,6 +41,7 @@ const phoneFilter = ref("");
 const statusFilter = ref<string | number | null>(null);
 const teacherFilter = ref("");
 const planFilter = ref("");
+const couponFilter = ref("");
 const startDateFrom = ref("");
 const startDateTo = ref("");
 
@@ -62,6 +64,7 @@ const activeFilterCount = computed(() =>
     statusFilter.value,
     teacherFilter.value,
     planFilter.value,
+    couponFilter.value,
     startDateFrom.value,
     startDateTo.value,
   ])
@@ -87,6 +90,7 @@ async function loadStudents() {
       status: statusFilter.value ? String(statusFilter.value) : undefined,
       teacherName: teacherFilter.value.trim() || undefined,
       planName: planFilter.value.trim() || undefined,
+      couponName: couponFilter.value.trim() || undefined,
       startDateFrom: startDateFrom.value || undefined,
       startDateTo: startDateTo.value || undefined,
     });
@@ -113,6 +117,7 @@ function clearFilters() {
   statusFilter.value = null;
   teacherFilter.value = "";
   planFilter.value = "";
+  couponFilter.value = "";
   startDateFrom.value = "";
   startDateTo.value = "";
   page.value = 1;
@@ -258,6 +263,18 @@ onMounted(loadStudents);
           </FilterField>
         </div>
         <div class="col-md-6 col-lg-3">
+          <FilterField label="Cupom" id="student-filter-coupon">
+            <input
+              id="student-filter-coupon"
+              v-model="couponFilter"
+              type="text"
+              class="form-control"
+              placeholder="Nome do cupom..."
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
           <AppDatePicker
             id="student-filter-start-from"
             v-model="startDateFrom"
@@ -296,13 +313,14 @@ onMounted(loadStudents);
                     <th>Status</th>
                     <th>Professor</th>
                     <th>Plano</th>
+                    <th>Cupom</th>
                     <th>Início</th>
                     <th v-if="showActions" class="text-end">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="students.length === 0">
-                    <td :colspan="showActions ? 9 : 8" class="text-center text-muted">
+                    <td :colspan="showActions ? 10 : 9" class="text-center text-muted">
                       Nenhum aluno encontrado
                     </td>
                   </tr>
@@ -327,6 +345,7 @@ onMounted(loadStudents);
                     </td>
                     <td>{{ getStudentCurrentTeacher(student)?.name || "—" }}</td>
                     <td>{{ formatStudentPlanShortLabel(getStudentCurrentPlanVariant(student)) }}</td>
+                    <td>{{ formatStudentCouponLabel(student) }}</td>
                     <td>
                       {{
                         student.start_date

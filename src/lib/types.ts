@@ -126,6 +126,7 @@ export type Student = {
   current_enrollment_assignment?:
     | StudentEnrollmentAssignment
     | null;
+  enrollments?: Enrollment[];
   relationships?: {
     teacher_assignments?:
       StudentTeacherAssignment[];
@@ -135,6 +136,7 @@ export type Student = {
     current_plan_variant?:
       | PlanVariant
       | null;
+    enrollments?: Enrollment[];
     group_classes?: EnrolledGroupClass[];
     lessons?: Lesson[];
   };
@@ -207,6 +209,24 @@ export type Plan = {
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+};
+
+export type CouponDiscountType = "percent" | "amount";
+
+export type Coupon = {
+  id: number;
+  name: string;
+  discount_type?: CouponDiscountType;
+  value: string | number;
+  usage_limit?: number | null;
+  used_count?: number;
+  unique_per_student?: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  relationships?: Record<string, unknown>;
 };
 
 export type LeadRegistrationSource =
@@ -363,6 +383,7 @@ export type Enrollment = {
   teacher_id?: number | null;
   group_class_id?: number | null;
   plan_variant_id?: number | null;
+  coupon_id?: number | null;
   discount_percent?: string | number | null;
   payment_method: EnrollmentPaymentMethod;
   status: EnrollmentStatus;
@@ -382,11 +403,13 @@ export type Enrollment = {
   teacher?: Teacher | null;
   group_class?: GroupClass | null;
   plan_variant?: PlanVariant | null;
+  coupon?: Coupon | null;
   relationships?: {
     student?: Student | null;
     teacher?: Teacher | null;
     group_class?: GroupClass | null;
     plan_variant?: PlanVariant | null;
+    coupon?: Coupon | null;
     form_questions?: EnrollmentFormQuestion[];
     student_extra?: StudentExtra | null;
     makeup_classes?: MakeupClass[];
@@ -402,6 +425,13 @@ export type PublicEnrollment = {
     | string
     | number
     | null;
+  coupon?: {
+    id: number;
+    name: string;
+    discount_type?: CouponDiscountType;
+    value: string | number;
+    unique_per_student?: boolean;
+  } | null;
   payment_method:
     EnrollmentPaymentMethod;
   plan_variant?: {

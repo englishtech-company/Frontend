@@ -3,9 +3,18 @@ import { PERMISSIONS } from "@/lib/permissions/access";
 
 /**
  * Domínio: Financeiro
- * Módulos: Cobranças, Pagamentos, Inadimplentes, Planos
+ * Módulos: Cobranças, Pagamentos, Inadimplentes, Planos, Cupons
  */
 export const financeiroRoutes: RouteRecordRaw[] = [
+  // ─── Painel de pagamentos ─────────────────────────────────────────────────
+  {
+    path: "/payments/dashboard",
+    name: "PaymentDashboard",
+    component: () =>
+      import("../views/admin/payments/PaymentDashboard.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.payments.view },
+  },
+
   // ─── Cobranças ────────────────────────────────────────────────────────────
   {
     path: "/charges",
@@ -82,5 +91,25 @@ export const financeiroRoutes: RouteRecordRaw[] = [
     name: "PlanEdit",
     component: () => import("../views/admin/plans/PlanForm.vue"),
     meta: { layout3: "layout3", permission: PERMISSIONS.plans.update },
+  },
+
+  // ─── Cupons ───────────────────────────────────────────────────────────────
+  {
+    path: "/coupons",
+    name: "Coupons",
+    component: () => import("../views/admin/coupons/CouponList.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.coupons.view },
+  },
+  {
+    path: "/coupons/create",
+    name: "CouponCreate",
+    component: () => import("../views/admin/coupons/CouponForm.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.coupons.create },
+  },
+  {
+    path: "/coupons/:id/edit",
+    name: "CouponEdit",
+    component: () => import("../views/admin/coupons/CouponForm.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.coupons.update },
   },
 ];

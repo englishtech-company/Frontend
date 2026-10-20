@@ -29,6 +29,12 @@ export const PERMISSIONS = {
     update: "plans.update",
     delete: "plans.delete",
   },
+  coupons: {
+    view: "coupons.view",
+    create: "coupons.create",
+    update: "coupons.update",
+    delete: "coupons.delete",
+  },
   leads: {
     view: "leads.view",
     create: "leads.create",
@@ -123,6 +129,7 @@ export type PermissionName =
   | (typeof PERMISSIONS.students)[keyof typeof PERMISSIONS.students]
   | (typeof PERMISSIONS.teachers)[keyof typeof PERMISSIONS.teachers]
   | (typeof PERMISSIONS.plans)[keyof typeof PERMISSIONS.plans]
+  | (typeof PERMISSIONS.coupons)[keyof typeof PERMISSIONS.coupons]
   | (typeof PERMISSIONS.leads)[keyof typeof PERMISSIONS.leads]
   | (typeof PERMISSIONS.enrollments)[keyof typeof PERMISSIONS.enrollments]
   | (typeof PERMISSIONS.enrollmentQuestions)[keyof typeof PERMISSIONS.enrollmentQuestions]
@@ -237,6 +244,24 @@ export function canAccessPath(
   if (path.startsWith("/plans")) {
     return hasPermission(
       PERMISSIONS.plans.view
+    );
+  }
+
+  if (path === "/coupons/create") {
+    return hasPermission(
+      PERMISSIONS.coupons.create
+    );
+  }
+
+  if (/^\/coupons\/\d+\/edit$/.test(path)) {
+    return hasPermission(
+      PERMISSIONS.coupons.update
+    );
+  }
+
+  if (path.startsWith("/coupons")) {
+    return hasPermission(
+      PERMISSIONS.coupons.view
     );
   }
 
@@ -456,6 +481,18 @@ export function resolveRoutePermission(
 
   if (path.startsWith("/plans")) {
     return PERMISSIONS.plans.view;
+  }
+
+  if (path === "/coupons/create") {
+    return PERMISSIONS.coupons.create;
+  }
+
+  if (/^\/coupons\/\d+\/edit$/.test(path)) {
+    return PERMISSIONS.coupons.update;
+  }
+
+  if (path.startsWith("/coupons")) {
+    return PERMISSIONS.coupons.view;
   }
 
   if (path === "/leads/create") {
