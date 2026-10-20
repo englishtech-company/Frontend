@@ -28,6 +28,7 @@ export type LessonPayload = {
   topic: string;
   status: string;
   observation?: string | null;
+  google_invite_attendees?: boolean;
 };
 
 // ─── Flat list ────────────────────────────────────────────────────────────────

@@ -1,4 +1,8 @@
-import type { CalendarEventKind, CalendarMockEvent } from "@/lib/calendar/types";
+import type {
+  CalendarEventKind,
+  CalendarEventStatusKey,
+  CalendarMockEvent,
+} from "@/lib/calendar/types";
 import {
   listExperimentalClasses,
   type ListExperimentalClassesParams,
@@ -12,7 +16,14 @@ import {
   listLessonsForStudent,
   type ListLessonsParams,
 } from "@/lib/lessons";
-import type { ExperimentalClass, Lesson, LessonStatus, Paginated } from "@/lib/types";
+import { listMakeupClasses } from "@/lib/makeupClasses";
+import type {
+  ExperimentalClass,
+  Lesson,
+  LessonStatus,
+  MakeupClass,
+  Paginated,
+} from "@/lib/types";
 
 const LESSON_STATUS_LABELS: Record<LessonStatus, string> = {
   scheduled: "Agendada",
@@ -34,6 +45,7 @@ const CALENDAR_MAX_PAGES = 25;
 export type LoadCalendarEventsParams = {
   teacherId?: string | number | null;
   studentId?: string | number | null;
+  googleConnected?: boolean;
 };
 
 function addMinutes(isoDate: string, minutes = 60): string {
@@ -58,6 +70,24 @@ function normalizeOptionalId(
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function lessonStatusKey(status: LessonStatus): CalendarEventStatusKey {
+  return status;
+}
+
+function experimentalStatusKey(statusClass: string): CalendarEventStatusKey {
+  const normalized = statusClass.toLowerCase();
+
+  if (normalized === "cancelada") {
+    return "cancelada";
+  }
+
+  if (normalized === "realizada") {
+    return "realizada";
+  }
+
+  return "agendada";
 }
 
 function getLessonKind(lesson: Lesson): CalendarEventKind {
@@ -122,6 +152,7 @@ export function lessonToCalendarEvent(lesson: Lesson): CalendarMockEvent {
       ? `Turma · ${groupClass.name}`
       : `Aluno · ${student?.name ?? "—"}`,
     statusLabel: LESSON_STATUS_LABELS[lesson.status] ?? lesson.status,
+    statusKey: lessonStatusKey(lesson.status),
     observation: lesson.observation ?? undefined,
     sourceType: "lesson",
     sourceId: lesson.id,
@@ -147,10 +178,47 @@ export function experimentalClassToCalendarEvent(
     contextLabel: `Interessado · ${lead?.name ?? "—"}`,
     statusLabel:
       EXPERIMENTAL_STATUS_LABELS[item.status_class] ?? item.status_class,
+    statusKey: experimentalStatusKey(String(item.status_class)),
     observation: item.observations_feedback ?? undefined,
     sourceType: "experimental",
     sourceId: item.id,
     href: `/experimental-classes/${item.id}/edit`,
+  };
+}
+
+export function makeupClassToCalendarEvent(item: MakeupClass): CalendarMockEvent {
+  const teacher = item.teacher ?? item.relationships?.teacher ?? null;
+  const student =
+    item.enrollment?.student ??
+    item.relationships?.enrollment?.student ??
+    null;
+  const groupClass =
+    item.group_class ?? item.relationships?.group_class ?? null;
+  const teacherId = teacher?.id ?? item.teacher_id ?? null;
+  const start = item.new_date!;
+
+  return {
+    id: `makeup-${item.id}`,
+    kind: "makeup_lesson",
+    title: student
+      ? `Reposição — ${student.name}`
+      : groupClass
+        ? `Reposição — ${groupClass.name}`
+        : "Reposição agendada",
+    start,
+    end: addMinutes(start),
+    teacherName: teacher?.name ?? "—",
+    teacherId,
+    contextLabel: student
+      ? `Aluno · ${student.name}`
+      : groupClass
+        ? `Turma · ${groupClass.name}`
+        : "Reposição",
+    statusLabel: "Agendada",
+    statusKey: "scheduled",
+    sourceType: "lesson",
+    sourceId: item.id,
+    href: `/makeup-classes/${item.id}/edit`,
   };
 }
 
@@ -163,6 +231,7 @@ export async function loadCalendarEvents(
   const to = formatApiDate(rangeEnd);
   const teacherId = normalizeOptionalId(params.teacherId);
   const studentId = normalizeOptionalId(params.studentId);
+  const googleConnected = params.googleConnected === true;
 
   const lessonParams: ListLessonsParams = {
     limit: CALENDAR_PAGE_SIZE,
@@ -185,43 +254,44 @@ export async function loadCalendarEvents(
     : fetchAllPages((page) => listLessons({ ...lessonParams, page }));
 
   const includeExperimental = studentId === undefined;
-  const includeGoogle = studentId === undefined;
+  const includeGoogle = studentId === undefined && googleConnected;
+  const includeMakeup = studentId === undefined;
 
-  const [lessons, experimentalClasses, googleEvents] = await Promise.all([
-    lessonsPromise,
-    includeExperimental
-      ? fetchAllPages((page) =>
-          listExperimentalClasses({ ...experimentalParams, page })
-        )
-      : Promise.resolve([]),
-    includeGoogle
-      ? loadGoogleEvents(rangeStart, rangeEnd, teacherId)
-      : Promise.resolve([]),
-  ]);
+  const makeupPromise = includeMakeup
+    ? fetchAllPages((page) =>
+        listMakeupClasses({
+          page,
+          limit: CALENDAR_PAGE_SIZE,
+          status: "scheduled",
+          new_date_from: `${from} 00:00:00`,
+          new_date_to: `${to} 23:59:59`,
+          ...(teacherId !== undefined ? { teacher_id: teacherId } : {}),
+        })
+      )
+    : Promise.resolve([]);
+
+  const [lessons, experimentalClasses, makeupClasses, googleEvents] =
+    await Promise.all([
+      lessonsPromise,
+      includeExperimental
+        ? fetchAllPages((page) =>
+            listExperimentalClasses({ ...experimentalParams, page })
+          )
+        : Promise.resolve([]),
+      makeupPromise,
+      includeGoogle
+        ? listGoogleCalendarEvents({ rangeStart, rangeEnd })
+        : Promise.resolve([]),
+    ]);
+
+  const scheduledMakeups = makeupClasses.filter((item) => item.new_date);
 
   return [
     ...lessons.map(lessonToCalendarEvent),
     ...experimentalClasses.map(experimentalClassToCalendarEvent),
-    ...googleEvents,
-  ];
-}
-
-async function loadGoogleEvents(
-  rangeStart: Date,
-  rangeEnd: Date,
-  teacherId?: number
-): Promise<CalendarMockEvent[]> {
-  try {
-    const events = await listGoogleCalendarEvents({
-      rangeStart,
-      rangeEnd,
-      teacherId,
-    });
-
-    return events
+    ...scheduledMakeups.map(makeupClassToCalendarEvent),
+    ...googleEvents
       .map(googleEventToCalendarEvent)
-      .filter((event): event is CalendarMockEvent => event !== null);
-  } catch {
-    return [];
-  }
+      .filter((event): event is CalendarMockEvent => event !== null),
+  ];
 }

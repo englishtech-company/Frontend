@@ -1,4 +1,7 @@
-import type { CalendarEventKind } from "@/lib/calendar/types";
+import type {
+  CalendarEventKind,
+  CalendarEventStatusKey,
+} from "@/lib/calendar/types";
 
 export type CalendarLegendItem = {
   kind: CalendarEventKind;
@@ -98,4 +101,103 @@ export function getCalendarEventBackground(
   dark = false
 ): string {
   return getCalendarLegendItem(kind, dark).background;
+}
+
+export type CalendarEventPresentation = {
+  backgroundColor: string;
+  borderColor: string;
+  textColor: string;
+  classNames: string[];
+};
+
+const STATUS_CANCELLED: Record<"light" | "dark", Omit<CalendarEventPresentation, "classNames">> = {
+  light: {
+    backgroundColor: "#fce8e6",
+    borderColor: "#d93025",
+    textColor: "#c5221f",
+  },
+  dark: {
+    backgroundColor: "rgba(242, 139, 130, 0.35)",
+    borderColor: "#f28b82",
+    textColor: "#f9dedc",
+  },
+};
+
+const STATUS_COMPLETED: Record<"light" | "dark", Omit<CalendarEventPresentation, "classNames">> = {
+  light: {
+    backgroundColor: "#e8eaed",
+    borderColor: "#5f6368",
+    textColor: "#3c4043",
+  },
+  dark: {
+    backgroundColor: "rgba(154, 160, 166, 0.28)",
+    borderColor: "#9aa0a6",
+    textColor: "#e8eaed",
+  },
+};
+
+const STATUS_POSTPONED: Record<"light" | "dark", Omit<CalendarEventPresentation, "classNames">> = {
+  light: {
+    backgroundColor: "#fef7e0",
+    borderColor: "#f9ab00",
+    textColor: "#e37400",
+  },
+  dark: {
+    backgroundColor: "rgba(253, 214, 99, 0.22)",
+    borderColor: "#fdd663",
+    textColor: "#fdd663",
+  },
+};
+
+function isCancelledStatus(statusKey?: CalendarEventStatusKey): boolean {
+  return (
+    statusKey === "cancelled" ||
+    statusKey === "cancelada" ||
+    statusKey === "google_cancelled"
+  );
+}
+
+function isCompletedStatus(statusKey?: CalendarEventStatusKey): boolean {
+  return statusKey === "completed" || statusKey === "realizada";
+}
+
+function isPostponedStatus(statusKey?: CalendarEventStatusKey): boolean {
+  return statusKey === "postponed";
+}
+
+export function getCalendarEventPresentation(
+  kind: CalendarEventKind,
+  statusKey: CalendarEventStatusKey | undefined,
+  dark = false
+): CalendarEventPresentation {
+  const mode = dark ? "dark" : "light";
+  const classNames = [`gcal-event--${kind}`];
+
+  if (statusKey) {
+    classNames.push(`gcal-event--status-${statusKey}`);
+  }
+
+  if (isCancelledStatus(statusKey)) {
+    classNames.push("gcal-event--status-cancelled");
+    return { ...STATUS_CANCELLED[mode], classNames };
+  }
+
+  if (isCompletedStatus(statusKey)) {
+    classNames.push("gcal-event--status-completed");
+    return { ...STATUS_COMPLETED[mode], classNames };
+  }
+
+  if (isPostponedStatus(statusKey)) {
+    classNames.push("gcal-event--status-postponed");
+    return { ...STATUS_POSTPONED[mode], classNames };
+  }
+
+  const legend = getCalendarLegendItem(kind, dark);
+
+  return {
+    backgroundColor: legend.background,
+    borderColor: legend.color,
+    textColor: legend.color,
+    classNames,
+  };
 }

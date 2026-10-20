@@ -121,6 +121,11 @@ const MenuItems = reactive<menuType[]>([
     className: "sub-menu",
     subMenuItems: [
       {
+        menu: "Painel de pagamentos",
+        to: "/payments/dashboard",
+        permission: PERMISSIONS.payments.view,
+      },
+      {
         menu: "Cobranças",
         to: "/charges",
         permission: PERMISSIONS.charges.view,

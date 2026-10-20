@@ -35,6 +35,7 @@ import {
   CALENDAR_EVENT_LEGEND_DARK,
   getCalendarEventBackground,
   getCalendarEventColor,
+  getCalendarEventPresentation,
   getCalendarLegendItem,
 } from "@/lib/calendar/theme";
 import { useBodyThemeVersion } from "@/composables/useBodyThemeVersion";
@@ -44,6 +45,7 @@ import {
   connectGoogleCalendar,
   disconnectGoogleCalendar,
   getGoogleCalendarStatus,
+  syncGoogleCalendarEvents,
   type GoogleCalendarStatus,
 } from "@/lib/googleCalendar";
 import { getStudentOptions } from "@/lib/students";
@@ -54,6 +56,8 @@ type CalendarViewMode = "timeGridWeek" | "dayGridMonth" | "timeGridDay";
 const {
   canCreateLessons,
   canCreateExperimentalClasses,
+  canUpdateLessons,
+  canUpdateExperimentalClasses,
   canViewGoogleCalendar,
   canUpdateGoogleCalendar,
   canViewStudents,
@@ -69,6 +73,7 @@ const allEvents = ref<CalendarMockEvent[]>([]);
 const loadingEvents = ref(false);
 const selectedEvent = ref<CalendarMockEvent | null>(null);
 const showCreateModal = ref(false);
+const editEvent = ref<CalendarMockEvent | null>(null);
 const createInitialDateTime = ref("");
 const currentTitle = ref("");
 const currentView = ref<CalendarViewMode>("timeGridWeek");
@@ -122,7 +127,11 @@ const upcomingEvents = computed(() => {
 
 const calendarEvents = computed<EventInput[]>(() =>
   filteredEvents.value.map((event) => {
-    const legend = getCalendarLegendItem(event.kind, isDarkTheme.value);
+    const presentation = getCalendarEventPresentation(
+      event.kind,
+      event.statusKey,
+      isDarkTheme.value
+    );
 
     return {
       id: event.id,
@@ -130,10 +139,10 @@ const calendarEvents = computed<EventInput[]>(() =>
       start: event.start,
       end: event.end,
       allDay: Boolean(event.allDay),
-      backgroundColor: legend.background,
-      borderColor: legend.color,
-      textColor: legend.color,
-      classNames: [`gcal-event--${event.kind}`],
+      backgroundColor: presentation.backgroundColor,
+      borderColor: presentation.borderColor,
+      textColor: presentation.textColor,
+      classNames: presentation.classNames,
       extendedProps: { ...event },
     };
   })
@@ -152,9 +161,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   dayMaxEvents: 4,
   height: "100%",
   expandRows: true,
-  slotMinTime: "07:00:00",
-  slotMaxTime: "22:00:00",
+  slotMinTime: "06:00:00",
+  // Exclusivo no FullCalendar: 24:00 inclui faixas até 23:30 (aulas noturnas).
+  slotMaxTime: "24:00:00",
   slotDuration: "00:30:00",
+  scrollTime: "07:00:00",
+  scrollTimeReset: false,
   allDaySlot: true,
   nowIndicator: true,
   firstDay: 0,
@@ -217,6 +229,7 @@ async function refreshEvents(start: Date, end: Date) {
     const events = await loadCalendarEvents(start, end, {
       teacherId: selectedTeacherId.value,
       studentId: selectedStudentId.value,
+      googleConnected: googleStatus.value?.connected === true,
     });
 
     if (token !== refreshToken) {
@@ -345,6 +358,10 @@ function googleCallbackError(reason: string | null): string {
     return "Não foi possível concluir a autorização do Google Calendar. Tente novamente.";
   }
 
+  if (reason === "token_exchange_failed") {
+    return "O Google recusou as credenciais do servidor (Client Secret inválido ou desatualizado). Gere uma nova chave no Google Cloud e atualize o backend/.env.";
+  }
+
   return "Não foi possível vincular o Google Calendar. Tente novamente.";
 }
 
@@ -372,6 +389,44 @@ async function connectGoogleAccount() {
         ? error.message
         : "Não foi possível iniciar a vinculação com o Google Calendar."
     );
+    googleBusy.value = false;
+  }
+}
+
+async function pullGoogleEvents() {
+  if (!canViewGoogleCalendar.value || googleBusy.value || !googleStatus.value?.connected) {
+    return;
+  }
+
+  if (!currentRange.value) {
+    notify.warning("Aguarde o calendário carregar o período atual.");
+    return;
+  }
+
+  googleBusy.value = true;
+
+  try {
+    const result = await syncGoogleCalendarEvents({
+      rangeStart: currentRange.value.start,
+      rangeEnd: currentRange.value.end,
+    });
+
+    googleStatus.value = result.google_calendar;
+    await refreshEvents(currentRange.value.start, currentRange.value.end);
+
+    const count = result.imported_count ?? result.google_calendar_events?.length ?? 0;
+    notify.success(
+      count > 0
+        ? `${count} evento(s) do Google importados para este período.`
+        : "Sincronizado. Nenhum evento do Google neste período."
+    );
+  } catch (error) {
+    notify.error(
+      error instanceof Error
+        ? error.message
+        : "Não foi possível puxar os eventos do Google Calendar."
+    );
+  } finally {
     googleBusy.value = false;
   }
 }
@@ -412,11 +467,29 @@ async function disconnectGoogleAccount() {
   }
 }
 
-onMounted(() => {
+watch(
+  () => googleStatus.value?.connected,
+  (connected, wasConnected) => {
+    if (connected && !wasConnected && currentRange.value) {
+      void refreshEvents(currentRange.value.start, currentRange.value.end);
+    }
+  }
+);
+
+watch(
+  () => route.path,
+  (path) => {
+    if (path === "/calendar" && currentRange.value) {
+      void refreshEvents(currentRange.value.start, currentRange.value.end);
+    }
+  }
+);
+
+onMounted(async () => {
   void loadTeacherOptions();
   void loadStudentOptionsList();
-  void loadGoogleStatus();
-  void handleGoogleCallbackQuery();
+  await loadGoogleStatus();
+  await handleGoogleCallbackQuery();
 });
 
 function toDateTimeLocalValue(date: Date): string {
@@ -433,16 +506,88 @@ function openCreateModal(date?: Date) {
     return;
   }
 
+  editEvent.value = null;
   createInitialDateTime.value = date ? toDateTimeLocalValue(date) : "";
   showCreateModal.value = true;
 }
 
-function closeCreateModal() {
+function closeEventModal() {
   showCreateModal.value = false;
   createInitialDateTime.value = "";
+  editEvent.value = null;
+}
+
+function toggleCalendarKind(kind: CalendarEventKind) {
+  visibleKinds.value[kind] = !visibleKinds.value[kind];
+}
+
+function canEditEventInCalendar(event: CalendarMockEvent): boolean {
+  if (!event.sourceId) {
+    return false;
+  }
+
+  if (
+    event.sourceType === "experimental" ||
+    event.kind === "experimental_class" ||
+    event.id.startsWith("experimental-")
+  ) {
+    return canUpdateExperimentalClasses.value;
+  }
+
+  if (event.id.startsWith("lesson-") || event.sourceType === "lesson") {
+    return canUpdateLessons.value;
+  }
+
+  return false;
+}
+
+function normalizeEditCalendarEvent(event: CalendarMockEvent): CalendarMockEvent {
+  if (event.sourceType) {
+    return event;
+  }
+
+  if (event.kind === "experimental_class" || event.id.startsWith("experimental-")) {
+    const sourceId =
+      event.sourceId ??
+      Number.parseInt(event.id.replace(/^experimental-/, ""), 10);
+
+    return {
+      ...event,
+      sourceType: "experimental",
+      sourceId: Number.isFinite(sourceId) ? sourceId : event.sourceId,
+    };
+  }
+
+  if (event.id.startsWith("lesson-")) {
+    const sourceId =
+      event.sourceId ?? Number.parseInt(event.id.replace(/^lesson-/, ""), 10);
+
+    return {
+      ...event,
+      sourceType: "lesson",
+      sourceId: Number.isFinite(sourceId) ? sourceId : event.sourceId,
+    };
+  }
+
+  return event;
+}
+
+function openEditEventModal(event: CalendarMockEvent) {
+  const normalized = normalizeEditCalendarEvent(event);
+
+  if (!canEditEventInCalendar(normalized)) {
+    return;
+  }
+
+  showCreateModal.value = false;
+  createInitialDateTime.value = "";
+  editEvent.value = normalized;
+  selectedEvent.value = null;
+  closeQuickPreview();
 }
 
 async function handleEventCreated() {
+  selectedEvent.value = null;
   if (currentRange.value) {
     await refreshEvents(currentRange.value.start, currentRange.value.end);
   }
@@ -680,26 +825,42 @@ onUnmounted(clearHoverPreviewTimers);
           </button>
         </div>
 
-        <div v-if="canUpdateGoogleCalendar" class="gcal-toolbar__google">
+        <div
+          v-if="canViewGoogleCalendar || canUpdateGoogleCalendar"
+          class="gcal-toolbar__google"
+        >
+          <span class="gcal-toolbar__google-label">Minha conta Google</span>
+          <template v-if="canUpdateGoogleCalendar">
+            <button
+              v-if="!googleStatus?.connected"
+              type="button"
+              class="gcal-toolbar__google-btn"
+              :disabled="googleBusy || !googleStatus || googleStatus.configured === false"
+              :title="googleStatus?.message || 'Vincular a sua conta Google'"
+              @click="connectGoogleAccount"
+            >
+              Vincular
+            </button>
+            <button
+              v-else
+              type="button"
+              class="gcal-toolbar__google-btn gcal-toolbar__google-btn--connected"
+              :disabled="googleBusy"
+              :title="googleStatus.google_email || 'Desvincular conta Google'"
+              @click="disconnectGoogleAccount"
+            >
+              {{ googleStatus.google_email || "Desvincular" }}
+            </button>
+          </template>
           <button
-            v-if="!googleStatus?.connected"
+            v-if="googleStatus?.connected && canViewGoogleCalendar"
             type="button"
-            class="gcal-toolbar__google-btn"
-            :disabled="googleBusy || !googleStatus || googleStatus.configured === false"
-            :title="googleStatus?.message || 'Vincular Google Calendar'"
-            @click="connectGoogleAccount"
+            class="gcal-toolbar__google-btn gcal-toolbar__google-btn--pull"
+            :disabled="googleBusy || loadingEvents"
+            title="Buscar eventos do Google Calendar neste período"
+            @click="pullGoogleEvents"
           >
-            Vincular conta
-          </button>
-          <button
-            v-else
-            type="button"
-            class="gcal-toolbar__google-btn gcal-toolbar__google-btn--connected"
-            :disabled="googleBusy"
-            :title="googleStatus.google_email || 'Desvincular Google Calendar'"
-            @click="disconnectGoogleAccount"
-          >
-            {{ googleStatus.google_email || "Desvincular" }}
+            Puxar do Google
           </button>
         </div>
       </div>
@@ -745,18 +906,21 @@ onUnmounted(clearHoverPreviewTimers);
           <h2>Meus calendários</h2>
           <ul class="gcal-calendars list-unstyled mb-0">
             <li v-for="item in eventLegend" :key="item.kind">
-              <label class="gcal-calendars__item">
-                <input
-                  v-model="visibleKinds[item.kind]"
-                  type="checkbox"
-                  class="gcal-calendars__checkbox"
-                />
+              <button
+                type="button"
+                class="gcal-calendars__item"
+                :class="{
+                  'gcal-calendars__item--off': !visibleKinds[item.kind],
+                }"
+                :aria-pressed="visibleKinds[item.kind]"
+                @click="toggleCalendarKind(item.kind)"
+              >
                 <span
                   class="gcal-calendars__swatch"
                   :style="{ backgroundColor: item.color }"
                 ></span>
-                <span>{{ item.label }}</span>
-              </label>
+                <span class="gcal-calendars__label">{{ item.label }}</span>
+              </button>
             </li>
           </ul>
         </section>
@@ -843,12 +1007,28 @@ onUnmounted(clearHoverPreviewTimers);
               <dd>
                 <span
                   class="gcal-event-panel__status"
+                  :class="{
+                    'gcal-event-panel__status--cancelled':
+                      selectedEvent.statusKey === 'cancelled' ||
+                      selectedEvent.statusKey === 'cancelada' ||
+                      selectedEvent.statusKey === 'google_cancelled',
+                  }"
                   :style="{
-                    color: getCalendarEventColor(selectedEvent.kind, isDarkTheme),
-                    backgroundColor: getCalendarEventBackground(
+                    color: getCalendarEventPresentation(
                       selectedEvent.kind,
+                      selectedEvent.statusKey,
                       isDarkTheme
-                    ),
+                    ).textColor,
+                    backgroundColor: getCalendarEventPresentation(
+                      selectedEvent.kind,
+                      selectedEvent.statusKey,
+                      isDarkTheme
+                    ).backgroundColor,
+                    borderColor: getCalendarEventPresentation(
+                      selectedEvent.kind,
+                      selectedEvent.statusKey,
+                      isDarkTheme
+                    ).borderColor,
                   }"
                 >
                   {{ selectedEvent.statusLabel }}
@@ -880,8 +1060,16 @@ onUnmounted(clearHoverPreviewTimers);
             >
               Abrir no Google Calendar
             </a>
+            <button
+              v-if="selectedEvent && canEditEventInCalendar(selectedEvent)"
+              type="button"
+              class="gcal-event-panel__open"
+              @click="openEditEventModal(selectedEvent)"
+            >
+              Abrir aula
+            </button>
             <RouterLink
-              v-if="selectedEventHref"
+              v-else-if="selectedEventHref"
               :to="selectedEventHref"
               class="gcal-event-panel__open"
             >
@@ -893,9 +1081,10 @@ onUnmounted(clearHoverPreviewTimers);
     </div>
 
     <CalendarCreateModal
-      v-if="showCreateModal"
+      v-if="showCreateModal || editEvent"
       :initial-date-time="createInitialDateTime"
-      @close="closeCreateModal"
+      :edit-event="editEvent"
+      @close="closeEventModal"
       @created="handleEventCreated"
     />
 
@@ -948,8 +1137,16 @@ onUnmounted(clearHoverPreviewTimers);
             >
               Ver detalhes
             </button>
+            <button
+              v-if="quickPreviewEvent && canEditEventInCalendar(quickPreviewEvent)"
+              type="button"
+              class="gcal-quick-preview__btn"
+              @click="openEditEventModal(quickPreviewEvent)"
+            >
+              Abrir aula
+            </button>
             <RouterLink
-              v-if="quickPreviewHref"
+              v-else-if="quickPreviewHref"
               :to="quickPreviewHref"
               class="gcal-quick-preview__btn"
               @click="closeQuickPreview"
@@ -1119,6 +1316,19 @@ onUnmounted(clearHoverPreviewTimers);
   padding: 0.4rem 0.9rem;
 }
 
+.gcal-toolbar__google {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gcal-toolbar__google-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gcal-text-secondary);
+  white-space: nowrap;
+}
+
 .gcal-toolbar__google-btn {
   display: inline-flex;
   align-items: center;
@@ -1147,6 +1357,12 @@ onUnmounted(clearHoverPreviewTimers);
   border-color: rgba(129, 201, 149, 0.45);
   background: var(--gcal-success-soft);
   color: var(--gcal-success-text);
+}
+
+.gcal-toolbar__google-btn--pull {
+  border-color: rgba(210, 227, 252, 0.9);
+  background: #e8f0fe;
+  color: #1a73e8;
 }
 
 .gcal-view-switch button.is-active {
@@ -1216,16 +1432,41 @@ onUnmounted(clearHoverPreviewTimers);
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.35rem 0.25rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--gcal-surface-muted);
   color: var(--gcal-text);
+  font-family: inherit;
   font-size: 0.88rem;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
-.gcal-calendars__checkbox {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
+.gcal-calendars__item:hover:not(.gcal-calendars__item--off) {
+  background: var(--gcal-surface-hover);
+}
+
+.gcal-calendars__item--off {
+  opacity: 0.38;
+  background: transparent;
+  color: var(--gcal-text-faint);
+}
+
+.gcal-calendars__item--off .gcal-calendars__label {
+  text-decoration: line-through;
+  text-decoration-color: var(--gcal-text-faint);
+}
+
+.gcal-calendars__item--off .gcal-calendars__swatch {
+  opacity: 0.45;
+  filter: grayscale(0.85);
 }
 
 .gcal-calendars__swatch {
@@ -1233,6 +1474,19 @@ onUnmounted(clearHoverPreviewTimers);
   height: 0.8rem;
   border-radius: 3px;
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  transition:
+    opacity 0.15s ease,
+    filter 0.15s ease;
+}
+
+.gcal-app--dark .gcal-calendars__swatch {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.gcal-calendars__label {
+  flex: 1;
+  min-width: 0;
 }
 
 .gcal-upcoming {
@@ -1403,12 +1657,15 @@ onUnmounted(clearHoverPreviewTimers);
   justify-content: center;
   margin-top: 0.35rem;
   padding: 0.55rem 0.9rem;
+  border: 0;
   border-radius: 999px;
   background: var(--gcal-accent-soft);
   color: var(--gcal-accent);
   font-size: 0.85rem;
   font-weight: 600;
+  font-family: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .gcal-event-panel__open:hover {
@@ -1465,6 +1722,20 @@ onUnmounted(clearHoverPreviewTimers);
 :deep(.fc .fc-scrollgrid-section-body td),
 :deep(.fc .fc-col-header-cell) {
   background: var(--gcal-fc-page-bg);
+}
+
+/* Grade: borda externa + mês (daygrid). Semana/dia: divisórias verticais no bloco global abaixo. */
+.gcal-main__canvas :deep(.fc-theme-standard .fc-scrollgrid) {
+  border: 1px solid var(--gcal-fc-border) !important;
+}
+
+.gcal-main__canvas :deep(.fc-theme-standard .fc-scrollgrid-sync-table) {
+  border-collapse: collapse !important;
+}
+
+.gcal-main__canvas :deep(.fc-dayGridMonth-view .fc-scrollgrid-sync-table td),
+.gcal-main__canvas :deep(.fc-dayGridMonth-view .fc-scrollgrid-sync-table th) {
+  border: 1px solid var(--gcal-fc-border) !important;
 }
 
 :deep(.fc .fc-daygrid-day-frame) {
@@ -1529,6 +1800,33 @@ onUnmounted(clearHoverPreviewTimers);
 
 :deep(.fc .gcal-event--google_event) {
   border-left-color: #d50000 !important;
+}
+
+:deep(.fc .gcal-event--status-cancelled) {
+  border-left-width: 4px !important;
+  opacity: 0.92;
+}
+
+:deep(.fc .gcal-event--status-cancelled .fc-event-title),
+:deep(.fc .gcal-event--status-cancelled .fc-event-time) {
+  text-decoration: line-through;
+}
+
+:deep(.fc .gcal-event--status-completed) {
+  opacity: 0.78;
+}
+
+:deep(.fc .gcal-event--status-postponed) {
+  border-left-width: 4px !important;
+  border-style: dashed !important;
+}
+
+.gcal-event-panel__status {
+  border: 1px solid transparent;
+}
+
+.gcal-event-panel__status--cancelled {
+  font-weight: 600;
 }
 
 :deep(.fc .fc-timegrid-now-indicator-line) {
@@ -1679,5 +1977,36 @@ onUnmounted(clearHoverPreviewTimers);
     bottom: 0;
     box-shadow: -8px 0 24px var(--gcal-shadow);
   }
+}
+</style>
+
+<!-- Sem scoped: linhas verticais na semana/dia (camadas absolute do timegrid cobrem border das td) -->
+<style>
+.gcal-app .gcal-main__canvas .fc-timeGridWeek-view .fc-timegrid-cols td.fc-timegrid-col,
+.gcal-app .gcal-main__canvas .fc-timeGridDay-view .fc-timegrid-cols td.fc-timegrid-col {
+  position: relative;
+}
+
+.gcal-app .gcal-main__canvas .fc-timeGridWeek-view .fc-timegrid-cols td.fc-timegrid-col:not(:last-child)::after,
+.gcal-app .gcal-main__canvas .fc-timeGridDay-view .fc-timegrid-cols td.fc-timegrid-col:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--gcal-fc-border, #dadce0);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.gcal-app .gcal-main__canvas .fc-timeGridWeek-view .fc-col-header .fc-col-header-cell:not(:last-child),
+.gcal-app .gcal-main__canvas .fc-timeGridDay-view .fc-col-header .fc-col-header-cell:not(:last-child) {
+  border-right: 1px solid var(--gcal-fc-border, #dadce0) !important;
+}
+
+.gcal-app .gcal-main__canvas .fc-timeGridWeek-view .fc-daygrid-body .fc-daygrid-day:not(:last-child),
+.gcal-app .gcal-main__canvas .fc-timeGridDay-view .fc-daygrid-body .fc-daygrid-day:not(:last-child) {
+  border-right: 1px solid var(--gcal-fc-border, #dadce0) !important;
 }
 </style>

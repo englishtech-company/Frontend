@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import ProfileAvatar from "@/components/admin/ProfileAvatar.vue";
 import ProfileTabListCard from "@/components/admin/ProfileTabListCard.vue";
+import StudentContractHistoryPanel from "@/components/admin/StudentContractHistoryPanel.vue";
 import StudentDocumentsPanel from "@/components/admin/StudentDocumentsPanel.vue";
 import StudentLessonsPanel from "@/components/admin/StudentLessonsPanel.vue";
 import StudentMakeupClassesPanel from "@/components/admin/StudentMakeupClassesPanel.vue";
@@ -694,8 +695,8 @@ onMounted(() => {
                           <div class="alert alert-light border mb-4">
                             <h5 class="mb-2">Histórico de atividades</h5>
                             <p class="mb-0 text-muted">
-                              Em breve você verá aqui alterações cadastrais, eventos de matrícula,
-                              pagamentos e registros de aula vinculados a este aluno.
+                              Consulte os aceites de contratos e os vínculos de professores
+                              e planos deste aluno.
                             </p>
                           </div>
 
@@ -713,6 +714,12 @@ onMounted(() => {
                               </strong>
                             </li>
                           </ul>
+
+                          <StudentContractHistoryPanel
+                            v-if="activeTab === 'history'"
+                            :key="student.id"
+                            :student-id="student.id"
+                          />
 
                           <h5 class="mb-3">Professores</h5>
                           <ul v-if="teacherHistory.length" class="list-group list-group-flush mb-4">

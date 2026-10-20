@@ -23,6 +23,8 @@ export type ListMakeupClassesParams = {
   teacher_id?: number;
   original_date_from?: string;
   original_date_to?: string;
+  new_date_from?: string;
+  new_date_to?: string;
   sort_by_urgency?: boolean;
   expiring_soon?: boolean;
 };
@@ -85,6 +87,8 @@ export async function listMakeupClasses(
   appendExact(query, "teacher_id", params.teacher_id);
   appendExact(query, "original_date_from", params.original_date_from);
   appendExact(query, "original_date_to", params.original_date_to);
+  appendExact(query, "new_date_from", params.new_date_from);
+  appendExact(query, "new_date_to", params.new_date_to);
   if (params.sort_by_urgency) query.set("sort_by_urgency", "1");
   if (params.expiring_soon)   query.set("expiring_soon", "1");
 

@@ -52,6 +52,7 @@ export type ExperimentalClassPayload = {
   evaluation_vocabulary?: string | null;
   evaluation_grammar?: string | null;
   observations_feedback?: string | null;
+  google_invite_attendees?: boolean;
 };
 
 export async function getExperimentalClassPlucks(): Promise<{

@@ -397,6 +397,7 @@ export type Enrollment = {
 export type PublicEnrollment = {
   id: number;
   status: EnrollmentStatus;
+  is_group_class: boolean;
   discount_percent?:
     | string
     | number
