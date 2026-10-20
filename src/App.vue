@@ -10,6 +10,9 @@ import { useStore } from "./stores/Store";
 import { storeToRefs } from "pinia";
 import { onMounted, onUnmounted, watchEffect, ref } from "vue";
 import router from "./router";
+import RbacAuditPanel from "./components/dev/RbacAuditPanel.vue";
+
+const isDev = import.meta.env.DEV;
 
 const store = useStore();
 const { naveHeader, iconHover } = storeToRefs(store);
@@ -120,5 +123,6 @@ onUnmounted(() => {
       </div>
     </component>
     <ActionNotificationHost />
+    <RbacAuditPanel v-if="isDev" />
   </div>
 </template>
