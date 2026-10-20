@@ -410,6 +410,24 @@ const router = createRouter({
       meta: { layout3: "layout3", permission: PERMISSIONS.plans.update },
     },
     {
+      path: "/coupons",
+      name: "Coupons",
+      component: () => import("../views/admin/coupons/CouponList.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.coupons.view },
+    },
+    {
+      path: "/coupons/create",
+      name: "CouponCreate",
+      component: () => import("../views/admin/coupons/CouponForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.coupons.create },
+    },
+    {
+      path: "/coupons/:id/edit",
+      name: "CouponEdit",
+      component: () => import("../views/admin/coupons/CouponForm.vue"),
+      meta: { layout3: "layout3", permission: PERMISSIONS.coupons.update },
+    },
+    {
       path: "/permissions",
       name: "Permissions",
       component: () =>

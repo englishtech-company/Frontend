@@ -19,6 +19,7 @@ export type ListStudentsParams = {
   status?: string;
   teacherName?: string;
   planName?: string;
+  couponName?: string;
   startDateFrom?: string;
   startDateTo?: string;
 };
@@ -50,6 +51,7 @@ export async function listStudents(
   appendExact(query, "status", params.status);
   appendLike(query, "teacher_name", params.teacherName);
   appendLike(query, "plan_name", params.planName);
+  appendLike(query, "coupon_name", params.couponName);
   appendDateRange(query, "start_date", params.startDateFrom, params.startDateTo);
 
   const response = await api<ApiListResponse<"students", Student>>(

@@ -31,6 +31,7 @@ export type EnrollmentPayload = {
   teacher_id?: number | null;
   group_class_id?: number | null;
   plan_variant_id?: number | null;
+  coupon_name?: string | null;
   discount_percent?: number | null;
   payment_method: EnrollmentPaymentMethod;
   status?: EnrollmentStatus;

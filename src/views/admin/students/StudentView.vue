@@ -19,12 +19,15 @@ import {
   formatCpf,
   formatStudentDate,
   formatStudentDateTime,
+  formatStudentPlanShortLabel,
   formatStudentPlanSummary,
   formatStudentPlanVariantLabel,
   formatStudentStatusBadge,
   getStudentAge,
+  getStudentCoupons,
   getStudentCurrentPlanVariant,
   getStudentCurrentTeacher,
+  getStudentPlanPricing,
   getStudentEnrollmentDays,
   getStudentEnrollmentHistory,
   getStudentTeacherHistory,
@@ -34,7 +37,14 @@ import { enrollStudentInGroupClass, getGroupClassOptions } from "@/lib/groupClas
 import type { Student } from "@/lib/types";
 
 const route = useRoute();
-const { canUpdateStudents, canViewTeachers, canViewPlans, canUpdateGroupClasses, canViewGroupClasses } = usePermissions();
+const {
+  canUpdateStudents,
+  canViewTeachers,
+  canViewPlans,
+  canViewCoupons,
+  canUpdateGroupClasses,
+  canViewGroupClasses,
+} = usePermissions();
 
 const studentId = computed(() => Number(route.params.id));
 const student = ref<Student | null>(null);
@@ -91,8 +101,23 @@ const currentPlanVariant = computed(() =>
 
 const planSummary = computed(() => formatStudentPlanSummary(currentPlanVariant.value));
 
+const planPricing = computed(() =>
+  student.value
+    ? getStudentPlanPricing(student.value)
+    : {
+        originalLabel: "—",
+        discountedLabel: "—",
+        hasDiscount: false,
+        couponName: null,
+      }
+);
+
 const enrollmentHistory = computed(() =>
   student.value ? getStudentEnrollmentHistory(student.value) : []
+);
+
+const studentCoupons = computed(() =>
+  student.value ? getStudentCoupons(student.value) : []
 );
 
 const studentGroupClasses = computed(
@@ -222,7 +247,19 @@ onMounted(() => {
                       <span class="badge" :class="statusBadge.class">{{ statusBadge.label }}</span>
                       <span v-if="currentPlanVariant" class="student-profile-header__chip">
                         <i class="fa fa-tag" aria-hidden="true"></i>
-                        {{ formatStudentPlanVariantLabel(currentPlanVariant) }}
+                        {{ formatStudentPlanShortLabel(currentPlanVariant) }}
+                        ·
+                        <s
+                          v-if="planPricing.hasDiscount"
+                          class="text-decoration-line-through opacity-75"
+                        >
+                          {{ planPricing.originalLabel }}
+                        </s>
+                        {{
+                          planPricing.hasDiscount
+                            ? planPricing.discountedLabel
+                            : planPricing.originalLabel
+                        }}
                       </span>
                       <span v-if="currentTeacher" class="student-profile-header__chip">
                         <i class="fa fa-chalkboard-teacher" aria-hidden="true"></i>
@@ -312,7 +349,52 @@ onMounted(() => {
                     </div>
                     <div class="student-profile-header__detail">
                       <dt>Plano</dt>
-                      <dd>{{ formatStudentPlanVariantLabel(currentPlanVariant) }}</dd>
+                      <dd>
+                        {{ formatStudentPlanShortLabel(currentPlanVariant) }}
+                        <div v-if="currentPlanVariant" class="mt-1">
+                          <s
+                            v-if="planPricing.hasDiscount"
+                            class="text-muted me-1"
+                          >
+                            {{ planPricing.originalLabel }}
+                          </s>
+                          <strong>
+                            {{
+                              planPricing.hasDiscount
+                                ? planPricing.discountedLabel
+                                : planPricing.originalLabel
+                            }}
+                          </strong>
+                        </div>
+                      </dd>
+                    </div>
+                    <div class="student-profile-header__detail">
+                      <dt>Cupom</dt>
+                      <dd>
+                        <template v-if="studentCoupons.length">
+                          <span
+                            v-for="coupon in studentCoupons"
+                            :key="coupon.id"
+                            class="d-inline-flex align-items-center gap-1 me-2"
+                          >
+                            <RouterLink
+                              v-if="canViewCoupons"
+                              :to="`/coupons/${coupon.id}/edit`"
+                              class="text-primary"
+                            >
+                              {{ coupon.name }}
+                            </RouterLink>
+                            <span v-else>{{ coupon.name }}</span>
+                            <span
+                              v-if="coupon.unique_per_student"
+                              class="badge badge-primary"
+                            >
+                              Único
+                            </span>
+                          </span>
+                        </template>
+                        <span v-else>—</span>
+                      </dd>
                     </div>
                     <div class="student-profile-header__detail">
                       <dt>Nascimento</dt>
@@ -506,7 +588,51 @@ onMounted(() => {
                             </div>
                             <div class="info-item">
                               <span class="info-label">Plano</span>
-                              <span class="info-value">{{ formatStudentPlanVariantLabel(currentPlanVariant) }}</span>
+                              <span class="info-value">
+                                {{ formatStudentPlanShortLabel(currentPlanVariant) }}
+                                <template v-if="currentPlanVariant">
+                                  ·
+                                  <s
+                                    v-if="planPricing.hasDiscount"
+                                    class="text-muted"
+                                  >
+                                    {{ planPricing.originalLabel }}
+                                  </s>
+                                  {{
+                                    planPricing.hasDiscount
+                                      ? planPricing.discountedLabel
+                                      : planPricing.originalLabel
+                                  }}
+                                </template>
+                              </span>
+                            </div>
+                            <div class="info-item">
+                              <span class="info-label">Cupom</span>
+                              <span class="info-value">
+                                <template v-if="studentCoupons.length">
+                                  <span
+                                    v-for="coupon in studentCoupons"
+                                    :key="coupon.id"
+                                    class="d-inline-flex align-items-center gap-1 me-2"
+                                  >
+                                    <RouterLink
+                                      v-if="canViewCoupons"
+                                      :to="`/coupons/${coupon.id}/edit`"
+                                      class="text-primary"
+                                    >
+                                      {{ coupon.name }}
+                                    </RouterLink>
+                                    <strong v-else>{{ coupon.name }}</strong>
+                                    <span
+                                      v-if="coupon.unique_per_student"
+                                      class="badge badge-primary"
+                                    >
+                                      Único
+                                    </span>
+                                  </span>
+                                </template>
+                                <span v-else>—</span>
+                              </span>
                             </div>
                             <div class="info-item">
                               <span class="info-label">Atualizado em</span>
@@ -526,8 +652,35 @@ onMounted(() => {
                               <div class="d-flex align-items-start justify-content-between gap-3">
                                 <div>
                                   <h5 class="mb-2">{{ planSummary.planName }}</h5>
-                                  <p class="text-muted mb-2">
-                                    {{ planSummary.hours }} · {{ planSummary.price }}/mês
+                                  <p class="text-muted mb-1">
+                                    {{ planSummary.hours }}
+                                  </p>
+                                  <p class="mb-1">
+                                    <span class="text-muted">Valor original:</span>
+                                    <s
+                                      v-if="planPricing.hasDiscount"
+                                      class="text-muted ms-1"
+                                    >
+                                      {{ planPricing.originalLabel }}/mês
+                                    </s>
+                                    <span v-else class="ms-1">
+                                      {{ planPricing.originalLabel }}/mês
+                                    </span>
+                                  </p>
+                                  <p
+                                    v-if="planPricing.hasDiscount"
+                                    class="mb-2"
+                                  >
+                                    <span class="text-muted">Com desconto:</span>
+                                    <strong class="ms-1">
+                                      {{ planPricing.discountedLabel }}/mês
+                                    </strong>
+                                    <span
+                                      v-if="planPricing.couponName"
+                                      class="text-muted small ms-1"
+                                    >
+                                      ({{ planPricing.couponName }})
+                                    </span>
                                   </p>
                                   <p class="mb-0 small text-muted">
                                     {{ planSummary.commitment }} · Vigência de

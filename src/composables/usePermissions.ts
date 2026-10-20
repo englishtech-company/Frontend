@@ -112,6 +112,25 @@ export function usePermissions() {
       )
     ),
 
+    canViewCoupons: computed(() =>
+      auth.hasPermission(PERMISSIONS.coupons.view)
+    ),
+    canCreateCoupons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.coupons.create
+      )
+    ),
+    canUpdateCoupons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.coupons.update
+      )
+    ),
+    canDeleteCoupons: computed(() =>
+      auth.hasPermission(
+        PERMISSIONS.coupons.delete
+      )
+    ),
+
     canViewLeads: computed(() =>
       auth.hasPermission(PERMISSIONS.leads.view)
     ),

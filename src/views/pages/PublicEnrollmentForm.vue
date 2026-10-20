@@ -2,12 +2,14 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { ApiError } from "@/lib/api";
+import { formatCouponValue } from "@/lib/coupons/format";
 import {
   formatDiscountedPrice,
   PAYMENT_METHOD_LABELS,
 } from "@/lib/enrollments/format";
 import { formatPlanVariantOptionLabel } from "@/lib/plans/format";
 import {
+  applyPublicEnrollmentCoupon,
   getPublicEnrollment,
   submitPublicEnrollment,
 } from "@/lib/public-enrollments";
@@ -68,6 +70,10 @@ const cepError = ref("");
 const answers = ref<Record<string, string | string[]>>({});
 const contractAccepted = ref(false);
 const showContractModal = ref(false);
+const couponName = ref("");
+const applyingCoupon = ref(false);
+const couponMessage = ref("");
+const couponError = ref("");
 
 const steps = [
   { number: 1, label: "Dados", icon: "fa-user" },
@@ -345,6 +351,7 @@ async function loadForm() {
   try {
     const data = await getPublicEnrollment(token.value);
     enrollment.value = data;
+    couponName.value = data.coupon?.name ?? "";
 
     name.value = data.student?.name ?? "";
     email.value = data.student?.email ?? "";
@@ -362,6 +369,37 @@ async function loadForm() {
     }
 
     await redirectToNotFound();
+  }
+}
+
+async function applyCoupon() {
+  const nameToApply = couponName.value.trim();
+
+  if (!nameToApply) {
+    couponError.value = "Informe o nome do cupom.";
+    couponMessage.value = "";
+    return;
+  }
+
+  applyingCoupon.value = true;
+  couponError.value = "";
+  couponMessage.value = "";
+
+  try {
+    enrollment.value = await applyPublicEnrollmentCoupon(
+      token.value,
+      nameToApply
+    );
+    couponName.value = enrollment.value.coupon?.name ?? nameToApply;
+    couponMessage.value = `Cupom aplicado: ${formatCouponValue(
+      enrollment.value.coupon?.value ?? enrollment.value.discount_percent ?? 0,
+      enrollment.value.coupon?.discount_type
+    )} de desconto.`;
+  } catch (e) {
+    couponError.value =
+      e instanceof Error ? e.message : "Não foi possível aplicar o cupom.";
+  } finally {
+    applyingCoupon.value = false;
   }
 }
 
@@ -410,6 +448,7 @@ async function submit() {
       birthdate: birthdate.value,
       answers: answers.value,
       contract_accepted: true,
+      coupon_name: couponName.value.trim() || null,
     });
 
     enrollment.value = result.enrollment;
@@ -535,11 +574,49 @@ onUnmounted(() => {
             </div>
             <div class="public-enrollment__plan-meta">
               <span v-if="monthlyPriceLabel">{{ monthlyPriceLabel }}/mês</span>
+              <span v-if="enrollment.coupon?.name">
+                Cupom: {{ enrollment.coupon.name }}
+                <span
+                  v-if="enrollment.coupon.unique_per_student"
+                  class="badge badge-primary ms-1"
+                >
+                  Único
+                </span>
+              </span>
               <span v-if="enrollment.discount_percent">
                 Desconto: {{ enrollment.discount_percent }}%
               </span>
               <span>{{ PAYMENT_METHOD_LABELS[enrollment.payment_method] }}</span>
             </div>
+          </div>
+
+          <div class="public-enrollment__coupon">
+            <label class="form-label" for="couponName">Cupom de desconto</label>
+            <div class="public-enrollment__coupon-row">
+              <input
+                id="couponName"
+                v-model="couponName"
+                type="text"
+                class="form-control"
+                maxlength="255"
+                placeholder="Digite o nome do cupom"
+                :disabled="applyingCoupon"
+              />
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="applyingCoupon"
+                @click="applyCoupon"
+              >
+                {{ applyingCoupon ? "Aplicando..." : "Aplicar" }}
+              </button>
+            </div>
+            <small v-if="couponMessage" class="text-success d-block mt-1">
+              {{ couponMessage }}
+            </small>
+            <small v-if="couponError" class="text-danger d-block mt-1">
+              {{ couponError }}
+            </small>
           </div>
 
           <div class="public-enrollment__card-body">
@@ -1124,6 +1201,19 @@ onUnmounted(() => {
   font-size: 0.78rem;
   opacity: 0.95;
   text-align: right;
+}
+
+.public-enrollment__coupon {
+  padding: 0.75rem 1rem 0;
+}
+
+.public-enrollment__coupon-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.public-enrollment__coupon-row .form-control {
+  flex: 1;
 }
 
 .public-enrollment__section-head h2 {

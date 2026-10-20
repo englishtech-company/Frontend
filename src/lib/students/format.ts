@@ -1,4 +1,6 @@
 import type {
+  Coupon,
+  Enrollment,
   Plan,
   PlanVariant,
   Student,
@@ -135,6 +137,127 @@ export function getStudentCurrentPlanVariant(student: Student): PlanVariant | nu
 
 export function getStudentEnrollmentHistory(student: Student): StudentEnrollmentAssignment[] {
   return student.relationships?.enrollment_assignments ?? [];
+}
+
+export function getStudentCoupons(student: Student): Coupon[] {
+  const enrollments =
+    student.relationships?.enrollments ?? student.enrollments ?? [];
+  const seen = new Set<number>();
+  const coupons: Coupon[] = [];
+
+  for (const enrollment of enrollments) {
+    if (enrollment.status === "cancelled") {
+      continue;
+    }
+
+    const coupon = enrollment.coupon ?? enrollment.relationships?.coupon;
+
+    if (!coupon || seen.has(coupon.id)) {
+      continue;
+    }
+
+    seen.add(coupon.id);
+    coupons.push(coupon);
+  }
+
+  return coupons;
+}
+
+export function formatStudentCouponLabel(student: Student): string {
+  const names = getStudentCoupons(student).map((coupon) => coupon.name);
+
+  return names.length ? names.join(", ") : "—";
+}
+
+function getStudentEnrollments(student: Student): Enrollment[] {
+  return student.relationships?.enrollments ?? student.enrollments ?? [];
+}
+
+export function getStudentCurrentEnrollment(student: Student): Enrollment | null {
+  const enrollments = getStudentEnrollments(student).filter(
+    (enrollment) => enrollment.status !== "cancelled"
+  );
+
+  if (!enrollments.length) {
+    return null;
+  }
+
+  const withCoupon = enrollments.filter(
+    (enrollment) =>
+      Boolean(enrollment.coupon_id) ||
+      Boolean(enrollment.coupon ?? enrollment.relationships?.coupon)
+  );
+
+  const variantId = getStudentCurrentPlanVariant(student)?.id;
+
+  if (variantId) {
+    const matchingCoupon = withCoupon.find(
+      (enrollment) => enrollment.plan_variant_id === variantId
+    );
+
+    if (matchingCoupon) {
+      return matchingCoupon;
+    }
+
+    const matchingPlan = enrollments.find(
+      (enrollment) => enrollment.plan_variant_id === variantId
+    );
+
+    if (matchingPlan) {
+      return matchingPlan;
+    }
+  }
+
+  return withCoupon[0] ?? enrollments[0] ?? null;
+}
+
+export type StudentPlanPricing = {
+  originalLabel: string;
+  discountedLabel: string;
+  hasDiscount: boolean;
+  couponName: string | null;
+};
+
+export function getStudentPlanPricing(student: Student): StudentPlanPricing {
+  const variant = getStudentCurrentPlanVariant(student);
+  const original = variant ? Number(variant.monthly_price) : Number.NaN;
+  const originalLabel = Number.isFinite(original) ? formatPrice(original) : "—";
+  const enrollment = getStudentCurrentEnrollment(student);
+  const coupon =
+    enrollment?.coupon ??
+    enrollment?.relationships?.coupon ??
+    getStudentCoupons(student)[0] ??
+    null;
+
+  let discounted = original;
+
+  if (Number.isFinite(original) && coupon) {
+    const couponValue = Number(coupon.value);
+
+    if (coupon.discount_type === "amount" && Number.isFinite(couponValue)) {
+      discounted = Math.max(0, original - couponValue);
+    } else if (Number.isFinite(couponValue)) {
+      discounted = original * (1 - Math.min(100, Math.max(0, couponValue)) / 100);
+    }
+  } else if (Number.isFinite(original)) {
+    const percent = Number(enrollment?.discount_percent ?? 0);
+
+    if (Number.isFinite(percent) && percent > 0) {
+      discounted = original * (1 - Math.min(100, percent) / 100);
+    }
+  }
+
+  const hasDiscount =
+    Number.isFinite(original) &&
+    Number.isFinite(discounted) &&
+    discounted < original - 0.004;
+
+  return {
+    originalLabel,
+    discountedLabel: Number.isFinite(discounted) ? formatPrice(discounted) : "—",
+    hasDiscount,
+    couponName: coupon?.name ?? null,
+  };
 }
 
 export function formatStudentPlanVariantLabel(variant: PlanVariant | null | undefined): string {

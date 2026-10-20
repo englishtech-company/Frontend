@@ -35,6 +35,10 @@ export function getEnrollmentPlanVariant(enrollment: Enrollment): PlanVariant | 
   return enrollment.relationships?.plan_variant ?? enrollment.plan_variant ?? null;
 }
 
+export function getEnrollmentCoupon(enrollment: Enrollment) {
+  return enrollment.relationships?.coupon ?? null;
+}
+
 export function getEnrollmentStudentName(enrollment: Enrollment): string {
   return (
     enrollment.relationships?.student?.name ??
