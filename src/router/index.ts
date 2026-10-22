@@ -14,6 +14,7 @@ declare module "vue-router" {
     layout3?: string;
     layout4?: string;
     permission?: string;
+    permissions?: string[];
   }
 }
 
@@ -122,8 +123,8 @@ router.beforeEach(async (to) => {
       resolveRoutePermission(to.path);
 
     if (
-      requiredPermission &&
-      !auth.hasPermission(requiredPermission)
+      (requiredPermission && !auth.hasPermission(requiredPermission)) ||
+      (to.meta.permissions?.some((permission) => !auth.hasPermission(permission)) ?? false)
     ) {
       return { path: "/page-error-403" };
     }
