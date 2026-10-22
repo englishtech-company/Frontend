@@ -25,6 +25,7 @@ import type {
   NavChild,
 } from "@/layouts/navigation.schema";
 import type { PermissionName } from "@/lib/permissions/access";
+import { resolveNavigationChild } from "@/layouts/navigationMatching";
 
 // ─── Re-export legacy type so Sidebar.vue needs no extra imports ──────────────
 export type { NavEntry, NavGroup, NavItem, NavChild };
@@ -86,9 +87,10 @@ export function useFilteredMenu() {
       }
 
       // Filter children individually
-      const visibleChildren = entry.children.filter((c) =>
-        allowed(c.permission)
-      );
+      const visibleChildren = entry.children.flatMap((child) => {
+        const resolved = resolveNavigationChild(child, route.path, auth.hasPermission);
+        return resolved ? [resolved] : [];
+      });
 
       // Unmount group entirely if no children survive
       if (visibleChildren.length === 0) continue;
