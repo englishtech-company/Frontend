@@ -6,6 +6,12 @@ import { PERMISSIONS } from "@/lib/permissions/access";
  * Módulos: Cobranças, Pagamentos, Inadimplentes, Planos, Cupons
  */
 export const financeiroRoutes: RouteRecordRaw[] = [
+  {
+    path: "/charges/dashboard",
+    name: "DueDashboard",
+    component: () => import("../views/admin/charges/DueDashboard.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.charges.view },
+  },
   // ─── Painel de pagamentos ─────────────────────────────────────────────────
   {
     path: "/payments/dashboard",

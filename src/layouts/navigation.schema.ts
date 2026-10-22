@@ -21,6 +21,8 @@ export interface NavChild {
   to: string;
   /** Permissão Spatie necessária (ausente = sempre visível) */
   permission?: PermissionName;
+  /** Destinos alternativos do mesmo item, avaliados por permissão. */
+  alternatives?: { to: string; permission: PermissionName }[];
 }
 
 export interface NavGroup {
@@ -155,6 +157,12 @@ export const navigationSchema: NavEntry[] = [
       PERMISSIONS.financialAlerts.view,
     ],
     children: [
+      {
+        label: "Painéis",
+        to: "/payments/dashboard",
+        permission: PERMISSIONS.payments.view,
+        alternatives: [{ to: "/charges/dashboard", permission: PERMISSIONS.charges.view }],
+      },
       {
         label: "Cobranças",
         to: "/charges",
