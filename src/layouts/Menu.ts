@@ -109,7 +109,7 @@ const MenuItems = reactive<menuType[]>([
         permission: PERMISSIONS.enrollments.view,
       },
       {
-        menu: "Perguntas de matrícula",
+        menu: "Perguntas de forms",
         to: "/enrollment-questions",
         permission: PERMISSIONS.enrollmentQuestions.view,
       },

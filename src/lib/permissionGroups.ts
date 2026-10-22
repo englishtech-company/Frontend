@@ -34,7 +34,7 @@ const MODULE_LABELS: Record<string, string> = {
   payments: "Pagamentos",
   "student-documents": "Documentos de alunos",
   enrollments: "Matrículas",
-  "enrollment-questions": "Perguntas de matrícula",
+  "enrollment-questions": "Perguntas de forms",
   "group-classes": "Turmas",
   lessons: "Aulas",
   "library-categories": "Categorias da biblioteca",

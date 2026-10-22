@@ -112,4 +112,10 @@ export const financeiroRoutes: RouteRecordRaw[] = [
     component: () => import("../views/admin/coupons/CouponForm.vue"),
     meta: { layout3: "layout3", permission: PERMISSIONS.coupons.update },
   },
+  {
+    path: "/coupons/:id",
+    name: "CouponUsage",
+    component: () => import("../views/admin/coupons/CouponUsage.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.coupons.view },
+  },
 ];

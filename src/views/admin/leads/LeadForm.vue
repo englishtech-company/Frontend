@@ -9,6 +9,7 @@ import {
   updateLead,
 } from "@/lib/leads";
 import type { LeadPayload } from "@/lib/leads";
+import type { LeadRegistrationSource } from "@/lib/types";
 
 const route = useRoute();
 const router = useRouter();
@@ -30,6 +31,7 @@ const email = ref("");
 const source = ref("");
 const objective = ref("");
 const selfDeclaredLevel = ref("");
+const registrationSource = ref<LeadRegistrationSource | null>(null);
 
 const loading = ref(false);
 const saving = ref(false);
@@ -79,6 +81,7 @@ async function loadForm() {
     source.value = lead.source;
     objective.value = lead.objective;
     selfDeclaredLevel.value = lead.self_declared_level;
+    registrationSource.value = lead.registration_source;
   } catch (e) {
     error.value =
       e instanceof Error
@@ -141,8 +144,20 @@ onMounted(loadForm);
     <div class="row page-titles mx-0">
       <div class="col-sm-6 p-md-0">
         <div class="welcome-text">
-          <h4>
+          <h4 class="d-flex align-items-center gap-2">
             {{ isEdit ? "Editar interessado" : "Novo interessado" }}
+            <span
+              v-if="registrationSource === 'form'"
+              class="badge badge-primary"
+            >
+              Formulário
+            </span>
+            <span
+              v-else-if="registrationSource === 'webhook'"
+              class="badge badge-info"
+            >
+              Webhook
+            </span>
           </h4>
           <p class="mb-0">
             Preencha os dados de contato e interesse do possível aluno

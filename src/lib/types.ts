@@ -109,6 +109,7 @@ export type StudentEnrollmentAssignment = {
 
 export type Student = {
   id: number;
+  lead_id?: number | null;
   name: string;
   email: string;
   cpf?: string | null;
@@ -137,6 +138,7 @@ export type Student = {
       | PlanVariant
       | null;
     enrollments?: Enrollment[];
+    lead?: Lead | null;
     group_classes?: EnrolledGroupClass[];
     lessons?: Lesson[];
   };
@@ -221,6 +223,7 @@ export type Coupon = {
   usage_limit?: number | null;
   used_count?: number;
   unique_per_student?: boolean;
+  active?: boolean;
   starts_at?: string | null;
   ends_at?: string | null;
   created_at?: string;
@@ -231,24 +234,40 @@ export type Coupon = {
 
 export type LeadRegistrationSource =
   | "manual"
-  | "webhook";
+  | "webhook"
+  | "form";
+
+export type LeadAppearsOn =
+  | "both"
+  | "lead"
+  | "enrollment";
 
 export type Lead = {
   id: number;
   name: string;
   whatsapp_phone: string;
   email?: string | null;
+  birthdate?: string | null;
   source: string;
   objective: string;
   self_declared_level: string;
   registration_source:
     LeadRegistrationSource;
+  link_tag?: string | null;
   raw_payload?:
     | Record<string, unknown>
     | null;
+  answers?: Record<string, string | string[]>;
+  converted_at?: string | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+  relationships?: {
+    experimental_classes?: unknown[];
+    enrollments?: unknown[];
+    students?: unknown[];
+    form_questions?: EnrollmentQuestion[];
+  };
 };
 
 export type ExperimentalClass = {
@@ -315,6 +334,7 @@ export type EnrollmentQuestion = {
   options?: string[] | null;
   sort_order: number;
   active: boolean;
+  appears_on?: LeadAppearsOn;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
@@ -336,6 +356,7 @@ export type EnrollmentFormQuestion = {
   required: boolean;
   options?: string[] | null;
   sort_order: number;
+  appears_on?: LeadAppearsOn;
 };
 
 export type StudentExtra = {
@@ -380,6 +401,7 @@ export type MakeupClass = {
 export type Enrollment = {
   id: number;
   student_id?: number | null;
+  lead_id?: number | null;
   teacher_id?: number | null;
   group_class_id?: number | null;
   plan_variant_id?: number | null;
@@ -400,12 +422,14 @@ export type Enrollment = {
   updated_at?: string;
   deleted_at?: string | null;
   student?: Student | null;
+  lead?: Lead | null;
   teacher?: Teacher | null;
   group_class?: GroupClass | null;
   plan_variant?: PlanVariant | null;
   coupon?: Coupon | null;
   relationships?: {
     student?: Student | null;
+    lead?: Lead | null;
     teacher?: Teacher | null;
     group_class?: GroupClass | null;
     plan_variant?: PlanVariant | null;
@@ -454,6 +478,12 @@ export type PublicEnrollment = {
     phone?: string | null;
     address?: string | null;
     birthdate?: string | null;
+  } | null;
+  lead?: {
+    id: number;
+    name: string;
+    whatsapp_phone: string;
+    email?: string | null;
   } | null;
   form_questions:
     EnrollmentFormQuestion[];

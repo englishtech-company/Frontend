@@ -10,9 +10,12 @@ import {
 import { formatPlanVariantOptionLabel } from "@/lib/plans/format";
 import {
   applyPublicEnrollmentCoupon,
+  attachPublicEnrollmentLead,
   getPublicEnrollment,
+  lookupPublicEnrollmentLeads,
   submitPublicEnrollment,
 } from "@/lib/public-enrollments";
+import type { PublicLeadMatch } from "@/lib/public-enrollments";
 import { composeAddress } from "@/lib/br/address";
 import { maskCep, maskCpf, maskPhone } from "@/lib/br/masks";
 import { fetchAddressByCep } from "@/lib/br/viacep";
@@ -74,6 +77,12 @@ const couponName = ref("");
 const applyingCoupon = ref(false);
 const couponMessage = ref("");
 const couponError = ref("");
+const lookupName = ref("");
+const lookupPhone = ref("");
+const lookupLoading = ref(false);
+const lookupError = ref("");
+const lookupMatches = ref<PublicLeadMatch[]>([]);
+const attachingLead = ref(false);
 
 const steps = [
   { number: 1, label: "Dados", icon: "fa-user" },
@@ -344,22 +353,71 @@ async function redirectToNotFound() {
   await router.replace({ name: "page_error_404" });
 }
 
+function applyEnrollmentData(data: PublicEnrollment) {
+  enrollment.value = data;
+  couponName.value = data.coupon?.name ?? couponName.value;
+  name.value = data.student?.name ?? name.value;
+  email.value = data.student?.email ?? email.value;
+  cpf.value = maskCpf(data.student?.cpf ?? cpf.value);
+  phone.value = maskPhone(data.student?.phone ?? phone.value);
+  if (data.student?.address) {
+    street.value = data.student.address;
+  }
+  birthdate.value = data.student?.birthdate ?? birthdate.value;
+  initializeAnswers(data.form_questions);
+}
+
+async function searchLead() {
+  lookupError.value = "";
+  lookupMatches.value = [];
+
+  if (!lookupName.value.trim() && !lookupPhone.value.trim()) {
+    lookupError.value = "Informe o nome ou o WhatsApp.";
+    return;
+  }
+
+  lookupLoading.value = true;
+
+  try {
+    lookupMatches.value = await lookupPublicEnrollmentLeads(token.value, {
+      name: lookupName.value.trim() || undefined,
+      whatsapp_phone: lookupPhone.value.replace(/\D/g, "") || undefined,
+    });
+
+    if (lookupMatches.value.length === 0) {
+      lookupError.value = "Nenhum cadastro de interessado encontrado.";
+    }
+  } catch (e) {
+    lookupError.value =
+      e instanceof Error ? e.message : "Não foi possível buscar o cadastro.";
+  } finally {
+    lookupLoading.value = false;
+  }
+}
+
+async function selectLead(lead: PublicLeadMatch) {
+  attachingLead.value = true;
+  lookupError.value = "";
+
+  try {
+    const data = await attachPublicEnrollmentLead(token.value, lead.id);
+    applyEnrollmentData(data);
+    lookupMatches.value = [];
+  } catch (e) {
+    lookupError.value =
+      e instanceof Error ? e.message : "Não foi possível vincular o cadastro.";
+  } finally {
+    attachingLead.value = false;
+  }
+}
+
 async function loadForm() {
   loading.value = true;
   error.value = "";
 
   try {
     const data = await getPublicEnrollment(token.value);
-    enrollment.value = data;
-    couponName.value = data.coupon?.name ?? "";
-
-    name.value = data.student?.name ?? "";
-    email.value = data.student?.email ?? "";
-    cpf.value = maskCpf(data.student?.cpf ?? "");
-    phone.value = maskPhone(data.student?.phone ?? "");
-    street.value = data.student?.address ?? "";
-    birthdate.value = data.student?.birthdate ?? "";
-    initializeAnswers(data.form_questions);
+    applyEnrollmentData(data);
     loading.value = false;
   } catch (e) {
     const status = (e as ApiError)?.status;
@@ -629,6 +687,67 @@ onUnmounted(() => {
               <div class="public-enrollment__section-head">
                 <h2>Etapa 1 — Seus dados</h2>
                 <p>Informe seus dados pessoais para continuar.</p>
+              </div>
+
+              <div v-if="enrollment.lead" class="alert alert-success py-2">
+                Cadastro de interessado encontrado: <strong>{{ enrollment.lead.name }}</strong>
+              </div>
+
+              <div v-else class="public-enrollment__question mb-3">
+                <p class="mb-2">
+                  Já fez a aula experimental? Busque seu cadastro pelo nome.
+                </p>
+                <div class="row g-2">
+                  <div class="col-md-5">
+                    <input
+                      v-model.trim="lookupName"
+                      type="text"
+                      class="form-control"
+                      placeholder="Nome completo"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <input
+                      v-model="lookupPhone"
+                      type="tel"
+                      class="form-control"
+                      placeholder="WhatsApp (se houver mais de um)"
+                    />
+                  </div>
+                  <div class="col-md-3">
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary w-100"
+                      :disabled="lookupLoading || attachingLead"
+                      @click="searchLead"
+                    >
+                      {{ lookupLoading ? "Buscando..." : "Buscar" }}
+                    </button>
+                  </div>
+                </div>
+                <small v-if="lookupError" class="text-danger d-block mt-1">
+                  {{ lookupError }}
+                </small>
+                <ul v-if="lookupMatches.length" class="list-group mt-2">
+                  <li
+                    v-for="match in lookupMatches"
+                    :key="match.id"
+                    class="list-group-item d-flex justify-content-between align-items-center"
+                  >
+                    <span>
+                      {{ match.name }}
+                      <small class="text-muted d-block">{{ match.whatsapp_phone }}</small>
+                    </span>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-primary"
+                      :disabled="attachingLead"
+                      @click="selectLead(match)"
+                    >
+                      Usar este
+                    </button>
+                  </li>
+                </ul>
               </div>
 
               <div class="row g-2">

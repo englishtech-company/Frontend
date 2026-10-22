@@ -6,6 +6,7 @@ import type {
   ApiListResponse,
   EnrollmentQuestion,
   EnrollmentQuestionType,
+  LeadAppearsOn,
   Paginated,
 } from "@/lib/types";
 
@@ -24,6 +25,7 @@ export type EnrollmentQuestionPayload = {
   options?: string[] | null;
   sort_order?: number;
   active: boolean;
+  appears_on?: LeadAppearsOn;
 };
 
 type EnrollmentQuestionPlucksResponse = {
@@ -32,6 +34,7 @@ type EnrollmentQuestionPlucksResponse = {
   msg: string;
   plucks: {
     types: Record<string, string>;
+    appears_on?: Record<string, string>;
   };
 };
 

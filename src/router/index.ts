@@ -58,6 +58,16 @@ const router = createRouter({
         path: `/enrollment/${String(to.params.token)}`,
       }),
     },
+    {
+      path: "/aula-experimental",
+      name: "PublicLead",
+      component: () => import("../views/pages/PublicLeadForm.vue"),
+      meta: { layout4: "layout4" },
+    },
+    {
+      path: "/experimental-class",
+      redirect: "/aula-experimental",
+    },
 
     // ─── Páginas de sistema ───────────────────────────────────────────────
     {
@@ -90,7 +100,11 @@ function isPublicPath(path: string): boolean {
     return true;
   }
 
-  return path.startsWith("/enrollment/");
+  return (
+    path.startsWith("/enrollment/") ||
+    path === "/aula-experimental" ||
+    path === "/experimental-class"
+  );
 }
 
 // ─── Global navigation guard ──────────────────────────────────────────────────

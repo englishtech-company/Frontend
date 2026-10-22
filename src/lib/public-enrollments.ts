@@ -1,6 +1,13 @@
 import { api } from "@/lib/api";
 import type { ApiItemResponse, PublicEnrollment } from "@/lib/types";
 
+export type PublicLeadMatch = {
+  id: number;
+  name: string;
+  whatsapp_phone: string;
+  email?: string | null;
+};
+
 export type PublicEnrollmentSubmitPayload = {
   name: string;
   email: string;
@@ -31,6 +38,44 @@ export async function applyPublicEnrollmentCoupon(
     {
       method: "POST",
       body: { coupon_name: couponName },
+      auth: false,
+    }
+  );
+
+  return response.enrollment;
+}
+
+export async function lookupPublicEnrollmentLeads(
+  token: string,
+  params: { name?: string; whatsapp_phone?: string }
+): Promise<PublicLeadMatch[]> {
+  const query = new URLSearchParams();
+
+  if (params.name?.trim()) {
+    query.set("name", params.name.trim());
+  }
+
+  if (params.whatsapp_phone?.trim()) {
+    query.set("whatsapp_phone", params.whatsapp_phone.trim());
+  }
+
+  const response = await api<{ leads: PublicLeadMatch[] }>(
+    `/public/enrollments/${token}/leads?${query.toString()}`,
+    { auth: false }
+  );
+
+  return response.leads;
+}
+
+export async function attachPublicEnrollmentLead(
+  token: string,
+  leadId: number
+): Promise<PublicEnrollment> {
+  const response = await api<ApiItemResponse<"enrollment", PublicEnrollment>>(
+    `/public/enrollments/${token}/lead`,
+    {
+      method: "POST",
+      body: { lead_id: leadId },
       auth: false,
     }
   );

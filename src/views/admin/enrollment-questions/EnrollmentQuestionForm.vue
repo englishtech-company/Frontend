@@ -10,7 +10,7 @@ import {
   getEnrollmentQuestionPlucks,
   updateEnrollmentQuestion,
 } from "@/lib/enrollment-questions";
-import type { EnrollmentQuestionType } from "@/lib/types";
+import type { EnrollmentQuestionType, LeadAppearsOn } from "@/lib/types";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,9 +24,11 @@ const type = ref<EnrollmentQuestionType>("text");
 const required = ref(true);
 const sortOrder = ref("0");
 const active = ref(true);
+const appearsOn = ref<LeadAppearsOn>("both");
 const options = ref<string[]>([""]);
 
 const typeOptions = ref<SelectOption[]>([]);
+const appearsOnOptions = ref<SelectOption[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const error = ref("");
@@ -64,6 +66,14 @@ async function loadForm() {
       value,
       label: itemLabel,
     }));
+    appearsOnOptions.value = Object.entries(plucks.appears_on ?? {
+      both: "Ambos",
+      lead: "Interessado",
+      enrollment: "Matrícula",
+    }).map(([value, itemLabel]) => ({
+      value,
+      label: itemLabel,
+    }));
 
     if (!isEdit.value) return;
 
@@ -74,6 +84,7 @@ async function loadForm() {
     required.value = question.required;
     sortOrder.value = String(question.sort_order ?? 0);
     active.value = question.active;
+    appearsOn.value = question.appears_on ?? "both";
     options.value =
       question.options && question.options.length > 0 ? [...question.options] : [""];
   } catch (e) {
@@ -102,6 +113,7 @@ async function submit() {
     required: required.value,
     sort_order: Number(sortOrder.value || 0),
     active: active.value,
+    appears_on: appearsOn.value,
     options: isChoiceType.value ? cleanedOptions : null,
   };
 
@@ -130,7 +142,7 @@ onMounted(loadForm);
       <div class="col-sm-6 p-md-0">
         <div class="welcome-text">
           <h4>{{ isEdit ? "Editar pergunta" : "Nova pergunta" }}</h4>
-          <p class="mb-0">Alterações afetam apenas novas matrículas</p>
+          <p class="mb-0">O mesmo catálogo alimenta o form de interessado e o de matrícula</p>
         </div>
       </div>
       <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
@@ -239,6 +251,16 @@ onMounted(loadForm);
                     />
                     <label class="form-check-label" for="active">Ativa</label>
                   </div>
+                </div>
+                <div class="col-lg-3 mb-3">
+                  <SingleSelect
+                    id="appearsOn"
+                    v-model="appearsOn"
+                    label="Aparece em *"
+                    :options="appearsOnOptions"
+                    :searchable="false"
+                    required
+                  />
                 </div>
               </div>
 

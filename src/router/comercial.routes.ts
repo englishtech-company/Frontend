@@ -23,6 +23,12 @@ export const comercialRoutes: RouteRecordRaw[] = [
     meta: { layout3: "layout3", permission: PERMISSIONS.leads.create },
   },
   {
+    path: "/leads/:id",
+    name: "LeadView",
+    component: () => import("../views/admin/leads/LeadView.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.leads.view },
+  },
+  {
     path: "/leads/:id/edit",
     name: "LeadEdit",
     component: () => import("../views/admin/leads/LeadForm.vue"),

@@ -5,10 +5,12 @@ import FilterField from "@/components/ui/FilterField.vue";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
 import ListPagination from "@/components/ui/ListPagination.vue";
 import { usePermissions } from "@/composables/usePermissions";
-import { confirmDelete } from "@/lib/confirm";
-import { notifyRemoved } from "@/lib/actionNotification";
+import SingleSelect from "@/components/ui/SingleSelect.vue";
+import type { SelectOption } from "@/components/ui/select.types";
+import { confirmAction, confirmDelete } from "@/lib/confirm";
+import { notify, notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
-import { deleteCoupon, listCoupons } from "@/lib/coupons";
+import { deleteCoupon, listCoupons, updateCoupon } from "@/lib/coupons";
 import {
   formatCouponDate,
   formatCouponLimit,
@@ -32,13 +34,23 @@ const lastPage = ref(1);
 const total = ref(0);
 const idFilter = ref("");
 const nameFilter = ref("");
+const activeFilter = ref<string | number | null>(null);
+const togglingId = ref<number | null>(null);
+
+const activeOptions: SelectOption[] = [
+  { value: "true", label: "Ativo" },
+  { value: "false", label: "Inativo" },
+];
 
 const activeFilterCount = computed(() =>
-  countActiveFilters([idFilter.value, nameFilter.value])
+  countActiveFilters([idFilter.value, nameFilter.value, activeFilter.value])
 );
 
 const showActions = computed(
-  () => canUpdateCoupons.value || canDeleteCoupons.value
+  () =>
+    canViewCoupons.value ||
+    canUpdateCoupons.value ||
+    canDeleteCoupons.value
 );
 
 async function loadCoupons() {
@@ -56,6 +68,12 @@ async function loadCoupons() {
       page: page.value,
       id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
       name: nameFilter.value.trim() || undefined,
+      active:
+        activeFilter.value === "true"
+          ? true
+          : activeFilter.value === "false"
+            ? false
+            : undefined,
     });
 
     coupons.value = result.data;
@@ -77,8 +95,52 @@ function handleSearch() {
 function clearFilters() {
   idFilter.value = "";
   nameFilter.value = "";
+  activeFilter.value = null;
   page.value = 1;
   loadCoupons();
+}
+
+function isCouponActive(coupon: Coupon): boolean {
+  return coupon.active !== false;
+}
+
+async function toggleCouponActive(coupon: Coupon) {
+  if (!canUpdateCoupons.value) {
+    error.value = "Você não tem permissão para atualizar cupons.";
+    return;
+  }
+
+  const nextActive = !isCouponActive(coupon);
+
+  if (!nextActive) {
+    const confirmed = await confirmAction({
+      title: "Inativar cupom?",
+      message: `O cupom "${coupon.name}" deixará de valer nas matrículas até ser ativado de novo.`,
+      confirmButtonText: "Sim, inativar",
+    });
+
+    if (!confirmed) return;
+  }
+
+  togglingId.value = coupon.id;
+  error.value = "";
+
+  try {
+    const updated = await updateCoupon(coupon.id, { active: nextActive });
+    coupons.value = coupons.value.map((item) =>
+      item.id === coupon.id ? { ...item, ...updated } : item
+    );
+    notify.success(
+      nextActive
+        ? `Cupom "${coupon.name}" ativado.`
+        : `Cupom "${coupon.name}" inativado.`
+    );
+  } catch (e) {
+    error.value =
+      e instanceof Error ? e.message : "Erro ao atualizar o cupom";
+  } finally {
+    togglingId.value = null;
+  }
 }
 
 async function removeCoupon(coupon: Coupon) {
@@ -172,6 +234,18 @@ onMounted(loadCoupons);
             />
           </FilterField>
         </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="Status" id="coupon-filter-active">
+            <SingleSelect
+              id="coupon-filter-active"
+              v-model="activeFilter"
+              :options="activeOptions"
+              placeholder="Todos os status"
+              :searchable="false"
+              aria-label="Filtrar cupons por status"
+            />
+          </FilterField>
+        </div>
       </div>
     </FilterPanel>
 
@@ -260,6 +334,45 @@ onMounted(loadCoupons);
                       v-if="showActions"
                       class="text-end text-nowrap"
                     >
+                      <RouterLink
+                        v-if="canViewCoupons"
+                        :to="`/coupons/${coupon.id}`"
+                        class="btn btn-xs sharp btn-info me-1"
+                        :aria-label="`Ver histórico de ${coupon.name}`"
+                        title="Histórico"
+                      >
+                        <i class="fa fa-eye"></i>
+                      </RouterLink>
+
+                      <button
+                        v-if="canUpdateCoupons"
+                        type="button"
+                        class="btn btn-xs sharp me-1"
+                        :class="
+                          isCouponActive(coupon)
+                            ? 'btn-warning'
+                            : 'btn-success'
+                        "
+                        :disabled="togglingId === coupon.id"
+                        :aria-label="
+                          isCouponActive(coupon)
+                            ? `Inativar ${coupon.name}`
+                            : `Ativar ${coupon.name}`
+                        "
+                        :title="
+                          isCouponActive(coupon) ? 'Inativar' : 'Ativar'
+                        "
+                        @click="toggleCouponActive(coupon)"
+                      >
+                        <i
+                          :class="
+                            isCouponActive(coupon)
+                              ? 'fa fa-ban'
+                              : 'fa fa-check'
+                          "
+                        ></i>
+                      </button>
+
                       <RouterLink
                         v-if="canUpdateCoupons"
                         :to="`/coupons/${coupon.id}/edit`"

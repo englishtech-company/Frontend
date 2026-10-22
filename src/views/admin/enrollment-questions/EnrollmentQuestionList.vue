@@ -30,6 +30,7 @@ const {
 
 const questions = ref<EnrollmentQuestion[]>([]);
 const typeLabels = ref<Record<string, string>>({});
+const appearsOnLabels = ref<Record<string, string>>({});
 const loading = ref(true);
 const reordering = ref(false);
 const error = ref("");
@@ -84,6 +85,11 @@ async function loadQuestions() {
     lastPage.value = result.last_page;
     total.value = result.total;
     typeLabels.value = plucks.types;
+    appearsOnLabels.value = plucks.appears_on ?? {
+      both: "Ambos",
+      lead: "Interessado",
+      enrollment: "Matrícula",
+    };
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Erro ao carregar perguntas";
   } finally {
@@ -165,8 +171,8 @@ onMounted(loadQuestions);
     <div class="row page-titles mx-0">
       <div class="col-sm-6 p-md-0">
         <div class="welcome-text">
-          <h4>Perguntas de matrícula</h4>
-          <p class="mb-0">Gerencie o formulário usado nas novas matrículas</p>
+          <h4>Perguntas de forms</h4>
+          <p class="mb-0">Gerencie as perguntas dos formulários de interessado e matrícula</p>
         </div>
       </div>
 
@@ -239,6 +245,7 @@ onMounted(loadQuestions);
                     <th>Ordem</th>
                     <th>Pergunta</th>
                     <th>Tipo</th>
+                    <th>Aparece em</th>
                     <th>Obrigatória</th>
                     <th>Ativa</th>
                     <th v-if="showActions" class="text-end">Ações</th>
@@ -248,7 +255,7 @@ onMounted(loadQuestions);
                 <tbody v-if="questions.length === 0">
                   <tr>
                     <td
-                      :colspan="showActions ? (canUpdateEnrollmentQuestions ? 7 : 6) : (canUpdateEnrollmentQuestions ? 6 : 5)"
+                      :colspan="showActions ? (canUpdateEnrollmentQuestions ? 8 : 7) : (canUpdateEnrollmentQuestions ? 7 : 6)"
                       class="text-center text-muted"
                     >
                       Nenhuma pergunta cadastrada
@@ -285,6 +292,7 @@ onMounted(loadQuestions);
                     <td>{{ question.sort_order }}</td>
                     <td>{{ question.label }}</td>
                     <td>{{ typeLabels[question.type] ?? question.type }}</td>
+                    <td>{{ appearsOnLabels[question.appears_on ?? "both"] ?? question.appears_on }}</td>
                     <td>{{ question.required ? "Sim" : "Não" }}</td>
                     <td>
                       <span

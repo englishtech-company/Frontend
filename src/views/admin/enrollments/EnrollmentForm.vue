@@ -32,6 +32,7 @@ const isEdit = computed(() => Boolean(route.params.id));
 const enrollmentId = computed(() => Number(route.params.id));
 
 const studentId = ref<string | null>(null);
+const leadId = ref<string | null>(null);
 const teacherId = ref<string | null>(null);
 const groupClassId = ref<string | null>(null);
 const isGroupClass = ref(false);
@@ -44,6 +45,7 @@ const paymentMethod = ref<EnrollmentPaymentMethod>("pix");
 const status = ref<EnrollmentStatus>("pending");
 
 const studentOptions = ref<SelectOption[]>([]);
+const leadOptions = ref<SelectOption[]>([]);
 const teacherOptions = ref<SelectOption[]>([]);
 const groupClassOptions = ref<SelectOption[]>([]);
 const planVariantOptions = ref<SelectOption[]>([]);
@@ -92,6 +94,11 @@ async function loadOptions() {
     label,
   }));
 
+  leadOptions.value = Object.entries(plucks.leads ?? {}).map(([value, label]) => ({
+    value,
+    label,
+  }));
+
   teacherOptions.value = teachersResult.data.map((t) => ({
     value: String(t.id),
     label: t.name,
@@ -116,6 +123,11 @@ async function loadForm() {
 
     const enrollment = await getEnrollment(enrollmentId.value);
     studentId.value = enrollment.student_id ? String(enrollment.student_id) : null;
+    leadId.value = enrollment.lead_id
+      ? String(enrollment.lead_id)
+      : enrollment.relationships?.lead?.id
+        ? String(enrollment.relationships.lead.id)
+        : null;
     teacherId.value = enrollment.teacher_id ? String(enrollment.teacher_id) : null;
     groupClassId.value = enrollment.group_class_id ? String(enrollment.group_class_id) : null;
     isGroupClass.value = Boolean(enrollment.is_group_class);
@@ -144,6 +156,7 @@ async function submit() {
 
   const payload = {
     student_id: studentId.value ? Number(studentId.value) : null,
+    lead_id: leadId.value ? Number(leadId.value) : null,
     teacher_id: teacherId.value ? Number(teacherId.value) : null,
     group_class_id: groupClassId.value ? Number(groupClassId.value) : null,
     plan_variant_id: planVariantId.value ? Number(planVariantId.value) : null,
@@ -275,6 +288,17 @@ onMounted(loadForm);
                     :options="studentOptions"
                     placeholder="Sem aluno vinculado"
                     hint="Deixe vazio para o aluno preencher pelo link."
+                  />
+                </div>
+
+                <div class="col-lg-6 mb-3">
+                  <AppCombobox
+                    id="leadId"
+                    v-model="leadId"
+                    label="Interessado (opcional)"
+                    :options="leadOptions"
+                    placeholder="Sem interessado vinculado"
+                    hint="Vincula as respostas do formulário de aula experimental."
                   />
                 </div>
 

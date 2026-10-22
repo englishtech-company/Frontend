@@ -40,77 +40,7 @@
                 <i id="icon-dark" class="fas fa-moon"></i>
               </a>
             </li>
-            <li class="nav-item dropdown notification_dropdown">
-              <a class="nav-link bell ai-icon" href="javascript:void(0);" role="button" data-bs-toggle="dropdown">
-                <svg
-                  id="icon-user"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="feather feather-bell"
-                >
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-                <div class="pulse-css"></div>
-              </a>
-              <div class="dropdown-menu dropdown-menu-right">
-                <ul class="list-unstyled">
-                  <li class="media dropdown-item align-items-center gap-3">
-                    <span class="success"><i class="ti-user"></i></span>
-                    <div class="media-body">
-                      <a href="javascript:void(0);">
-                        <p><strong>Martin</strong> has added a <strong>customer</strong> Successfully</p>
-                      </a>
-                    </div>
-                    <span class="notify-time">3:20 am</span>
-                  </li>
-                  <li class="media dropdown-item align-items-center gap-3">
-                    <span class="primary"><i class="ti-shopping-cart"></i></span>
-                    <div class="media-body">
-                      <a href="javascript:void(0);">
-                        <p><strong>Jennifer</strong> purchased Light Dashboard 2.0.</p>
-                      </a>
-                    </div>
-                    <span class="notify-time">3:20 am</span>
-                  </li>
-                  <li class="media dropdown-item align-items-center gap-3">
-                    <span class="danger"><i class="ti-bookmark"></i></span>
-                    <div class="media-body">
-                      <a href="javascript:void(0);">
-                        <p><strong>Robin</strong> marked a <strong>ticket</strong> as unsolved.</p>
-                      </a>
-                    </div>
-                    <span class="notify-time">3:20 am</span>
-                  </li>
-                  <li class="media dropdown-item align-items-center gap-3">
-                    <span class="primary"><i class="ti-heart"></i></span>
-                    <div class="media-body">
-                      <a href="javascript:void(0);">
-                        <p><strong>David</strong> purchased Light Dashboard 1.0.</p>
-                      </a>
-                    </div>
-                    <span class="notify-time">3:20 am</span>
-                  </li>
-                  <li class="media dropdown-item align-items-center gap-3">
-                    <span class="success"><i class="ti-image"></i></span>
-                    <div class="media-body">
-                      <a href="javascript:void(0);">
-                        <p><strong> James.</strong> has added a<strong>customer</strong> Successfully</p>
-                      </a>
-                    </div>
-                    <span class="notify-time">3:20 am</span>
-                  </li>
-                </ul>
-                <a class="all-notification" href="javascript:void(0);">See all notifications <i class="ti-arrow-right"></i></a>
-              </div>
-            </li>
+            <NotificationBell />
             <li class="nav-item dropdown header-profile">
               <a class="nav-link" href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-label="Menu do usuário">
                 <span class="header-profile__icon">
@@ -277,11 +207,12 @@ import { useAuthStore } from "@/stores/auth";
 import { RouterLink } from "vue-router";
 import router from "@/router";
 import JobSelectOption from "@/elements/JobSelectOption.vue";
+import NotificationBell from "@/layouts/NotificationBell.vue";
 import { useFilteredMenu } from "@/layouts/useFilteredMenu";
 
 export default defineComponent({
   name: "header_",
-  components: { RouterLink, JobSelectOption },
+  components: { RouterLink, JobSelectOption, NotificationBell },
   data() {
     return SVGImage;
   },

@@ -28,6 +28,7 @@ export type ListEnrollmentsParams = {
 
 export type EnrollmentPayload = {
   student_id?: number | null;
+  lead_id?: number | null;
   teacher_id?: number | null;
   group_class_id?: number | null;
   plan_variant_id?: number | null;
@@ -47,6 +48,7 @@ type EnrollmentPlucksResponse = {
   msg: string;
   plucks: {
     students: Record<string, string>;
+    leads?: Record<string, string>;
     statuses: Record<string, string>;
     payment_methods: Record<string, string>;
   };

@@ -81,6 +81,7 @@ export const navigationSchema: NavEntry[] = [
       PERMISSIONS.leads.view,
       PERMISSIONS.experimentalClasses.view,
       PERMISSIONS.enrollments.view,
+      PERMISSIONS.enrollmentQuestions.view,
     ],
     children: [
       {
@@ -97,6 +98,11 @@ export const navigationSchema: NavEntry[] = [
         label: "Matrículas",
         to: "/enrollments",
         permission: PERMISSIONS.enrollments.view,
+      },
+      {
+        label: "Perguntas de forms",
+        to: "/enrollment-questions",
+        permission: PERMISSIONS.enrollmentQuestions.view,
       },
     ],
   },
@@ -182,6 +188,7 @@ export const navigationSchema: NavEntry[] = [
     anyPermission: [
       PERMISSIONS.students.view,
       PERMISSIONS.plans.view,
+      PERMISSIONS.coupons.view,
       PERMISSIONS.users.view,
       PERMISSIONS.roles.view,
       PERMISSIONS.permissions.view,
@@ -197,6 +204,11 @@ export const navigationSchema: NavEntry[] = [
         label: "Planos",
         to: "/plans",
         permission: PERMISSIONS.plans.view,
+      },
+      {
+        label: "Cupons",
+        to: "/coupons",
+        permission: PERMISSIONS.coupons.view,
       },
       {
         label: "Configurações",

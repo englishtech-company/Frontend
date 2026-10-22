@@ -42,6 +42,7 @@ const {
   canViewTeachers,
   canViewPlans,
   canViewCoupons,
+  canViewLeads,
   canUpdateGroupClasses,
   canViewGroupClasses,
 } = usePermissions();
@@ -118,6 +119,10 @@ const enrollmentHistory = computed(() =>
 
 const studentCoupons = computed(() =>
   student.value ? getStudentCoupons(student.value) : []
+);
+
+const studentLead = computed(
+  () => student.value?.relationships?.lead ?? null
 );
 
 const studentGroupClasses = computed(
@@ -544,6 +549,19 @@ onMounted(() => {
                             <div class="info-item">
                               <span class="info-label">Nome</span>
                               <span class="info-value">{{ student.name }}</span>
+                            </div>
+                            <div v-if="studentLead" class="info-item">
+                              <span class="info-label">Interessado</span>
+                              <span class="info-value">
+                                <RouterLink
+                                  v-if="canViewLeads"
+                                  :to="`/leads/${studentLead.id}/edit`"
+                                  class="text-primary"
+                                >
+                                  {{ studentLead.name }}
+                                </RouterLink>
+                                <span v-else>{{ studentLead.name }}</span>
+                              </span>
                             </div>
                             <div class="info-item">
                               <span class="info-label">Status</span>

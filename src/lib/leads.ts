@@ -24,6 +24,7 @@ export type ListLeadsParams = {
   selfDeclaredLevel?: string;
   registrationSource?: LeadRegistrationSource;
   objective?: string;
+  linkTag?: string;
 };
 
 type LeadPlucksResponse = {
@@ -32,6 +33,7 @@ type LeadPlucksResponse = {
   msg: string;
   plucks: {
     leads: Record<string, string>;
+    link_tags?: string[];
   };
 };
 
@@ -57,6 +59,7 @@ export async function listLeads(
   appendLike(query, "self_declared_level", params.selfDeclaredLevel);
   appendExact(query, "registration_source", params.registrationSource);
   appendLike(query, "objective", params.objective);
+  appendExact(query, "link_tag", params.linkTag);
 
   const response = await api<ApiListResponse<"leads", Lead>>(
     `/leads?${query.toString()}`
@@ -110,4 +113,23 @@ export async function getLeadOptions(): Promise<Record<string, string>> {
   const response = await api<LeadPlucksResponse>("/leads/plucks");
 
   return response.plucks.leads;
+}
+
+export async function getLeadLinkTags(): Promise<string[]> {
+  const response = await api<LeadPlucksResponse>("/leads/plucks");
+
+  return response.plucks.link_tags ?? [];
+}
+
+export async function issuePublicLeadLink(
+  tag: string
+): Promise<{ tag: string; code: string }> {
+  const response = await api<{
+    source: { tag: string; code: string };
+  }>("/leads/public-link", {
+    method: "POST",
+    body: { tag },
+  });
+
+  return response.source;
 }

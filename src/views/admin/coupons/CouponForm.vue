@@ -29,6 +29,7 @@ const discountType = ref<CouponDiscountType>("percent");
 const value = ref("");
 const usageLimit = ref("");
 const uniquePerStudent = ref(false);
+const active = ref(true);
 const startsAt = ref("");
 const endsAt = ref("");
 
@@ -60,6 +61,7 @@ async function loadForm() {
     usageLimit.value =
       coupon.usage_limit == null ? "" : String(coupon.usage_limit);
     uniquePerStudent.value = Boolean(coupon.unique_per_student);
+    active.value = coupon.active !== false;
     startsAt.value = toDateInput(coupon.starts_at);
     endsAt.value = toDateInput(coupon.ends_at);
   } catch (e) {
@@ -87,6 +89,7 @@ async function submit() {
       ? Number(usageLimit.value)
       : null,
     unique_per_student: uniquePerStudent.value,
+    active: active.value,
     starts_at: startsAt.value || null,
     ends_at: endsAt.value || null,
   };
@@ -234,6 +237,25 @@ onMounted(loadForm);
                     </div>
                     <small class="form-text text-muted">
                       Cada aluno só pode usar este cupom uma vez.
+                    </small>
+                  </div>
+                </div>
+
+                <div class="col-sm-12">
+                  <div class="form-group">
+                    <div class="form-check">
+                      <input
+                        id="coupon-active"
+                        v-model="active"
+                        class="form-check-input"
+                        type="checkbox"
+                      />
+                      <label class="form-check-label" for="coupon-active">
+                        Ativo
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">
+                      Cupons inativos não podem ser aplicados nas matrículas.
                     </small>
                   </div>
                 </div>

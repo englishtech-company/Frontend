@@ -26,7 +26,7 @@ import { formatCpf } from "@/lib/students/format";
 import type { Enrollment } from "@/lib/types";
 
 const route = useRoute();
-const { canUpdateEnrollments, canViewStudents } = usePermissions();
+const { canUpdateEnrollments, canViewStudents, canViewLeads } = usePermissions();
 
 const enrollmentId = computed(() => Number(route.params.id));
 const enrollment = ref<Enrollment | null>(null);
@@ -45,6 +45,13 @@ const statusLabel = computed(
 
 const student = computed(() =>
   enrollment.value ? getEnrollmentStudent(enrollment.value) : null
+);
+
+const lead = computed(
+  () =>
+    enrollment.value?.relationships?.lead ??
+    enrollment.value?.lead ??
+    null
 );
 
 const formQuestions = computed(() =>
@@ -230,6 +237,22 @@ onMounted(loadEnrollment);
                   <li class="list-group-item d-flex px-0 justify-content-between">
                     <strong>Telefone</strong>
                     <span class="mb-0">{{ student.phone || "—" }}</span>
+                  </li>
+                  <li
+                    v-if="lead"
+                    class="list-group-item d-flex px-0 justify-content-between"
+                  >
+                    <strong>Interessado</strong>
+                    <span class="mb-0 text-end">
+                      <RouterLink
+                        v-if="canViewLeads"
+                        :to="`/leads/${lead.id}`"
+                        class="text-primary"
+                      >
+                        {{ lead.name }}
+                      </RouterLink>
+                      <span v-else>{{ lead.name }}</span>
+                    </span>
                   </li>
                 </ul>
               </div>

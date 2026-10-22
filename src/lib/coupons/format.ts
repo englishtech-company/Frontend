@@ -51,6 +51,10 @@ export function formatCouponLimit(coupon: Coupon): string {
 }
 
 export function formatCouponStatus(coupon: Coupon): CouponStatus {
+  if (coupon.active === false) {
+    return { label: "Inativo", class: "badge-secondary" };
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const startsAt = toDateOnly(coupon.starts_at);
   const endsAt = toDateOnly(coupon.ends_at);
