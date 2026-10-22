@@ -147,12 +147,23 @@ export type PermissionName =
   | (typeof PERMISSIONS.makeupClasses)[keyof typeof PERMISSIONS.makeupClasses]
   | (typeof PERMISSIONS.googleCalendar)[keyof typeof PERMISSIONS.googleCalendar];
 
+export const REVENUE_DASHBOARD_PERMISSIONS: readonly PermissionName[] = [
+  PERMISSIONS.students.view, PERMISSIONS.payments.view, PERMISSIONS.charges.view, PERMISSIONS.enrollments.view,
+];
+
+export function canViewRevenueDashboard(hasPermission: (permission: PermissionName) => boolean): boolean {
+  return REVENUE_DASHBOARD_PERMISSIONS.every(hasPermission);
+}
+
 export function canAccessPath(
   path: string,
   hasPermission: (
     permission: PermissionName | string
   ) => boolean
 ): boolean {
+  if (path === "/students/revenue-dashboard" || path.startsWith("/students/revenue-dashboard/")) {
+    return canViewRevenueDashboard(hasPermission);
+  }
   if (path === "/" || path === "") {
     return true;
   }

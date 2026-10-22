@@ -23,8 +23,10 @@ export function resolveNavigationChild(
   hasPermission: (permission: PermissionName) => boolean
 ): NavChild | null {
   const allowed = [child, ...(child.alternatives ?? [])]
-    .filter((candidate) => !candidate.permission || hasPermission(candidate.permission));
+    .filter((candidate) => (!candidate.permission || hasPermission(candidate.permission)) &&
+      (candidate.requiredPermissions?.every(hasPermission) ?? true));
   const active = getActiveNavigationPath(currentPath, allowed.map((candidate) => candidate.to));
   const destination = allowed.find((candidate) => candidate.to === active) ?? allowed[0];
-  return destination ? { ...child, to: destination.to, permission: destination.permission } : null;
+  return destination ? { ...child, to: destination.to, permission: destination.permission,
+    ...(destination.requiredPermissions ? { requiredPermissions: destination.requiredPermissions } : {}) } : null;
 }

@@ -10,6 +10,7 @@
  */
 
 import { PERMISSIONS } from "@/lib/permissions/access";
+import { REVENUE_DASHBOARD_PERMISSIONS } from "@/lib/permissions/access";
 import type { PermissionName } from "@/lib/permissions/access";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -22,7 +23,8 @@ export interface NavChild {
   /** Permissão Spatie necessária (ausente = sempre visível) */
   permission?: PermissionName;
   /** Destinos alternativos do mesmo item, avaliados por permissão. */
-  alternatives?: { to: string; permission: PermissionName }[];
+  requiredPermissions?: readonly PermissionName[];
+  alternatives?: { to: string; permission: PermissionName; requiredPermissions?: readonly PermissionName[] }[];
 }
 
 export interface NavGroup {
@@ -161,7 +163,10 @@ export const navigationSchema: NavEntry[] = [
         label: "Painéis",
         to: "/payments/dashboard",
         permission: PERMISSIONS.payments.view,
-        alternatives: [{ to: "/charges/dashboard", permission: PERMISSIONS.charges.view }],
+        alternatives: [
+          { to: "/charges/dashboard", permission: PERMISSIONS.charges.view },
+          { to: "/students/revenue-dashboard", permission: PERMISSIONS.students.view, requiredPermissions: REVENUE_DASHBOARD_PERMISSIONS },
+        ],
       },
       {
         label: "Cobranças",
