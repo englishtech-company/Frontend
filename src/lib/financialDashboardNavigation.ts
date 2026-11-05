@@ -1,12 +1,10 @@
 import type { PermissionName } from "@/lib/permissions/access";
-import { REVENUE_DASHBOARD_PERMISSIONS } from "@/lib/permissions/access";
 
 export type FinancialDashboardNavigationItem = {
   key: "payments" | "due-dates" | "revenue";
   label: string;
   path: string | null;
   permission: PermissionName | null;
-  requiredPermissions?: readonly PermissionName[];
 };
 
 const dashboards: readonly FinancialDashboardNavigationItem[] = [
@@ -25,9 +23,8 @@ const dashboards: readonly FinancialDashboardNavigationItem[] = [
   {
     key: "revenue",
     label: "Receita e LTV",
-    path: "/students/revenue-dashboard",
-    permission: "students.view",
-    requiredPermissions: REVENUE_DASHBOARD_PERMISSIONS,
+    path: null,
+    permission: null,
   },
 ];
 
@@ -37,8 +34,7 @@ export function getFinancialDashboardNavigation(
   return dashboards
     .filter((dashboard) =>
       dashboard.path === null ||
-      (dashboard.permission !== null && hasPermission(dashboard.permission) &&
-        (dashboard.requiredPermissions?.every(hasPermission) ?? true))
+      (dashboard.permission !== null && hasPermission(dashboard.permission))
     )
-    .map((dashboard) => ({ ...dashboard, ...(dashboard.requiredPermissions ? { requiredPermissions: [...dashboard.requiredPermissions] } : {}) }));
+    .map((dashboard) => ({ ...dashboard }));
 }

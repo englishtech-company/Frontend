@@ -59,7 +59,7 @@ test("payment viewers can access the delivered dashboard", () => {
   const items = getFinancialDashboardNavigation((permission) =>
     permission === "payments.view"
   );
-  assert.deepEqual(items.map((item) => item.key), ["payments"]);
+  assert.deepEqual(items.map((item) => item.key), ["payments", "revenue"]);
   assert.equal(items[0].path, "/payments/dashboard");
 });
 
@@ -69,10 +69,12 @@ test("users without payment view permission receive no payment link", () => {
   assert.ok(!items.some((item) => item.key === "payments"));
 });
 
-test("all delivered dashboards have real destinations", () => {
+test("planned dashboards have no links to nonexistent routes", () => {
   const items = getFinancialDashboardNavigation(() => true);
-  assert.equal(items.filter((item) => item.path !== null).length, 3);
-  assert.deepEqual(items.filter((item) => item.path === null), []);
+  assert.equal(items.filter((item) => item.path !== null).length, 2);
+  assert.deepEqual(items.filter((item) => item.path === null).map((item) => item.key), [
+    "revenue",
+  ]);
 });
 
 test("callers cannot mutate the shared navigation definitions", () => {
@@ -127,7 +129,6 @@ async function renderNavigation(path, hasPermission) {
       { path: "/payments/dashboard", component: { render: () => null } },
       { path: "/charges", component: { render: () => null } },
       { path: "/charges/dashboard", component: { render: () => null } },
-      { path: "/students/revenue-dashboard", component: { render: () => null } },
     ],
   });
   await router.push(path);
@@ -139,20 +140,20 @@ async function renderNavigation(path, hasPermission) {
   return renderToString(app);
 }
 
-test("the real component renders the three delivered links without pending placeholders", async () => {
+test("the real component renders two delivered links and one disabled upcoming option", async () => {
   const html = await renderNavigation("/payments/dashboard", () => true);
   assert.match(html, /aria-label="Painéis financeiros"/);
   assert.match(html, /aria-current="page"/);
   assert.match(html, /href="\/payments\/dashboard"/);
-  assert.equal((html.match(/<a\b/g) ?? []).length, 3);
-  assert.equal((html.match(/<button\b[^>]*\sdisabled(?:\s|>)/g) ?? []).length, 0);
-  assert.equal((html.match(/Em breve/g) ?? []).length, 0);
+  assert.equal((html.match(/<a\b/g) ?? []).length, 2);
+  assert.equal((html.match(/<button\b[^>]*\sdisabled(?:\s|>)/g) ?? []).length, 1);
+  assert.equal((html.match(/Em breve/g) ?? []).length, 1);
 });
 
 test("charge-only viewers can enter Painéis without payment permission", async () => {
   const allowed = (permission) => permission === "charges.view";
   const items = getFinancialDashboardNavigation(allowed);
-  assert.deepEqual(items.map((item) => item.key), ["due-dates"]);
+  assert.deepEqual(items.map((item) => item.key), ["due-dates", "revenue"]);
   const group = navigationSchema.find((entry) => entry.key === "financeiro");
   const child = resolveNavigationChild(group.children[0], "/charges/dashboard", allowed);
   assert.equal(child.to, "/charges/dashboard");
