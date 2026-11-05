@@ -81,6 +81,13 @@ export const PERMISSIONS = {
   audits: {
     view: "audits.view",
   },
+  terms: {
+    view: "terms.view",
+    create: "terms.create",
+  },
+  termAcceptances: {
+    view: "term-acceptances.view",
+  },
   experimentalClasses: {
     view: "experimental-classes.view",
     create: "experimental-classes.create",
@@ -139,6 +146,8 @@ export type PermissionName =
   | (typeof PERMISSIONS.studentDocuments)[keyof typeof PERMISSIONS.studentDocuments]
   | (typeof PERMISSIONS.permissions)[keyof typeof PERMISSIONS.permissions]
   | (typeof PERMISSIONS.audits)[keyof typeof PERMISSIONS.audits]
+  | (typeof PERMISSIONS.terms)[keyof typeof PERMISSIONS.terms]
+  | (typeof PERMISSIONS.termAcceptances)[keyof typeof PERMISSIONS.termAcceptances]
   | (typeof PERMISSIONS.experimentalClasses)[keyof typeof PERMISSIONS.experimentalClasses]
   | (typeof PERMISSIONS.groupClasses)[keyof typeof PERMISSIONS.groupClasses]
   | (typeof PERMISSIONS.lessons)[keyof typeof PERMISSIONS.lessons]
@@ -377,6 +386,12 @@ export function canAccessPath(
     );
   }
 
+  if (path.startsWith("/term-acceptances")) {
+    return hasPermission(
+      PERMISSIONS.termAcceptances.view
+    );
+  }
+
   if (path === "/experimental-classes/create") return hasPermission(PERMISSIONS.experimentalClasses.create);
   if (/^\/experimental-classes\/\d+\/edit$/.test(path)) return hasPermission(PERMISSIONS.experimentalClasses.update);
   if (path.startsWith("/experimental-classes")) return hasPermission(PERMISSIONS.experimentalClasses.view);
@@ -571,6 +586,10 @@ export function resolveRoutePermission(
 
   if (path.startsWith("/audits")) {
     return PERMISSIONS.audits.view;
+  }
+
+  if (path.startsWith("/term-acceptances")) {
+    return PERMISSIONS.termAcceptances.view;
   }
 
   if (path === "/experimental-classes/create") return PERMISSIONS.experimentalClasses.create;

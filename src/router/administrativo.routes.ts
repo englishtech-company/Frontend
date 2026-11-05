@@ -90,6 +90,15 @@ export const administrativoRoutes: RouteRecordRaw[] = [
     meta: { layout3: "layout3", permission: PERMISSIONS.audits.view },
   },
 
+  // ─── Aceites de Termos de Uso ─────────────────────────────────────────────
+  {
+    path: "/term-acceptances",
+    name: "TermAcceptances",
+    component: () =>
+      import("../views/admin/term-acceptances/TermAcceptanceList.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.termAcceptances.view },
+  },
+
   // ─── Biblioteca ───────────────────────────────────────────────────────────
   // Legacy alias: /biblioteca → /library/materials (redirect direto para materiais)
   {

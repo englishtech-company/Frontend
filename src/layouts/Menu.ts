@@ -158,6 +158,11 @@ const MenuItems = reactive<menuType[]>([
         permission: PERMISSIONS.coupons.view,
       },
       {
+        menu: "Aceites",
+        to: "/term-acceptances",
+        permission: PERMISSIONS.termAcceptances.view,
+      },
+      {
         menu: "Usuários",
         to: "/users",
         permission: PERMISSIONS.users.view,

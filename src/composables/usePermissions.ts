@@ -414,6 +414,12 @@ export function usePermissions() {
     canViewAudits: computed(() =>
       auth.hasPermission(PERMISSIONS.audits.view)
     ),
+    canViewTermAcceptances: computed(() =>
+      auth.hasPermission(PERMISSIONS.termAcceptances.view)
+    ),
+    canPublishTerms: computed(() =>
+      auth.hasPermission(PERMISSIONS.terms.create)
+    ),
 
     can,
   };

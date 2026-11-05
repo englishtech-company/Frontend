@@ -201,6 +201,7 @@ export const navigationSchema: NavEntry[] = [
       PERMISSIONS.roles.view,
       PERMISSIONS.permissions.view,
       PERMISSIONS.audits.view,
+      PERMISSIONS.termAcceptances.view,
     ],
     children: [
       {
@@ -217,6 +218,11 @@ export const navigationSchema: NavEntry[] = [
         label: "Cupons",
         to: "/coupons",
         permission: PERMISSIONS.coupons.view,
+      },
+      {
+        label: "Aceites",
+        to: "/term-acceptances",
+        permission: PERMISSIONS.termAcceptances.view,
       },
       {
         label: "Configurações",
