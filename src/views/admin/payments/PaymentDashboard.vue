@@ -5,6 +5,7 @@ import {
   watch,
 } from "vue";
 import { RouterLink } from "vue-router";
+import FinancialDashboardNavigation from "@/components/admin/FinancialDashboardNavigation.vue";
 import PaymentDashboardMonthlyChart from "@/components/admin/PaymentDashboardMonthlyChart.vue";
 import PaymentDashboardPlanChart from "@/components/admin/PaymentDashboardPlanChart.vue";
 import PaymentDashboardRecordsTable from "@/components/admin/PaymentDashboardRecordsTable.vue";
@@ -15,6 +16,8 @@ import SingleSelect from "@/components/ui/SingleSelect.vue";
 import type { SelectOption } from "@/components/ui/select.types";
 import { usePaymentDashboard } from "@/composables/usePaymentDashboard";
 import { usePermissions } from "@/composables/usePermissions";
+import { getFinancialDashboardNavigation } from "@/lib/financialDashboardNavigation";
+import { useAuthStore } from "@/stores/auth";
 import type {
   PaymentDashboardParams,
   PaymentDashboardPlanCommitment,
@@ -24,6 +27,11 @@ const {
   canViewPayments,
   canCreatePayments,
 } = usePermissions();
+
+const auth = useAuthStore();
+const dashboardNavigation = computed(() =>
+  getFinancialDashboardNavigation(auth.hasPermission)
+);
 
 const {
   summary,
@@ -275,6 +283,8 @@ async function selectPlan(
     </div>
 
     <template v-else>
+      <FinancialDashboardNavigation :items="dashboardNavigation" />
+
       <section
         class="payment-dashboard__filters"
         aria-label="Filtros de período e plano"

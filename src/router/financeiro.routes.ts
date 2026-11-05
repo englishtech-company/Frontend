@@ -1,11 +1,24 @@
 import type { RouteRecordRaw } from "vue-router";
 import { PERMISSIONS } from "@/lib/permissions/access";
+import { REVENUE_DASHBOARD_PERMISSIONS } from "@/lib/permissions/access";
 
 /**
  * Domínio: Financeiro
  * Módulos: Cobranças, Pagamentos, Inadimplentes, Planos, Cupons
  */
 export const financeiroRoutes: RouteRecordRaw[] = [
+  {
+    path: "/students/revenue-dashboard",
+    name: "RevenueDashboard",
+    component: () => import("../views/admin/students/RevenueDashboard.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.students.view, permissions: [...REVENUE_DASHBOARD_PERMISSIONS] },
+  },
+  {
+    path: "/charges/dashboard",
+    name: "DueDashboard",
+    component: () => import("../views/admin/charges/DueDashboard.vue"),
+    meta: { layout3: "layout3", permission: PERMISSIONS.charges.view },
+  },
   // ─── Painel de pagamentos ─────────────────────────────────────────────────
   {
     path: "/payments/dashboard",

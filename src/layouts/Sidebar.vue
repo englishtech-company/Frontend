@@ -97,6 +97,7 @@ import { useRoute, RouterLink } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useStore } from "@/stores/Store";
 import { useFilteredMenu } from "@/layouts/useFilteredMenu";
+import { getActiveNavigationPath } from "@/layouts/navigationMatching";
 
 // ── Store ──────────────────────────────────────────────────────────────────
 const { iconHover } = storeToRefs(useStore());
@@ -134,15 +135,23 @@ function toggleGroup(key: string) {
 }
 
 // ── Active state helpers ───────────────────────────────────────────────────
+const activeNavigationPath = computed(() =>
+  getActiveNavigationPath(
+    route.path,
+    menuEntries.value.flatMap((entry) =>
+      entry.kind === "group"
+        ? entry.children.map((child) => child.to)
+        : [entry.to]
+    )
+  )
+);
+
 function isItemActive(to: string): boolean {
-  if (to === "/") return route.path === "/";
-  return route.path === to || route.path.startsWith(to + "/");
+  return activeNavigationPath.value === to;
 }
 
 function isChildActive(to: string): boolean {
-  if (!to) return false;
-  if (to === "/") return route.path === "/";
-  return route.path === to || route.path.startsWith(to + "/");
+  return activeNavigationPath.value === to;
 }
 
 // ── Misc ───────────────────────────────────────────────────────────────────
