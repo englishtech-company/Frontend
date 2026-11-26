@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import FilterField from "@/components/ui/FilterField.vue";
 import FilterPanel from "@/components/ui/FilterPanel.vue";
@@ -12,6 +12,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { notifyRemoved } from "@/lib/actionNotification";
 import { countActiveFilters } from "@/lib/filters/query";
 import { deleteStudent, listStudents } from "@/lib/students";
+import { maskCpf } from "@/lib/br/masks";
 import {
   formatStudentCouponLabel,
   formatStudentPlanShortLabel,
@@ -37,18 +38,23 @@ const total = ref(0);
 const idFilter = ref("");
 const nameFilter = ref("");
 const emailFilter = ref("");
+const cpfFilter = ref("");
 const phoneFilter = ref("");
-const statusFilter = ref<string | number | null>(null);
+const statusFilter = ref<string | number | null>("active");
 const teacherFilter = ref("");
 const planFilter = ref("");
 const couponFilter = ref("");
 const startDateFrom = ref("");
 const startDateTo = ref("");
 
+let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const statusOptions: SelectOption[] = [
-  { value: "active", label: "Ativo" },
-  { value: "inactive", label: "Inativo" },
-  { value: "pending", label: "Pendente" },
+  { value: "active", label: "Ativos (Padrão)" },
+  { value: "inactive", label: "Inativos" },
+  { value: "pending", label: "Pendentes" },
+  { value: "suspended", label: "Suspensos" },
+  { value: "all", label: "Todos os status" },
 ];
 
 const showActions = computed(
@@ -60,8 +66,9 @@ const activeFilterCount = computed(() =>
     idFilter.value,
     nameFilter.value,
     emailFilter.value,
+    cpfFilter.value,
     phoneFilter.value,
-    statusFilter.value,
+    statusFilter.value && statusFilter.value !== "active" ? statusFilter.value : "",
     teacherFilter.value,
     planFilter.value,
     couponFilter.value,
@@ -81,13 +88,24 @@ async function loadStudents() {
   error.value = "";
 
   try {
+    let statusParam: string | undefined = undefined;
+    let allParam: boolean | undefined = undefined;
+
+    if (statusFilter.value === "all") {
+      allParam = true;
+    } else if (statusFilter.value) {
+      statusParam = String(statusFilter.value);
+    }
+
     const result = await listStudents({
       page: page.value,
       id: idFilter.value.trim() ? Number(idFilter.value) : undefined,
       name: nameFilter.value.trim() || undefined,
       email: emailFilter.value.trim() || undefined,
+      cpf: cpfFilter.value.trim() || undefined,
       phone: phoneFilter.value.trim() || undefined,
-      status: statusFilter.value ? String(statusFilter.value) : undefined,
+      status: statusParam,
+      all: allParam,
       teacherName: teacherFilter.value.trim() || undefined,
       planName: planFilter.value.trim() || undefined,
       couponName: couponFilter.value.trim() || undefined,
@@ -105,16 +123,38 @@ async function loadStudents() {
 }
 
 function handleSearch() {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
   page.value = 1;
   loadStudents();
 }
 
+function handleDebouncedSearch() {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
+  searchDebounceTimeout = setTimeout(() => {
+    handleSearch();
+  }, 400);
+}
+
+function onCpfFilterInput(event: Event) {
+  const input = event.target as HTMLInputElement;
+  cpfFilter.value = maskCpf(input.value);
+  handleDebouncedSearch();
+}
+
 function clearFilters() {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
   idFilter.value = "";
   nameFilter.value = "";
   emailFilter.value = "";
+  cpfFilter.value = "";
   phoneFilter.value = "";
-  statusFilter.value = null;
+  statusFilter.value = "active";
   teacherFilter.value = "";
   planFilter.value = "";
   couponFilter.value = "";
@@ -146,6 +186,16 @@ function goToPage(next: number) {
   page.value = next;
   loadStudents();
 }
+
+watch(statusFilter, () => {
+  handleSearch();
+});
+
+onBeforeUnmount(() => {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
+});
 
 onMounted(loadStudents);
 </script>
@@ -222,6 +272,21 @@ onMounted(loadStudents);
               type="text"
               class="form-control"
               placeholder="Digite o telefone..."
+              @input="handleDebouncedSearch"
+              @keyup.enter="handleSearch"
+            />
+          </FilterField>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <FilterField label="CPF" id="student-filter-cpf">
+            <input
+              id="student-filter-cpf"
+              :value="cpfFilter"
+              type="text"
+              class="form-control"
+              placeholder="000.000.000-00 ou dígitos"
+              maxlength="14"
+              @input="onCpfFilterInput"
               @keyup.enter="handleSearch"
             />
           </FilterField>

@@ -15,8 +15,10 @@ export type ListStudentsParams = {
   id?: number;
   name?: string;
   email?: string;
+  cpf?: string;
   phone?: string;
   status?: string;
+  all?: boolean;
   teacherName?: string;
   planName?: string;
   couponName?: string;
@@ -47,8 +49,12 @@ export async function listStudents(
   appendExact(query, "id", params.id);
   appendLike(query, "name", params.name);
   appendLike(query, "email", params.email);
+  appendExact(query, "cpf", params.cpf);
   appendLike(query, "phone", params.phone);
   appendExact(query, "status", params.status);
+  if (params.all) {
+    appendExact(query, "all", "true");
+  }
   appendLike(query, "teacher_name", params.teacherName);
   appendLike(query, "plan_name", params.planName);
   appendLike(query, "coupon_name", params.couponName);
