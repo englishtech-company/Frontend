@@ -121,8 +121,14 @@ export const navigationSchema: NavEntry[] = [
       PERMISSIONS.teachers.view,
       PERMISSIONS.libraryMaterials.view,
       PERMISSIONS.libraryCategories.view,
+      PERMISSIONS.students.view,
     ],
     children: [
+      {
+        label: "Alunos",
+        to: "/students",
+        permission: PERMISSIONS.students.view,
+      },
       {
         label: "Turmas",
         to: "/group-classes",
@@ -194,7 +200,6 @@ export const navigationSchema: NavEntry[] = [
     label: "Administrativo",
     icon: "la la-cog",
     anyPermission: [
-      PERMISSIONS.students.view,
       PERMISSIONS.plans.view,
       PERMISSIONS.coupons.view,
       PERMISSIONS.users.view,
@@ -204,11 +209,6 @@ export const navigationSchema: NavEntry[] = [
       PERMISSIONS.termAcceptances.view,
     ],
     children: [
-      {
-        label: "Alunos",
-        to: "/students",
-        permission: PERMISSIONS.students.view,
-      },
       {
         label: "Planos",
         to: "/plans",
